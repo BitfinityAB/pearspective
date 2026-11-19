@@ -102,3 +102,7 @@ The code is split into `shared/` (the provider-neutral model and status rules), 
 - Design: [`docs/design.md`](docs/design.md)
 - Interactive mockup: [`docs/mockup/overview-swimlanes.html`](docs/mockup/overview-swimlanes.html), which opens straight in a browser
 - Ideas for v2: [`docs/v2-proposal.md`](docs/v2-proposal.md)
+
+## License
+
+[MIT](LICENSE)
