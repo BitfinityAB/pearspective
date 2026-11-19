@@ -1,0 +1,15 @@
+{
+  "codeHost": {
+    "provider": "github",
+    "org": "acme",
+    "repos": ["orders-api", "orders-web"],
+    "excludeRepos": [],
+    "teams": ["platform-team"],
+    "localRepos": []
+  },
+  "reviewerClasses": {
+    "ai-review": ["copilot-pull-request-reviewer"],
+    "code-analysis": ["codescene-access", "codescene-delta-analysis"]
+  },
+  "refreshIntervalSec": 180
+}

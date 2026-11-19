@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="70 80 1080 1080" width="512" height="512">
+  <title>Pearspective</title>
+  <g stroke="#1f2328" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Stem and branch: a dark band with the brown stem on top, shaped like a git branch. -->
+    <path d="M606 540 C606 470 612 420 614 230 M614 420 C626 395 660 392 720 392 L790 392 C815 392 835 382 852 362" fill="none" stroke-width="78"/>
+    <path d="M560 430 C470 450 330 410 300 238 C455 222 548 300 560 430 Z" fill="#6cc04a" stroke-width="32"/>
+    <path d="M398 302 C450 330 495 360 528 398" fill="none" stroke-width="14"/>
+    <path d="M606 540 C606 470 612 420 614 230 M614 420 C626 395 660 392 720 392 L790 392 C815 392 835 382 852 362" fill="none" stroke="#9b6a4c" stroke-width="22"/>
+    <circle cx="618" cy="212" r="57" fill="#a9e84b" stroke-width="32"/>
+    <circle cx="855" cy="362" r="57" fill="#a9e84b" stroke-width="32"/>
+    <path d="M610 515 C690 515 745 560 765 640 C785 720 865 770 870 905 C878 1050 760 1124 606 1124 C452 1124 334 1050 342 905 C348 770 428 720 448 640 C468 560 530 515 610 515 Z" fill="#a9e84b" stroke-width="32"/>
+    <path d="M572 600 L522 690" fill="none" stroke="#eefad9" stroke-width="46"/>
+  </g>
+</svg>

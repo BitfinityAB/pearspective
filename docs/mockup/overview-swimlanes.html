@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pearspective — Mockup</title>
+<link rel="icon" href="../../web/public/favicon.svg" type="image/svg+xml">
+<script>
+// Apply the saved theme before first paint so dark users never see a white flash.
+try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f6f7f9;--surface:#fff;--subtle:#f6f8fa;--border:#d0d7de;--hair:#eaeef2;--text:#1f2328;--text2:#424a53;--muted:#59636e;--accent:#0969da;--accent-fg:#fff;
+  --g-bg:#dafbe1;--g-fg:#116329;--a-bg:#fff1c2;--a-fg:#6f4a00;--r-bg:#ffe0e3;--r-fg:#a40e26;--n-bg:#eef1f4;--n-fg:#4b535d;--b-bg:#ddf4ff;--b-fg:#0550ae;
+  --c-blocked:#cf222e;--c-waiting:#d4a72c;--c-ready:#2da44e;--c-draft:#8c959f;--c-merged:#8250df;--behind:#953800;
+  --hatch-a:#8c959f;--hatch-b:#d0d7de;--sel:#eef5ff;--stackrow:#f6f8ff;--track:#f0f2f5;--canvas:#fbfcfd;
+  --edge:#8c959f;--edge-merged:#c4ccd4;--merged-card:#f6f8fa;--pill:#1f2328;--pill-fg:#fff;--shadow:rgba(31,35,40,.15);--backdrop:rgba(31,35,40,.45);
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0d1117;--surface:#161b22;--subtle:#1c2128;--border:#30363d;--hair:#21262d;--text:#e6edf3;--text2:#c9d1d9;--muted:#9198a1;--accent:#4493f8;--accent-fg:#0d1117;
+    --g-bg:rgba(46,160,67,.2);--g-fg:#56d364;--a-bg:rgba(187,128,9,.22);--a-fg:#e3b341;--r-bg:rgba(248,81,73,.2);--r-fg:#ff7b72;--n-bg:#262c36;--n-fg:#9198a1;--b-bg:rgba(56,139,253,.2);--b-fg:#79c0ff;
+    --c-blocked:#f85149;--c-waiting:#d29922;--c-ready:#3fb950;--c-draft:#6e7681;--c-merged:#a371f7;--behind:#f0883e;
+    --hatch-a:#6e7681;--hatch-b:#30363d;--sel:rgba(56,139,253,.14);--stackrow:#161d2b;--track:#21262d;--canvas:#0d1117;
+    --edge:#6e7681;--edge-merged:#3d444d;--merged-card:#1c2128;--pill:#e6edf3;--pill-fg:#0d1117;--shadow:rgba(0,0,0,.5);--backdrop:rgba(1,4,9,.7);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0d1117;--surface:#161b22;--subtle:#1c2128;--border:#30363d;--hair:#21262d;--text:#e6edf3;--text2:#c9d1d9;--muted:#9198a1;--accent:#4493f8;--accent-fg:#0d1117;
+  --g-bg:rgba(46,160,67,.2);--g-fg:#56d364;--a-bg:rgba(187,128,9,.22);--a-fg:#e3b341;--r-bg:rgba(248,81,73,.2);--r-fg:#ff7b72;--n-bg:#262c36;--n-fg:#9198a1;--b-bg:rgba(56,139,253,.2);--b-fg:#79c0ff;
+  --c-blocked:#f85149;--c-waiting:#d29922;--c-ready:#3fb950;--c-draft:#6e7681;--c-merged:#a371f7;--behind:#f0883e;
+  --hatch-a:#6e7681;--hatch-b:#30363d;--sel:rgba(56,139,253,.14);--stackrow:#161d2b;--track:#21262d;--canvas:#0d1117;
+  --edge:#6e7681;--edge-merged:#3d444d;--merged-card:#1c2128;--pill:#e6edf3;--pill-fg:#0d1117;--shadow:rgba(0,0,0,.5);--backdrop:rgba(1,4,9,.7);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--text);font-size:14px}
+a{color:var(--accent)}a:hover{color:var(--b-fg)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1440px;margin:0 auto;padding-bottom:48px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:16px;padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px}.brand b{font-size:16px}.brand span{font-size:13px;color:var(--muted)}
+.segs{display:flex;gap:4px;background:var(--subtle);border:1px solid var(--border);border-radius:8px;padding:3px;align-items:center}
+.segs .lbl{font-size:12px;color:var(--muted);padding:0 8px}
+.seg{border:0;background:transparent;cursor:pointer;height:30px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted)}
+.seg.on{background:var(--surface);box-shadow:0 1px 2px var(--shadow);color:var(--text)}
+.grow{flex:1 1 auto}
+.hdr-right{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+select{height:32px;border:1px solid var(--border);border-radius:6px;padding:0 8px;background:var(--surface)}
+.icon{border:1px solid var(--border);background:var(--surface);cursor:pointer;width:32px;height:32px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
+.icon:hover{background:var(--hair)}
+.who{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:999px;background:var(--subtle);border:1px solid var(--border);color:var(--text)}
+.who{padding:0 10px 0 4px}
+.pin-mark{display:inline-flex;vertical-align:-1px;margin-right:4px;color:var(--b-fg)}
+.pin-btn{flex:0 0 auto}.pin-btn.on{color:var(--b-fg);border-color:var(--b-fg)}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 24px}
+.chip{cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid var(--text);background:var(--surface)}
+.chip.off{border-style:dashed;border-color:var(--border);background:transparent;color:var(--muted)}
+.chip .n{color:var(--muted);font-weight:600}
+.chip .d{width:8px;height:8px;border-radius:50%}
+.search{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;flex:0 1 280px}
+.search input{border:0;outline:none;font-size:13px;width:100%;background:transparent}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.layout{display:flex;flex-wrap:wrap;gap:20px;padding:0 24px;align-items:flex-start}
+main{flex:999 1 760px;min-width:0;overflow-x:auto}
+.board{min-width:820px;display:flex;flex-direction:column;gap:14px}
+.cols,.row{display:grid;grid-template-columns:minmax(0,1fr) 216px 300px;gap:16px;align-items:center}
+.cols{padding:0 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;align-items:end}
+.sigh{display:flex;gap:8px}.sigh span{width:28px;text-align:center}
+.ruler{position:relative;height:16px}
+.ruler span{position:absolute;bottom:0;transform:translateX(-50%);text-transform:none;letter-spacing:0;font-weight:500}
+.lane{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lane-h{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 16px;background:var(--subtle)}
+.lane-h .icon{width:28px;height:28px;border:0;background:transparent}
+.av{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:0 0 auto}
+.lane-h .name{font-weight:600;font-size:15px}
+.muted{color:var(--muted)}.small{font-size:12px}
+.stackbar{display:flex;width:180px;height:10px;border-radius:999px;overflow:hidden;background:var(--hair)}
+.hatch{background:repeating-linear-gradient(45deg,var(--hatch-a) 0 3px,var(--hatch-b) 3px 6px)}
+.row{padding:10px 16px;border-top:1px solid var(--hair);cursor:pointer;width:100%}
+.row:hover{background:var(--subtle)}
+.row.sel{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
+.row.stack{background:var(--stackrow);cursor:default}
+.pr{display:flex;gap:10px;min-width:0}
+.stack-members{position:relative}
+.stack-links{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.stack-links .link{fill:none;stroke:var(--edge);stroke-width:1.5;stroke-linejoin:miter}
+.stack-links .link.hot{stroke:var(--accent);stroke-width:2}
+.stack-links .arrow{fill:var(--edge)}
+.stack-links .arrow.hot{fill:var(--accent)}
+.stack-base{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;border-top:1px solid var(--hair);background:var(--stackrow)}
+.base-pill{font:600 12px var(--mono);padding:3px 10px;border-radius:999px;background:var(--pill);color:var(--pill-fg)}
+.prtext{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rn{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badges{display:flex;flex-wrap:wrap;gap:4px}
+.badge{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.k-g{background:var(--g-bg);color:var(--g-fg)}.k-a{background:var(--a-bg);color:var(--a-fg)}.k-r{background:var(--r-bg);color:var(--r-fg)}.k-n{background:var(--n-bg);color:var(--n-fg)}.k-b{background:var(--b-bg);color:var(--b-fg)}
+.sigs{display:flex;gap:8px}
+.dot{width:28px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--mono)}
+.age{display:flex;align-items:center;gap:8px}
+.track{position:relative;flex:1 1 auto;height:12px;border-radius:3px;background:var(--track)}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.age .l{width:34px;text-align:right;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.toggle{border:0;background:transparent;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;padding:0;min-width:0}
+.pips{display:flex;gap:3px;flex-wrap:wrap}.pips i{width:14px;height:14px;border-radius:4px}
+.btn{cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:600}
+.btn:hover{background:var(--hair)}
+.empty{padding:14px 16px;font-size:13px;color:var(--muted);border-top:1px solid var(--hair)}
+aside{flex:1 1 340px;min-width:0;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:16px}
+aside h2{margin:0;font-size:18px;line-height:1.3}
+.sec{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.sline{display:flex;align-items:center;gap:10px;font-size:13px}.sline b{width:92px}
+.snip{font-size:13px;background:var(--subtle);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.mini{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:center;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px}
+.mini:hover{background:var(--subtle)}.mini.cur{background:var(--sel)}
+.mini i{width:14px;height:14px;border-radius:4px}
+.mini span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.stacks{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:16px;padding:0 24px}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.scard-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--hair);flex-wrap:wrap}
+.scard svg{display:block;width:100%;height:440px;background:var(--canvas);cursor:grab}
+dialog{background:var(--surface);color:var(--text);border:0;border-radius:14px;padding:0;width:min(1000px,94vw);height:min(820px,90vh);box-shadow:0 24px 64px var(--shadow)}
+dialog::backdrop{background:var(--backdrop)}
+.dlg{display:flex;flex-direction:column;height:100%}
+.dlg-h{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--hair);flex-wrap:wrap}
+.dlg-h h3{margin:0;font-size:16px}
+.dlg svg{flex:1 1 auto;width:100%;background:var(--canvas);cursor:grab}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:10px 18px;border-top:1px solid var(--hair)}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:12px;height:12px;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlg">
+    <div class="dlg-h">
+      <h3 id="dlgTitle"></h3><span class="muted small" id="dlgSub"></span>
+      <span class="grow"></span>
+      <span class="muted small">Scroll to zoom, drag to pan</span>
+      <button class="icon" id="dlgClose" aria-label="Close">✕</button>
+    </div>
+    <svg id="dlgSvg" role="img" aria-label="Stack diagram"></svg>
+    <div class="legend">
+      <span><i style="background:var(--c-blocked)"></i>Blocked</span>
+      <span><i style="background:var(--c-waiting)"></i>Waiting for review</span>
+      <span><i style="background:var(--c-ready)"></i>Ready</span>
+      <span><i style="background:var(--c-merged);opacity:.6"></i>Merged</span>
+      <span>Arrow = merges into · label = commits behind its target</span>
+    </div>
+  </div>
+</dialog>
+<script>
+// ---------- Fake data (no real people or PRs) ----------
+const PRS = [
+  {id:'m1', author:'Alex Rivera', repo:'orders-api', num:3412, branch:'XX-310-recalc-windows', title:'Recalculate delivery windows after a route is edited', h:620, ci:'r', failCheck:'integration-tests', cop:'g', cs:'g', rev:'r', thr:3, merge:'DIRTY', revs:[['Robin Park','CHANGES_REQUESTED'],['Kim Lee','COMMENTED']], snippet:'Robin Park: This still recalculates windows for cancelled deliveries.'},
+  {id:'m2', author:'Alex Rivera', repo:'orders-web', num:1350, branch:'XX-310-second-day', title:'Show the second day of an overnight route in the delivery editor', h:96, ci:'a', cop:'a', cs:'g', rev:'a', thr:0, merge:'BLOCKED', revs:[]},
+  {id:'m3', author:'Alex Rivera', repo:'orders-api', num:3420, branch:'XX-420-scheduler-lock', title:'Add a distributed lock for scheduler runs', h:30, ci:'g', cop:'g', cs:'g', rev:'g', thr:0, merge:'CLEAN', stack:'s2', revs:[['Sam Chen','APPROVED']]},
+  {id:'m5', author:'Alex Rivera', repo:'orders-api', num:3421, branch:'XX-421-lock-settings', title:'Split scheduler lock settings per tenant', h:26, ci:'g', cop:'a', copOpen:1, cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s2', parent:'m3', behind:0, revs:[]},
+  {id:'m6', author:'Alex Rivera', repo:'orders-api', num:3422, branch:'XX-422-lock-metrics', title:'Expose lock wait time as a metric', h:20, ci:'r', failCheck:'unit-tests', cop:'g', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s2', parent:'m3', behind:2, revs:[]},
+  {id:'m4', author:'Alex Rivera', repo:'orders-deploy', num:288, branch:'raise-scheduler-memory', title:'Raise scheduler memory limits in test', h:5, draft:true, ci:'g', cop:'n', cs:'n', rev:'a', thr:0, merge:'BLOCKED', revs:[]},
+  {id:'e1', author:'Sam Chen', repo:'field-app', num:4988, branch:'XX-412-offline-mode', title:'Use offline mode when it is available', h:410, ci:'g', cop:'a', copOpen:2, cs:'g', rev:'a', thr:2, merge:'BLOCKED', stack:'s1', behind:0, revs:[['Copilot','COMMENTED'],['Kim Lee','COMMENTED']], snippet:'Copilot: syncQueue is never cleared when the user signs out.'},
+  {id:'e2', author:'Sam Chen', repo:'field-app', num:4989, branch:'XX-413-orders-offline', title:'Show orders offline', h:380, ci:'g', cop:'g', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s1', parent:'e1', behind:0, revs:[]},
+  {id:'e3', author:'Sam Chen', repo:'field-app', num:4990, branch:'XX-414-history-offline', title:'Show the order history offline', h:360, ci:'r', failCheck:'e2e-android', cop:'g', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s1', parent:'e2', behind:3, revs:[]},
+  {id:'e4', author:'Sam Chen', repo:'field-app', num:4991, branch:'XX-415-prefetch', title:'Prefetch orders and history', h:300, ci:'a', cop:'a', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s1', parent:'e3', behind:1, revs:[]},
+  {id:'e5', author:'Sam Chen', repo:'field-app', num:4992, branch:'XX-416-messages-offline', title:'Show messages offline', h:200, ci:'g', cop:'g', cs:'g', rev:'g', thr:0, merge:'CLEAN', stack:'s1', parent:'e4', behind:0, revs:[['Kim Lee','APPROVED']]},
+  {id:'e6', author:'Sam Chen', repo:'field-api', num:712, branch:'XX-412-sync-endpoint', title:'Expose the sync list endpoint for offline cache', h:72, ci:'g', cop:'g', cs:'g', rev:'a', thr:0, merge:'BLOCKED', revs:[]},
+  {id:'s1', author:'Robin Park', repo:'integration-hr', num:148, branch:'XX-441-absence-codes', title:'Map absence codes from the HR export', h:8, ci:'g', cop:'g', cs:'g', rev:'g', thr:0, merge:'CLEAN', revs:[['Alex Rivera','APPROVED']]},
+  {id:'s2', author:'Robin Park', repo:'integration-hr', num:145, branch:'XX-440-retry-backoff', title:'Retry rate-limited requests with backoff', h:170, ci:'g', cop:'g', cs:'g', rev:'g', thr:0, merge:'BEHIND', revs:[['Sam Chen','APPROVED']]},
+  {id:'s3', author:'Robin Park', repo:'orders-api', num:3398, branch:'remove-legacy-route-flag', title:'Remove the legacy routing flag', h:1300, ci:'a', cop:'g', cs:'r', rev:'r', thr:5, merge:'BLOCKED', revs:[['Alex Rivera','CHANGES_REQUESTED']], snippet:'Alex Rivera: The flag is still read by the overnight importer.'},
+  {id:'j1', author:'Kim Lee', repo:'field-app', num:2010, branch:'XX-430-keyboard-overlap', title:'Fix keyboard overlapping order notes', h:2, ci:'a', cop:'n', cs:'n', rev:'a', thr:0, merge:'UNKNOWN', revs:[]},
+  {id:'j2', author:'Kim Lee', repo:'orders-web', num:1339, branch:'react-router-7', title:'Upgrade to React Router 7', h:220, draft:true, ci:'r', failCheck:'build', cop:'n', cs:'n', rev:'a', thr:0, merge:'BLOCKED', revs:[]},
+  {id:'b1', author:'dependabot', bot:true, repo:'orders-web', num:1345, branch:'dependabot/npm/vite-6.2.0', title:'Bump vite from 5.4.2 to 6.2.0', h:50, ci:'g', cop:'n', cs:'g', rev:'g', thr:0, merge:'CLEAN', revs:[]},
+  {id:'b2', author:'dependabot', bot:true, repo:'field-api', num:715, branch:'dependabot/nuget/npgsql-9.0.2', title:'Bump Npgsql from 8.0.5 to 9.0.2', h:30, ci:'r', failCheck:'unit-tests', cop:'n', cs:'g', rev:'a', thr:0, merge:'BLOCKED', revs:[]},
+  {id:'b3', author:'dependabot', bot:true, repo:'orders-api', num:3418, branch:'dependabot/nuget/xunit-2.9.2', title:'Bump xunit from 2.9.0 to 2.9.2', h:60, ci:'g', cop:'n', cs:'g', rev:'a', thr:0, merge:'BLOCKED', revs:[]}
+];
+// Native stacks carry merged entries; branch-chained stacks do not.
+const STACKS = {
+  s1: { native:true, number:4964, base:'main', merged:[{num:4985, title:'Add offline storage layer'},{num:4986, title:'Prefetch profile data'}] },
+  s2: { native:false, base:'main', merged:[] }
+};
+const ME = 'Alex Rivera';
+const ZOOM_KEY = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘ Cmd' : 'Ctrl';
+const MINE = { requested:['s3','e1'], team:['j1','b2'] };
+
+// ---------- Status rules (mirror docs/design.md) ----------
+const G = {g:'✓', a:'!', r:'✕', n:'–'};
+const CAT = { blocked:{c:'var(--c-blocked)',hex:'#cf222e',k:'r',l:'Blocked'}, waiting:{c:'var(--c-waiting)',hex:'#d4a72c',k:'a',l:'Waiting for review'}, ready:{c:'var(--c-ready)',hex:'#2da44e',k:'g',l:'Ready to merge'}, draft:{c:'var(--c-draft)',hex:'#8c959f',k:'n',l:'Draft'} };
+const ORDER = {blocked:0, waiting:1, ready:2, draft:3};
+const PIN_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5M9 3h6l-1 6 4 4v2H6v-2l4-4z"/></svg>';
+const pinMark = on => on ? `<span class="pin-mark" title="Pinned">${PIN_ICON}</span>` : '';
+const AV = [['#ddf4ff','#0550ae'],['#fbefff','#6e40c9'],['#fff1e5','#953800'],['#dafbe1','#116329'],['#ffeff7','#99286e']];
+const MAXH = 2160;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pct = h => Math.max(3, Math.min(100, Math.log(Math.max(h,1)) / Math.log(MAXH) * 100));
+const age = h => h < 24 ? h + 'h' : h < 336 ? Math.round(h/24) + 'd' : Math.round(h/168) + 'w';
+const initials = n => n.split(/[\s-]/).map(x => x[0]).join('').slice(0,2).toUpperCase();
+const avatar = n => { let i = 0; for (const c of n) i += c.charCodeAt(0); const p = AV[i % AV.length]; return `background:${p[0]};color:${p[1]}`; };
+const ticketOf = p => ((p.branch + ' ' + p.title).match(/\b([A-Z][A-Z0-9]+-\d+)\b/) || [])[1] || null;
+
+function blockersOf(p){
+  const b = [];
+  if (p.merge === 'DIRTY') b.push({t:'Conflicts', k:'r'});
+  if (p.merge === 'BEHIND') b.push({t:'Behind base', k:'r'});
+  if (p.ci === 'r') b.push({t:'Required check failed', k:'r'});
+  if (p.rev === 'r') b.push({t:'Changes requested', k:'r'});
+  if (p.thr > 0) b.push({t:p.thr + ' unresolved threads', k:'r'});
+  if (p.rev === 'a') b.push({t:'Needs approval', k:'a'});
+  return b;
+}
+function catOf(p){
+  if (p.draft) return 'draft';
+  if (blockersOf(p).some(x => x.k === 'r')) return 'blocked';
+  if (p.rev === 'a' || p.ci === 'a' || p.merge === 'UNKNOWN') return 'waiting';
+  return 'ready';
+}
+function signals(p){
+  const mK = {CLEAN:'g', BLOCKED:'a', UNSTABLE:'a', DIRTY:'r', BEHIND:'r', UNKNOWN:'n'}[p.merge];
+  const s = (full, k, text, glyph) => ({full, k, text, glyph: glyph || G[k]});
+  return [
+    s('CI', p.ci, {g:'All 7 checks passed', a:'2 checks running', r:'Required check failed: ' + (p.failCheck || 'build'), n:'No checks'}[p.ci]),
+    s('Copilot', p.cop, {g:'Reviewed, all comments resolved', a: p.copOpen ? `Reviewed, ${p.copOpen} comments unresolved` : 'Requested, not reviewed yet', n:'Not requested'}[p.cop]),
+    s('CodeScene', p.cs, {g:'Approved', r:'Changes requested', n:'No review'}[p.cs]),
+    s('Review', p.rev, {g:'Approved', a:'Review required, 0 of 1 approvals', r:'Changes requested', n:'No review required'}[p.rev]),
+    s('Threads', p.thr > 0 ? 'a' : 'g', p.thr > 0 ? p.thr + ' unresolved' : 'None unresolved', p.thr > 0 ? String(p.thr) : '✓'),
+    s('Mergeable', mK, {CLEAN:'Clean, can be merged', BLOCKED:'Blocked by branch protection', UNSTABLE:'Non-required checks failing', DIRTY:'Merge conflicts', BEHIND:'Behind the base branch', UNKNOWN:'Checking…'}[p.merge], p.merge === 'UNKNOWN' ? '…' : null)
+  ];
+}
+
+const ALL = PRS.map(p => ({...p, cat: catOf(p), ticket: ticketOf(p)}));
+const BY_ID = Object.fromEntries(ALL.map(p => [p.id, p]));
+
+function badgesOf(p){
+  const out = blockersOf(p).map(b => ({t:b.t, k:b.k}));
+  if (p.parent) out.unshift({t:'stacked on #' + BY_ID[p.parent].num, k:'b'});
+  if (p.merge === 'UNKNOWN') out.push({t:'Checking mergeability…', k:'n'});
+  if (p.draft) out.unshift({t:'Draft', k:'n'});
+  return out;
+}
+const barFill = cat => cat === 'draft' ? 'repeating-linear-gradient(45deg,var(--hatch-a) 0 4px,var(--hatch-b) 4px 8px)' : CAT[cat].c;
+const badgeHtml = b => `<span class="badge k-${b.k}">${esc(b.t)}</span>`;
+const sigHtml = p => signals(p).map(s => `<span class="dot k-${s.k}" title="${esc(s.full + ': ' + s.text)}">${esc(s.glyph)}</span>`).join('');
+const ageHtml = (h, cat) => `<span class="age"><span class="track"><i style="width:${pct(h)}%;background:${barFill(cat)}"></i></span><span class="l">${age(h)}</span></span>`;
+
+// ---------- State ----------
+const state = { tab:'overview', groupBy:'author', newestFirst:false, show:{blocked:true, waiting:true, ready:true, draft:false}, q:'', selected:'e1', pinned:{m2:true}, collapsed:{}, openStacks:{s1:true, s2:true}, interval:'3m', theme: document.documentElement.dataset.theme || 'system' };
+function setTheme(t){
+  state.theme = t;
+  if (t === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  try { t === 'system' ? localStorage.removeItem('theme') : localStorage.setItem('theme', t); } catch (e) {}
+}
+const THEME_ICONS = {
+  system: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/>',
+  light: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  dark: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+};
+
+// ---------- Rendering ----------
+// Stack connectors: a straight chain shares one trunk; each extra child of a fork gets its own gutter column.
+const GUTTER_X = 26, GUTTER_STEP = 12;
+// The gap after the last gutter is the visible length of each horizontal arm.
+const ARM_LENGTH = 24;
+const textXFor = maxColumn => GUTTER_X + (maxColumn + 1) * GUTTER_STEP + ARM_LENGTH;
+
+function branchColumns(members){
+  const columns = { base: 0 };
+  let next = 1;
+  const childrenOf = parentId => members.filter(m => (m.parent || 'base') === parentId).sort((a, b) => a.num - b.num);
+  const visit = parentId => childrenOf(parentId).forEach((child, index) => {
+    columns[child.id] = index === 0 ? columns[parentId] : next++;
+    visit(child.id);
+  });
+  visit('base');
+  return columns;
+}
+
+function prRow(p, stackTextX, column){
+  const inStack = stackTextX !== undefined;
+  const nodeAttrs = inStack ? ` data-node="${p.id}" data-parent="${p.parent || 'base'}" data-col="${column}"` : '';
+  return `<div class="row${state.selected === p.id ? ' sel' : ''}" role="button" tabindex="0" data-act="pick" data-id="${p.id}"${nodeAttrs}>
+    <span class="pr"${inStack ? ` style="padding-left:${stackTextX - 16}px"` : ''}>
+      <span class="prtext"><span class="rn">${pinMark(state.pinned[p.id])}${esc(p.repo)} #${p.num}</span><span class="title">${esc(p.title)}</span>
+      <span class="badges">${badgesOf(p).map(badgeHtml).join('')}</span></span></span>
+    <span class="sigs">${sigHtml(p)}</span>
+    ${ageHtml(p.h, p.cat)}
+  </div>`;
+}
+function stackRow(id, members, lead){
+  const open = !!state.openStacks[id];
+  const cnt = {blocked:0, waiting:0, ready:0, draft:0}; members.forEach(m => cnt[m.cat]++);
+  const st = STACKS[id];
+  return `<div class="row stack">
+    <span class="pr"><button class="toggle" data-act="stack" data-id="${id}" aria-expanded="${open}">
+      <span style="width:14px">${open ? '▾' : '▸'}</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--b-fg)" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+      <span class="prtext"><span class="rn">${pinMark(members.some(m => state.pinned[m.id]))}${esc(lead.repo)} · ${st.native ? 'GitHub stack #' + st.number : 'branch-chained'}</span>
+      <span class="title">Stack of ${members.length} open PRs${st.merged.length ? ` · ${st.merged.length} merged` : ''}</span>
+      <span class="badges">${cnt.blocked ? badgeHtml({t:cnt.blocked + ' blocked', k:'r'}) : ''}${cnt.waiting ? badgeHtml({t:cnt.waiting + ' waiting', k:'a'}) : ''}${cnt.ready ? badgeHtml({t:cnt.ready + ' ready', k:'g'}) : ''}</span></span>
+    </button></span>
+    <span style="display:flex;flex-direction:column;gap:6px"><span class="pips" role="img" aria-label="${cnt.blocked} blocked, ${cnt.waiting} waiting, ${cnt.ready} ready">${members.map(m => `<i style="background:${CAT[m.cat].c}"></i>`).join('')}</span>
+      <button class="btn" data-act="viz" data-id="${id}" style="align-self:flex-start">Visualize stack</button></span>
+    ${ageHtml(lead.h, lead.cat)}
+  </div>`;
+}
+function stackMembers(id, pool){
+  // Bottom-up order: walk parents from the PR closest to the base.
+  return pool.filter(x => x.stack === id).sort((a,b) => depth(a) - depth(b) || a.num - b.num);
+}
+function depth(p){ let d = 0; while (p.parent) { p = BY_ID[p.parent]; d++; } return d; }
+
+/** Expanded stack: member rows top-down, the base branch as the last node, and an SVG overlay for the links. */
+function stackBody(id, members){
+  const st = STACKS[id];
+  const columns = branchColumns(members);
+  const textX = textXFor(Math.max(...Object.values(columns)));
+  const rows = members.slice().reverse().map(m => prRow(m, textX, columns[m.id])).join('');
+  const base = `<div class="stack-base" data-node="base" style="padding-left:${textX}px">
+    <span class="base-pill">${esc(st.base)}</span>${st.merged.length ? `<span class="muted small">${st.merged.length} merged below</span>` : ''}</div>`;
+  return `<div class="stack-members" data-stack="${id}">${rows}${base}<svg class="stack-links" aria-hidden="true"></svg></div>`;
+}
+
+function drawConnectors(){
+  document.querySelectorAll('.stack-members').forEach(box => {
+    const svg = box.querySelector('.stack-links');
+    const frame = box.getBoundingClientRect();
+    svg.setAttribute('width', frame.width);
+    svg.setAttribute('height', frame.height);
+    const anchors = {};
+    box.querySelectorAll('[data-node]').forEach(node => {
+      const anchor = node.querySelector('.title, .base-pill').getBoundingClientRect();
+      anchors[node.dataset.node] = { x: anchor.left - frame.left, y: anchor.top + anchor.height / 2 - frame.top };
+    });
+    const key = box.dataset.stack.replace(/[^a-z0-9]/gi, '');
+    const links = [...box.querySelectorAll('[data-parent]')].map(node => {
+      const child = node.dataset.node, parent = node.dataset.parent;
+      // Arrows follow the merge direction: from a PR down to the branch it merges into.
+      const from = anchors[child], to = anchors[parent];
+      const gutter = GUTTER_X + Number(node.dataset.col) * GUTTER_STEP;
+      const hot = state.selected === child || state.selected === parent;
+      // Orthogonal route with square corners: out of the child, down the gutter, into its merge target.
+      const d = `M${from.x - 6} ${from.y} H${gutter} V${to.y} H${to.x - 4}`;
+      return { d, hot };
+    }).sort((a, b) => a.hot - b.hot);
+    svg.innerHTML = `<defs>
+      <marker id="arrow-${key}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrow"/></marker>
+      <marker id="arrow-hot-${key}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="arrow hot"/></marker>
+    </defs>${links.map(link => `<path class="link${link.hot ? ' hot' : ''}" d="${link.d}" marker-end="url(#arrow-${link.hot ? 'hot-' : ''}${key})"/>`).join('')}`;
+  });
+}
+
+function lane(name, prs, avatarName){
+  const q = state.q.toLowerCase();
+  const match = p => !q || `${p.title} ${p.repo} #${p.num} ${p.branch}`.toLowerCase().includes(q);
+  const counts = {blocked:0, waiting:0, ready:0, draft:0}; prs.forEach(p => counts[p.cat]++);
+  const units = [], seen = {};
+  prs.forEach(p => {
+    if (p.stack) { if (seen[p.stack]) return; seen[p.stack] = 1; const ms = stackMembers(p.stack, prs); units.push({kind:'stack', id:p.stack, members:ms, lead:ms[0]}); }
+    else units.push({kind:'pr', lead:p});
+  });
+  // Pinned units go first regardless of the sort order; a stack is pinned when any member is.
+  const isPinned = u => Number(u.kind === 'pr' ? !!state.pinned[u.lead.id] : u.members.some(m => state.pinned[m.id]));
+  const visible = units.filter(u => state.show[u.lead.cat] && (u.kind === 'pr' ? match(u.lead) : u.members.some(match)))
+    .sort((a,b) => isPinned(b) - isPinned(a) || ORDER[a.lead.cat] - ORDER[b.lead.cat] || (state.newestFirst ? a.lead.h - b.lead.h : b.lead.h - a.lead.h));
+  let rows = '';
+  visible.forEach(u => {
+    if (u.kind === 'pr') rows += prRow(u.lead, false);
+    else { rows += stackRow(u.id, u.members, u.lead); if (state.openStacks[u.id]) rows += stackBody(u.id, u.members); }
+  });
+  const total = prs.length || 1;
+  const collapsed = state.collapsed[name] ?? (name === 'Bots');
+  const an = avatarName || name;
+  const summary = `${counts.blocked} blocked · ${counts.waiting} waiting · ${counts.ready} ready${counts.draft ? ' · ' + counts.draft + ' draft' : ''}`;
+  return { blocked: counts.blocked, name, html: `<section class="lane">
+    <div class="lane-h">
+      <button class="icon" data-act="lane" data-name="${esc(name)}" aria-label="${collapsed ? 'Expand' : 'Collapse'} ${esc(name)}">${collapsed ? '▸' : '▾'}</button>
+      <span class="av" style="width:30px;height:30px;font-size:12px;${avatar(an)}">${esc(initials(an))}</span>
+      <span class="name">${esc(name)}</span><span class="muted" style="font-size:13px">${prs.length} open</span>
+      <span class="grow"></span><span class="muted small">${summary}</span>
+      <span class="stackbar" role="img" aria-label="${summary}">
+        <span style="background:var(--c-blocked);width:${counts.blocked/total*100}%"></span><span style="background:var(--c-waiting);width:${counts.waiting/total*100}%"></span>
+        <span style="background:var(--c-ready);width:${counts.ready/total*100}%"></span><span class="hatch" style="width:${counts.draft/total*100}%"></span>
+      </span>
+    </div>
+    ${collapsed ? '' : rows || '<div class="empty">No pull requests match the filters.</div>'}
+  </section>`};
+}
+
+function lanesHtml(){
+  let lanes;
+  if (state.tab === 'mine') {
+    lanes = [
+      lane('My PRs', ALL.filter(p => p.author === ME), ME),
+      lane('Review requested from me', MINE.requested.map(id => BY_ID[id]), 'Review Me'),
+      lane('Review requested from team-falcon', MINE.team.map(id => BY_ID[id]), 'Team')
+    ];
+  } else {
+    const groups = new Map();
+    ALL.forEach(p => {
+      const key = state.groupBy === 'author' ? (p.bot ? 'Bots' : p.author) : state.groupBy === 'repo' ? p.repo : (p.ticket || 'No ticket');
+      if (!groups.has(key)) groups.set(key, []); groups.get(key).push(p);
+    });
+    lanes = [...groups].map(([k, v]) => lane(k, v));
+    const last = n => n === 'Bots' || n === 'No ticket';
+    lanes.sort((a,b) => last(a.name) - last(b.name) || b.blocked - a.blocked);
+  }
+  const ticks = [[1,'1h'],[6,'6h'],[24,'1d'],[72,'3d'],[168,'1w'],[336,'2w'],[720,'1mo'],[2160,'3mo']]
+    .map(t => `<span style="left:${t[0] === 1 ? 2 : Math.min(97, Math.log(t[0]) / Math.log(MAXH) * 100)}%">${t[1]}</span>`).join('');
+  return `<div class="board">
+    <div class="cols"><span>Pull request</span>
+      <span class="sigh"><span title="CI checks">CI</span><span title="Copilot review">Cop</span><span title="CodeScene">CS</span><span title="Human review">Rev</span><span title="Unresolved threads">Thr</span><span title="Mergeable">Mrg</span></span>
+      <span class="ruler">${ticks}</span></div>
+    ${lanes.map(l => l.html).join('')}
+    <p class="note">Age axis is log scale: 1 hour to 3 months share one ruler. Bar colour = the PR's bucket; hatched = draft. Hover a status square for its detail.</p>
+  </div>`;
+}
+
+function drawerHtml(){
+  const p = BY_ID[state.selected];
+  const revs = (p.revs || []).map(r => {
+    const k = {APPROVED:'g', CHANGES_REQUESTED:'r', COMMENTED:'n'}[r[1]];
+    return `<div class="sline"><span class="av" style="width:22px;height:22px;font-size:10px;${avatar(r[0])}">${initials(r[0])}</span><span class="grow">${esc(r[0])}</span><span class="badge k-${k}">${{APPROVED:'Approved', CHANGES_REQUESTED:'Changes requested', COMMENTED:'Commented'}[r[1]]}</span></div>`;
+  }).join('');
+  const related = p.ticket ? ALL.filter(x => x.ticket === p.ticket && x.id !== p.id) : [];
+  const mini = x => `<div class="mini${x.id === p.id ? ' cur' : ''}" role="button" tabindex="0" data-act="pick" data-id="${x.id}"><i style="background:${CAT[x.cat].c}"></i><span><span class="rn">${esc(x.repo)} #${x.num}</span> ${esc(x.title)}</span></div>`;
+  const stack = p.stack ? stackMembers(p.stack, ALL).slice().reverse() : [];
+  return `<aside aria-label="Pull request detail">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:flex-start;gap:8px"><span class="rn grow">${esc(p.repo)} #${p.num} · ${esc(p.branch)}</span>
+        <button class="btn pin-btn${state.pinned[p.id] ? ' on' : ''}" data-act="pin" data-id="${p.id}" aria-pressed="${!!state.pinned[p.id]}">${PIN_ICON} ${state.pinned[p.id] ? 'Unpin' : 'Pin'}</button></div>
+      <h2>${esc(p.title)}</h2>
+      <span class="muted" style="font-size:13px">${esc(p.bot ? 'dependabot' : p.author)} · opened ${age(p.h)} ago</span>
+      <span class="badges"><span class="badge k-${CAT[p.cat].k}">${CAT[p.cat].l}</span>${badgesOf(p).map(badgeHtml).join('')}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">${signals(p).map(s => `<div class="sline"><span class="dot k-${s.k}">${esc(s.glyph)}</span><b>${s.full}</b><span style="color:var(--text2)">${esc(s.text)}</span></div>`).join('')}</div>
+    ${revs ? `<div style="display:flex;flex-direction:column;gap:6px"><span class="sec">Reviewers</span>${revs}</div>` : ''}
+    ${p.snippet ? `<div style="display:flex;flex-direction:column;gap:6px"><span class="sec">Unresolved thread</span><div class="snip">${esc(p.snippet)}</div></div>` : ''}
+    ${related.length ? `<div style="display:flex;flex-direction:column;gap:4px"><span class="sec">Related PRs · ${esc(p.ticket)}</span>${related.map(mini).join('')}</div>` : ''}
+    ${stack.length ? `<div style="display:flex;flex-direction:column;gap:4px"><span class="sec">Stack (top → base)</span>${stack.map(mini).join('')}<span class="muted small" style="padding-left:8px">↳ ${STACKS[p.stack].merged.length ? STACKS[p.stack].merged.length + ' merged · ' : ''}${STACKS[p.stack].base}</span>
+      <button class="btn" data-act="viz" data-id="${p.stack}" style="align-self:flex-start;margin-top:4px">Visualize stack</button></div>` : ''}
+    <div style="display:flex;gap:16px;flex-wrap:wrap"><a href="https://github.com" target="_blank" rel="noopener" style="font-weight:600">Open on GitHub ↗</a>${p.ticket ? `<a href="https://jira.example.invalid/browse/${esc(p.ticket)}" target="_blank" rel="noopener" style="font-weight:600">${esc(p.ticket)} in Jira ↗</a>` : ''}</div>
+  </aside>`;
+}
+
+function stacksHtml(){
+  return `<div class="stacks">${Object.keys(STACKS).map(id => {
+    const ms = stackMembers(id, ALL), st = STACKS[id];
+    return `<section class="scard"><div class="scard-h"><b>${esc(ms[0].repo)}</b><span class="muted small">${st.native ? 'GitHub stack #' + st.number : 'branch-chained'} · ${ms.length} open${st.merged.length ? ' · ' + st.merged.length + ' merged' : ''} · ${esc(ms[0].author)}</span><span class="grow"></span><button class="btn" data-act="viz" data-id="${id}">Open large</button></div>
+      <svg data-stack="${id}" role="img" aria-label="Stack diagram"></svg></section>`;
+  }).join('')}</div>`;
+}
+
+function render(){
+  const focused = document.activeElement && document.activeElement.id;
+  const caret = focused === 'q' ? document.activeElement.selectionStart : null;
+  const gCounts = {blocked:0, waiting:0, ready:0, draft:0}; ALL.forEach(p => gCounts[p.cat]++);
+  const seg = (on, act, val, label) => `<button class="seg${on ? ' on' : ''}" data-act="${act}" data-val="${val}">${label}</button>`;
+  document.getElementById('app').innerHTML = `
+  <header>
+    <div class="brand"><svg width="24" height="24" viewBox="70 80 1080 1080" aria-hidden="true"><g stroke="#1f2328" stroke-linecap="round" stroke-linejoin="round"><path d="M606 540 C606 470 612 420 614 230 M614 420 C626 395 660 392 720 392 L790 392 C815 392 835 382 852 362" fill="none" stroke-width="96"/><path d="M560 430 C470 450 330 410 300 238 C455 222 548 300 560 430 Z" fill="#6cc04a" stroke-width="44"/><path d="M606 540 C606 470 612 420 614 230 M614 420 C626 395 660 392 720 392 L790 392 C815 392 835 382 852 362" fill="none" stroke="#9b6a4c" stroke-width="30"/><circle cx="618" cy="212" r="57" fill="#a9e84b" stroke-width="44"/><circle cx="855" cy="362" r="57" fill="#a9e84b" stroke-width="44"/><path d="M610 515 C690 515 745 560 765 640 C785 720 865 770 870 905 C878 1050 760 1124 606 1124 C452 1124 334 1050 342 905 C348 770 428 720 448 640 C468 560 530 515 610 515 Z" fill="#a9e84b" stroke-width="44"/></g></svg><b>Pearspective</b><span>acme</span></div>
+    <nav class="segs" aria-label="Views">${seg(state.tab === 'overview','tab','overview','Overview')}${seg(state.tab === 'mine','tab','mine','Mine')}${seg(state.tab === 'stacks','tab','stacks','Stacks')}</nav>
+    <span class="grow"></span>
+    <div class="hdr-right">
+      <span>${state.interval === 'off' ? 'Auto-refresh paused · updated 6m ago' : 'Updated 42s ago'}</span>
+      <label><span class="sr">Auto-refresh interval</span><select id="interval">${['off','3m','5m','10m','15m','30m'].map(v => `<option value="${v}"${state.interval === v ? ' selected' : ''}>${v === 'off' ? 'Off' : 'Every ' + v}</option>`).join('')}</select></label>
+      <button class="icon" aria-label="Refresh now"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
+      <div class="segs" role="group" aria-label="Theme">${['system','light','dark'].map(t => `<button class="seg${state.theme === t ? ' on' : ''}" data-act="theme" data-val="${t}" aria-pressed="${state.theme === t}" aria-label="${{system:'System theme', light:'Light theme', dark:'Dark theme'}[t]}" title="${{system:'System', light:'Light', dark:'Dark'}[t]}" style="padding:0 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${THEME_ICONS[t]}</svg></button>`).join('')}</div>
+      <button class="icon" aria-label="Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <span class="who"><span class="av" style="width:24px;height:24px;font-size:10px;${avatar(ME)}">${initials(ME)}</span>${esc(ME)}</span>
+    </div>
+  </header>
+  ${state.tab === 'stacks' ? '<div class="toolbar"><span class="muted">Every stack in the selected repos. Hold ' + ZOOM_KEY + ' and scroll to zoom, drag to pan, click a PR to open it.</span></div>' + stacksHtml() : `
+  <section class="toolbar">
+    ${state.tab === 'overview' ? `<div class="segs" style="background:var(--surface)"><span class="lbl">Group by</span>${seg(state.groupBy === 'author','group','author','Author')}${seg(state.groupBy === 'repo','group','repo','Repository')}${seg(state.groupBy === 'ticket','group','ticket','Ticket')}</div>` : ''}
+    <div style="display:flex;flex-wrap:wrap;gap:8px" role="group" aria-label="Status filter">${['blocked','waiting','ready','draft'].map(k => `<button class="chip${state.show[k] ? '' : ' off'}" aria-pressed="${state.show[k]}" data-act="chip" data-val="${k}"><span class="d${k === 'draft' ? ' hatch' : ''}" style="${k === 'draft' ? '' : 'background:' + CAT[k].c}"></span>${{blocked:'Blocked', waiting:'Waiting', ready:'Ready', draft:'Drafts'}[k]}<span class="n">${gCounts[k]}</span></button>`).join('')}</div>
+    <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="sr">Search pull requests</span><input id="q" value="${esc(state.q)}" placeholder="Search title, branch, repo"></label>
+    <button class="chip" data-act="sort"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 16l4 4 4-4"/><path d="M17 20V4"/><path d="M13 8l4-4 4 4"/></svg>${state.newestFirst ? 'Newest first' : 'Oldest first'}</button>
+  </section>
+  <div class="layout"><main>${lanesHtml()}</main>${drawerHtml()}</div>`}`;
+  if (state.tab === 'stacks') document.querySelectorAll('svg[data-stack]').forEach(svg => drawStack(svg, svg.dataset.stack, false));
+  drawConnectors();
+  if (focused === 'q') { const el = document.getElementById('q'); el.focus(); el.setSelectionRange(caret, caret); }
+}
+
+// ---------- D3 stack diagram ----------
+const NW = 340, NH = 64;
+function drawStack(svgEl, id, large){
+  const st = STACKS[id];
+  const members = stackMembers(id, ALL);
+  const nodes = [{id:'base', kind:'base'}];
+  let prev = 'base';
+  st.merged.forEach(m => { nodes.push({id:'mg' + m.num, parentId:prev, kind:'merged', m}); prev = 'mg' + m.num; });
+  const bottomParent = prev;
+  members.forEach(p => nodes.push({id:p.id, parentId: p.parent || bottomParent, kind:'pr', p}));
+  const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(nodes);
+  d3.tree().nodeSize([NW + 40, NH + 46])(root);
+  const all = root.descendants();
+  const X = d => d.x, Y = d => -d.y;
+
+  const svg = d3.select(svgEl); svg.selectAll('*').remove();
+  const w = svgEl.clientWidth || 900, h = svgEl.clientHeight || 600;
+  const g = svg.append('g');
+  // Inline diagrams zoom only with the modifier held, so the page still scrolls; the dialog zooms with a plain wheel.
+  const zoom = d3.zoom().scaleExtent([0.25, 2]).filter(e => large || e.type !== 'wheel' || e.ctrlKey || e.metaKey).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+  const height = d3.max(all, d => d.y) + NH + 80;
+  const minX = d3.min(all, d => d.x) - NW/2, maxX = d3.max(all, d => d.x) + NW/2;
+  const k = Math.max(0.45, Math.min(1, (h - 40) / height, (w - 40) / (maxX - minX)));
+  svg.call(zoom.transform, d3.zoomIdentity.translate(w/2 - (minX + maxX)/2 * k, h - 50 * k).scale(k));
+
+  // Edges follow the merge direction, like the lane connectors: from a PR's card down into the card it merges into.
+  const markerKey = `m${++drawStack.count}`;
+  const defs = svg.append('defs');
+  [['idle', 'var(--edge)'], ['merged', 'var(--edge-merged)'], ['hot', 'var(--accent)']].forEach(([name, fill]) => {
+    defs.append('marker').attr('id', `${markerKey}-${name}`).attr('viewBox', '0 0 10 10').attr('refX', 9).attr('refY', 5)
+      .attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto-start-reverse')
+      .append('path').attr('d', 'M0 0 L10 5 L0 10 z').style('fill', fill);
+  });
+  const selectedNum = BY_ID[state.selected]?.num;
+  const isHot = l => [l.source, l.target].some(n => n.data.kind === 'pr' && n.data.p.num === selectedNum);
+  const edgeKind = l => (isHot(l) ? 'hot' : l.source.data.kind !== 'pr' ? 'merged' : 'idle');
+  const route = l => {
+    const childBottom = Y(l.target) + NH/2;
+    const parentTop = Y(l.source) - (l.source.data.kind === 'base' ? 16 : NH/2);
+    const midY = (childBottom + parentTop) / 2;
+    // Square-cornered step route: down from the child, across, then down into the merge target.
+    return `M${X(l.target)} ${childBottom} V${midY} H${X(l.source)} V${parentTop - 2}`;
+  };
+  const edges = g.append('g').selectAll('g').data(root.links().sort((a, b) => isHot(a) - isHot(b))).join('g');
+  edges.append('path')
+    .attr('d', route)
+    .attr('fill', 'none').attr('stroke-width', l => (isHot(l) ? 2.5 : 2)).attr('stroke-linejoin', 'miter')
+    .style('stroke', l => ({ hot: 'var(--accent)', merged: 'var(--edge-merged)', idle: 'var(--edge)' })[edgeKind(l)])
+    .attr('stroke-dasharray', l => l.source.data.kind === 'merged' || l.target.data.kind === 'merged' ? '5 4' : null)
+    .attr('marker-end', l => `url(#${markerKey}-${edgeKind(l)})`)
+    .style('opacity', 0)
+    .transition().delay((l, i) => 150 + i * 45).duration(350).style('opacity', 1);
+  edges.filter(l => l.target.data.kind === 'pr' && l.target.data.p.behind > 0).append('text')
+    .attr('x', l => X(l.target) + 8).attr('y', l => Y(l.target) + NH/2 + 16)
+    .attr('font-size', 11).attr('font-weight', 600).style('fill', 'var(--behind)').text(l => l.target.data.p.behind + ' behind');
+
+  const node = g.append('g').selectAll('g').data(all).join('g')
+    .attr('transform', d => `translate(${X(d)},${Y(d) + 24})`).style('opacity', 0);
+  node.transition().delay((d, i) => i * 45).duration(450).ease(d3.easeCubicOut)
+    .attr('transform', d => `translate(${X(d)},${Y(d)})`).style('opacity', d => d.data.kind === 'merged' ? 0.6 : 1);
+
+  const base = node.filter(d => d.data.kind === 'base');
+  base.append('rect').attr('x', -50).attr('y', -16).attr('width', 100).attr('height', 32).attr('rx', 16).style('fill', 'var(--pill)');
+  base.append('text').attr('text-anchor', 'middle').attr('y', 5).style('fill', 'var(--pill-fg)').attr('font-size', 13).attr('font-weight', 600).attr('font-family', 'JetBrains Mono, monospace').text(st.base);
+
+  const card = node.filter(d => d.data.kind !== 'base');
+  card.append('rect').attr('x', -NW/2).attr('y', -NH/2).attr('width', NW).attr('height', NH).attr('rx', 10)
+    .style('fill', d => d.data.kind === 'merged' ? 'var(--merged-card)' : 'var(--surface)')
+    .style('stroke', d => d.data.kind === 'merged' ? 'var(--edge-merged)' : (d.data.p.id === state.selected ? 'var(--accent)' : 'var(--border)'))
+    .attr('stroke-width', d => d.data.kind === 'pr' && d.data.p.id === state.selected ? 2 : 1)
+    .attr('stroke-dasharray', d => d.data.kind === 'merged' ? '5 4' : null);
+  card.append('circle').attr('cx', -NW/2 + 16).attr('cy', -NH/2 + 18).attr('r', 6)
+    .style('fill', d => d.data.kind === 'merged' ? 'var(--c-merged)' : CAT[d.data.p.cat].c);
+  card.append('text').attr('x', -NW/2 + 30).attr('y', -NH/2 + 22).attr('font-size', 12).attr('font-family', 'JetBrains Mono, monospace').style('fill', 'var(--muted)')
+    .text(d => '#' + (d.data.kind === 'merged' ? d.data.m.num + ' · merged' : d.data.p.num + ' · ' + age(d.data.p.h)));
+  card.append('text').attr('x', -NW/2 + 14).attr('y', -NH/2 + 42).attr('font-size', 13).attr('font-weight', 600).style('fill', 'var(--text)')
+    .text(d => { const t = d.data.kind === 'merged' ? d.data.m.title : d.data.p.title; return t.length > 30 ? t.slice(0, 29) + '…' : t; });
+  const prc = card.filter(d => d.data.kind === 'pr').style('cursor', 'pointer')
+    .on('click', (e, d) => { state.selected = d.data.p.id; if (state.tab === 'stacks') state.tab = 'overview'; document.getElementById('dlg').close(); render(); });
+  const pal = {g:['var(--g-bg)','var(--g-fg)'], a:['var(--a-bg)','var(--a-fg)'], r:['var(--r-bg)','var(--r-fg)'], n:['var(--n-bg)','var(--n-fg)']};
+  prc.each(function(d){
+    const sg = d3.select(this).append('g').attr('transform', `translate(${NW/2 - 6 * 19 - 8},${-NH/2 + 10})`);
+    signals(d.data.p).forEach((s, i) => {
+      sg.append('rect').attr('x', i * 19).attr('width', 16).attr('height', 16).attr('rx', 4).style('fill', pal[s.k][0]).append('title').text(s.full + ': ' + s.text);
+      sg.append('text').attr('x', i * 19 + 8).attr('y', 12).attr('text-anchor', 'middle').attr('font-size', 10).attr('font-weight', 700).style('fill', pal[s.k][1]).text(s.glyph);
+    });
+  });
+  // "Next to merge": open PRs sitting directly on the base or on a merged entry.
+  const next = prc.filter(d => d.parent && d.parent.data.kind !== 'pr');
+  next.append('rect').attr('x', NW/2 - 104).attr('y', NH/2 - 12).attr('width', 98).attr('height', 22).attr('rx', 11).style('fill', 'var(--accent)');
+  next.append('text').attr('x', NW/2 - 55).attr('y', NH/2 + 3).attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 700).style('fill', 'var(--accent-fg)').text('Next to merge');
+}
+
+// Several diagrams can be on screen (Stacks tab + dialog), so marker ids need a per-draw suffix.
+drawStack.count = 0;
+
+function openDialog(id){
+  const st = STACKS[id], ms = stackMembers(id, ALL);
+  document.getElementById('dlgTitle').textContent = `${ms[0].repo} · ${st.native ? 'GitHub stack #' + st.number : 'Branch-chained stack'}`;
+  document.getElementById('dlgSub').textContent = `${ms.length} open${st.merged.length ? ', ' + st.merged.length + ' merged' : ''} · onto ${st.base}`;
+  const dlg = document.getElementById('dlg'); dlg.showModal();
+  requestAnimationFrame(() => drawStack(document.getElementById('dlgSvg'), id, true));
+}
+
+// ---------- Events ----------
+const app = document.getElementById('app');
+app.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const {act, id, val, name} = el.dataset;
+  if (act === 'pick') state.selected = id;
+  else if (act === 'pin') state.pinned[id] = !state.pinned[id];
+  else if (act === 'stack') state.openStacks[id] = !state.openStacks[id];
+  else if (act === 'viz') return openDialog(id);
+  else if (act === 'lane') state.collapsed[name] = !(state.collapsed[name] ?? (name === 'Bots'));
+  else if (act === 'tab') state.tab = val;
+  else if (act === 'group') state.groupBy = val;
+  else if (act === 'chip') state.show[val] = !state.show[val];
+  else if (act === 'sort') state.newestFirst = !state.newestFirst;
+  else if (act === 'theme') setTheme(val);
+  render();
+});
+app.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role=button][data-act]')) { e.preventDefault(); e.target.click(); } });
+app.addEventListener('input', e => { if (e.target.id === 'q') { state.q = e.target.value; render(); } });
+app.addEventListener('change', e => { if (e.target.id === 'interval') { state.interval = e.target.value; render(); } });
+document.getElementById('dlgClose').addEventListener('click', () => document.getElementById('dlg').close());
+// Connector anchors depend on layout, so redraw when it shifts.
+window.addEventListener('resize', drawConnectors);
+document.fonts?.ready.then(drawConnectors);
+render();
+</script>
+</body>
+</html>

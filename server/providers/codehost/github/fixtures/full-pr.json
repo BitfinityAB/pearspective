@@ -1,0 +1,40 @@
+{
+  "id": "PR_kwDOAAAA4988",
+  "number": 4988,
+  "title": "Use offline mode when it is available",
+  "url": "https://github.com/acme/field-app/pull/4988",
+  "createdAt": "2026-10-27T09:00:00Z",
+  "updatedAt": "2026-11-17T15:00:00Z",
+  "isDraft": false,
+  "headRefOid": "abc123",
+  "headRefName": "XX-412-offline-mode",
+  "baseRefName": "XX-411-prefetch-profile-data",
+  "repository": { "name": "field-app" },
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "BLOCKED",
+  "reviewDecision": "REVIEW_REQUIRED",
+  "author": { "login": "dev-one_acme", "__typename": "User", "avatarUrl": "https://avatars.example.test/u/1?v=4", "name": "Dev One" },
+  "stack": { "number": 4964, "size": 26, "baseRefName": "main" },
+  "stackEntry": { "position": 15 },
+  "comments": { "totalCount": 4 },
+  "commits": { "nodes": [ { "commit": { "statusCheckRollup": { "contexts": { "nodes": [
+    { "__typename": "CheckRun", "name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "detailsUrl": "https://example.test/runs/1", "isRequired": true },
+    { "__typename": "CheckRun", "name": "e2e-android", "status": "IN_PROGRESS", "conclusion": null, "detailsUrl": "https://example.test/runs/2", "isRequired": true },
+    { "__typename": "CheckRun", "name": "lint-extra", "status": "COMPLETED", "conclusion": "FAILURE", "detailsUrl": "https://example.test/runs/3", "isRequired": false },
+    { "__typename": "StatusContext", "context": "codescene/delta", "state": "SUCCESS", "targetUrl": "https://example.test/cs", "isRequired": false }
+  ], "pageInfo": { "hasNextPage": false } } } } } ] },
+  "reviews": { "nodes": [
+    { "state": "COMMENTED", "submittedAt": "2026-11-16T10:00:00Z", "author": { "login": "copilot-pull-request-reviewer", "__typename": "Bot", "avatarUrl": "https://avatars.example.test/in/946600?v=4" } },
+    { "state": "APPROVED", "submittedAt": "2026-11-16T11:00:00Z", "author": { "login": "codescene-access", "__typename": "Bot", "avatarUrl": "https://avatars.example.test/in/3755875?v=4" } },
+    { "state": "PENDING", "submittedAt": null, "author": { "login": "dev-two_acme", "__typename": "User", "avatarUrl": "https://avatars.example.test/u/2?v=4" } }
+  ] },
+  "reviewThreads": { "pageInfo": { "hasNextPage": false }, "nodes": [
+    { "isResolved": false, "comments": { "nodes": [ { "bodyText": "syncQueue is never cleared when the user signs out.", "url": "https://example.test/t/1", "author": { "login": "copilot-pull-request-reviewer", "__typename": "Bot", "avatarUrl": "https://avatars.example.test/in/946600?v=4" } } ] } },
+    { "isResolved": false, "comments": { "nodes": [ { "bodyText": "Can this run twice?", "url": "https://example.test/t/2", "author": { "login": "dev-two_acme", "name": "Dev Two", "__typename": "User", "avatarUrl": "https://avatars.example.test/u/2?v=4" } } ] } },
+    { "isResolved": true, "comments": { "nodes": [ { "bodyText": "Rename this.", "url": "https://example.test/t/3", "author": { "login": "dev-two_acme", "__typename": "User", "avatarUrl": "https://avatars.example.test/u/2?v=4" } } ] } }
+  ] },
+  "reviewRequests": { "nodes": [
+    { "requestedReviewer": { "__typename": "Team", "slug": "platform-team", "avatarUrl": "https://avatars.example.test/t/1?v=4" } },
+    { "requestedReviewer": { "__typename": "User", "login": "dev-three_acme", "avatarUrl": "https://avatars.example.test/u/3?v=4" } }
+  ] }
+}
