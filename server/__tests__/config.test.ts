@@ -58,6 +58,7 @@ describe('issueTracker config', () => {
     expect(config.issueTracker).toEqual({
       provider: 'jira',
       baseUrl: 'https://tracker.example.test',
+      ticketStatus: true,
       refreshIntervalSec: 600,
       closedLookbackDays: 14,
       ignoreBases: ['release/*'],

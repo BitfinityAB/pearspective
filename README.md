@@ -99,7 +99,9 @@ Pearspective reads tickets through [jira-cli](https://github.com/ankitpokhrel/ji
    }
    ```
 
-These are optional keys inside the `issueTracker` block: `expectedStatuses`, `closedLookbackDays` (14), `ignoreBases` (`["release/*"]`), `graceMinutes` (30) and `refreshIntervalSec` (600).
+These are optional keys inside the `issueTracker` block: `ticketStatus` (`true`; `false` keeps only the ticket links), `expectedStatuses`, `closedLookbackDays` (14), `ignoreBases` (`["release/*"]`), `graceMinutes` (30) and `refreshIntervalSec` (600).
+
+Upgrading: a config that already has an `issueTracker` block for ticket links now gets ticket status too. To keep only the links, set `"ticketStatus": false` inside `issueTracker`.
 
 How tickets are judged:
 - Keys are taken from branch names and titles of open PRs and of PRs merged or closed in the last `issueTracker.closedLookbackDays` (default 14) in your repositories.

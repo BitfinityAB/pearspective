@@ -17,8 +17,8 @@ const ISSUE_TRACKERS: Record<string, (baseUrl: string) => IssueTrackerProvider> 
   jira: (baseUrl) => new JiraCliTracker(baseUrl),
 };
 
-export function createIssueTracker(config: { issueTracker?: { provider: string; baseUrl: string } }): IssueTrackerProvider | null {
-  if (!config.issueTracker) return null;
+export function createIssueTracker(config: { issueTracker?: { provider: string; baseUrl: string; ticketStatus?: boolean } }): IssueTrackerProvider | null {
+  if (!config.issueTracker || config.issueTracker.ticketStatus === false) return null;
   const factory = ISSUE_TRACKERS[config.issueTracker.provider];
   if (!factory) throw new Error(`Unknown issue tracker "${config.issueTracker.provider}". Available: ${Object.keys(ISSUE_TRACKERS).join(', ')}.`);
   return factory(config.issueTracker.baseUrl);

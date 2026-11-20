@@ -29,6 +29,8 @@ export const ConfigSchema = z.object({
   issueTracker: z.object({
     provider: z.string(),
     baseUrl: z.string().url(),
+    // false keeps ticket links only, for setups without the tracker's CLI.
+    ticketStatus: z.boolean().default(true),
     refreshIntervalSec: z.number().int().min(60).default(600),
     closedLookbackDays: z.number().int().min(1).max(90).default(14),
     ignoreBases: z.array(z.string()).default(['release/*']),
