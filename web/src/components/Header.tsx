@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { REFRESH_OPTIONS, type RefreshSetting, type Snapshot } from '../../../shared/types';
 import { isFirstLoad } from '../lib/firstLoad';
 import type { Tab } from '../state/urlState';
@@ -19,6 +19,8 @@ const icon = (paths: ReactNode) => (
 const REFRESH_ICON = icon(<><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" /></>);
 const SETTINGS_ICON = icon(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
+const MENU_ICON = icon(<path d="M4 6h16M4 12h16M4 18h16" />);
+
 const TABS: { value: Tab; label: string }[] = [{ value: 'overview', label: 'Overview' }, { value: 'mine', label: 'Mine' }, { value: 'stacks', label: 'Stacks' }];
 
 interface HeaderProps {
@@ -33,11 +35,34 @@ interface HeaderProps {
 
 export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting, onOpenSettings }: HeaderProps) {
   const [refreshing, setRefreshing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
   const { settings, viewer, fetchedAt } = snapshot;
   const updated = fetchedAt ? relativeTime(now - Date.parse(fetchedAt)) : 'never';
+  const status = isFirstLoad(snapshot) ? 'Loading…' : settings.refresh === 'off' ? `Auto-refresh off · updated ${updated}` : `Updated ${updated}`;
   return (
     <header className="top">
-      <div className="brand"><img src="/favicon.svg" alt="" width="24" height="24" /><b>Pearspective</b><span className="muted" style={{ fontSize: 13 }}>{settings.org}</span></div>
+      <div className="brand"><img src="/favicon.svg" alt="" width="24" height="24" /><b className="brand-name">Pearspective</b><span className="muted hdr-org" style={{ fontSize: 13 }}>{settings.org}</span></div>
       <nav className="segs" aria-label="Views">
         {TABS.map((item) => (
           <button key={item.value} type="button" className={`seg${tab === item.value ? ' on' : ''}`} aria-pressed={tab === item.value} onClick={() => onTab(item.value)}>{item.label}</button>
@@ -45,17 +70,33 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
       </nav>
       <span className="grow" />
       <div className="hdr-right">
-        <span>{isFirstLoad(snapshot) ? 'Loading…' : settings.refresh === 'off' ? `Auto-refresh off · updated ${updated}` : `Updated ${updated}`}</span>
-        <label>
-          <span className="sr-only">Auto-refresh interval</span>
-          <select aria-label="Auto-refresh interval" value={String(settings.refresh)} onChange={(event) => onRefreshSetting(event.target.value === 'off' ? 'off' : (Number(event.target.value) as RefreshSetting))}>
-            {REFRESH_OPTIONS.map((option) => <option key={option} value={String(option)}>{option === 'off' ? 'Off' : `Every ${option}m`}</option>)}
-          </select>
-        </label>
-        <button type="button" className="icon-btn" aria-label="Refresh now" disabled={refreshing} onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}>{REFRESH_ICON}</button>
-        <ThemeToggle />
-        <button type="button" className="icon-btn" aria-label="Settings" onClick={onOpenSettings}>{SETTINGS_ICON}</button>
-        {viewer && <span className="who"><Avatar name={viewer.name ?? viewer.login} url={viewer.avatarUrl} size={24} /><span title={viewer.login}>{viewer.name ?? viewer.login}</span></span>}
+        <span className="hdr-status">{status}</span>
+        <span className="hdr-refresh">
+          <label className="hdr-interval">
+            <span className="sr-only">Auto-refresh interval</span>
+            <select aria-label="Auto-refresh interval" value={String(settings.refresh)} onChange={(event) => onRefreshSetting(event.target.value === 'off' ? 'off' : (Number(event.target.value) as RefreshSetting))}>
+              {REFRESH_OPTIONS.map((option) => <option key={option} value={String(option)}>{option === 'off' ? 'Off' : `Every ${option}m`}</option>)}
+            </select>
+          </label>
+          <button type="button" className="icon-btn" aria-label="Refresh now" disabled={refreshing} onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}>{REFRESH_ICON}</button>
+        </span>
+        <span className="hdr-secondary">
+          <ThemeToggle />
+          <button type="button" className="icon-btn" aria-label="Settings" onClick={onOpenSettings}>{SETTINGS_ICON}</button>
+        </span>
+        {viewer && <span className="who"><Avatar name={viewer.name ?? viewer.login} url={viewer.avatarUrl} size={24} /><span className="who-name" title={viewer.login}>{viewer.name ?? viewer.login}</span></span>}
+        {/* Narrow screens move the secondary controls into this menu so the bar stays on one tidy layout. */}
+        <div className="hdr-menu" ref={menuRef}>
+          <button ref={menuButtonRef} type="button" className="icon-btn" aria-label="More" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{MENU_ICON}</button>
+          {menuOpen && (
+            <div id="header-menu" className="menu-panel" role="group" aria-label="More">
+              <div className="menu-row"><span className="muted">Organisation</span><b>{settings.org}</b></div>
+              <div className="menu-row"><span className="muted">{status}</span></div>
+              <div className="menu-row"><span className="muted">Theme</span><ThemeToggle /></div>
+              <button type="button" className="btn menu-item" onClick={() => { setMenuOpen(false); onOpenSettings(); }}>{SETTINGS_ICON} Settings</button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

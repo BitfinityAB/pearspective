@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Header, relativeTime } from '../components/Header';
 import { emptySnapshot } from '../../../shared/types';
@@ -30,6 +30,35 @@ describe('Header', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Refresh now' }));
     expect(onRefreshSetting).toHaveBeenCalledWith('off');
     expect(onRefresh).toHaveBeenCalledOnce();
+  });
+
+  it('opens a menu with the organisation, status, theme and settings, and closes it on Escape', async () => {
+    const onOpenSettings = vi.fn();
+    render(<Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={onOpenSettings} />);
+    const menuButton = screen.getByRole('button', { name: 'More' });
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(menuButton);
+    const menu = within(screen.getByRole('group', { name: 'More' }));
+    expect(menu.getByText('acme')).toBeInTheDocument();
+    expect(menu.getByText('Updated 42s ago')).toBeInTheDocument();
+    expect(menu.getByRole('group', { name: 'Theme' })).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('group', { name: 'More' })).toBeNull();
+    expect(menuButton).toHaveFocus();
+
+    await userEvent.click(menuButton);
+    await userEvent.click(within(screen.getByRole('group', { name: 'More' })).getByRole('button', { name: 'Settings' }));
+    expect(onOpenSettings).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('group', { name: 'More' })).toBeNull();
+  });
+
+  it('closes the menu on a click outside it', async () => {
+    render(<><Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} /><p>Outside</p></>);
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    await userEvent.click(screen.getByText('Outside'));
+    expect(screen.queryByRole('group', { name: 'More' })).toBeNull();
   });
 
   it('formats relative times', () => {

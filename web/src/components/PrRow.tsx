@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { PrView } from '../../../shared/grouping';
 import { AgeBar } from './AgeBar';
 import { PinIcon } from './PinIcon';
@@ -19,6 +20,7 @@ export function PrRow({ view, selected, pinned = false, indentPx, onSelect }: Pr
       className={`row${selected ? ' sel' : ''}`}
       aria-current={selected || undefined}
       data-node={indentPx !== undefined ? pr.id : undefined}
+      style={indentPx !== undefined ? ({ '--indent': `${indentPx}px` } as CSSProperties) : undefined}
       onClick={() => onSelect(pr.id)}
     >
       <span className="pr" style={indentPx !== undefined ? { paddingLeft: indentPx } : undefined}>

@@ -23,7 +23,7 @@ export function Toolbar({ url, counts, onChange }: ToolbarProps) {
           ))}
         </div>
       )}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="group" aria-label="Status filter">
+      <div className="status-chips" role="group" aria-label="Status filter">
         {CHIPS.map((chip) => (
           <button
             key={chip.bucket}
@@ -40,7 +40,7 @@ export function Toolbar({ url, counts, onChange }: ToolbarProps) {
         <span className="sr-only">Search pull requests</span>
         <input value={filters.q} placeholder="Search title, branch, repo" onChange={(event) => onChange({ filters: { ...filters, q: event.target.value } })} />
       </label>
-      <button type="button" className="chip" onClick={() => onChange({ filters: { ...filters, newestFirst: !filters.newestFirst } })}>
+      <button type="button" className="chip sort-chip" onClick={() => onChange({ filters: { ...filters, newestFirst: !filters.newestFirst } })}>
         ⇅ {filters.newestFirst ? 'Newest first' : 'Oldest first'}
       </button>
     </section>

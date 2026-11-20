@@ -29,7 +29,7 @@ export function StackRow({ unit, expanded, onToggle, onVisualize }: StackRowProp
           </span>
         </button>
       </span>
-      <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span className="stack-mid">
         <span className="pips" role="img" aria-label={summary}>
           {[...membersTopDown].reverse().map((view) => <i key={view.pr.id} className={`fill-${view.bucket}`} />)}
         </span>

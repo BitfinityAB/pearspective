@@ -30,6 +30,7 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
 .chip { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 1px solid var(--text); background: var(--surface) }
 .chip.off { border-style: dashed; border-color: var(--border); background: transparent; color: var(--muted) }
 .chip .n { color: var(--muted); font-weight: 600 } .chip .d { width: 8px; height: 8px; border-radius: 50% }
+.status-chips { display: flex; flex-wrap: wrap; gap: 8px }
 .search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; flex: 0 1 280px }
 .search input { border: 0; outline: none; font-size: 13px; width: 100%; background: transparent }
 
@@ -81,6 +82,7 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
 .fill-blocked { background: var(--c-blocked) } .fill-waiting { background: var(--c-waiting) } .fill-ready { background: var(--c-ready) }
 .fill-draft { background: repeating-linear-gradient(45deg, var(--hatch-a) 0 4px, var(--hatch-b) 4px 8px) }
 .toggle { border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; padding: 0; min-width: 0 }
+.stack-mid { display: flex; flex-direction: column; gap: 6px }
 .pips { display: flex; gap: 3px; flex-wrap: wrap } .pips i { width: 14px; height: 14px; border-radius: 4px }
 .btn { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; font-weight: 600 }
 .btn:hover { background: var(--hair) } .btn:disabled { opacity: .5; cursor: not-allowed }
@@ -118,5 +120,52 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
   .drawer:not(.empty) { position: fixed; inset: 0; z-index: 9; max-height: none; border: 0; border-radius: 0; padding: 16px 16px max(24px, env(safe-area-inset-bottom)); overscroll-behavior: contain }
   .drawer-close { display: inline-flex }
   html.drawer-open { overflow: hidden }
+}
+
+.hdr-secondary { display: contents }
+.hdr-refresh { display: flex; align-items: center; gap: 8px }
+.hdr-menu { position: relative; display: none }
+.menu-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 8; min-width: 240px; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px var(--shadow); color: var(--text) }
+.menu-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px }
+.menu-item { height: 32px; justify-content: center; gap: 8px }
+/* Keep in sync with NARROW_QUERY in lib/layout.ts. */
+@media (max-width: 1100px) {
+  .hdr-org, .hdr-status, .hdr-secondary { display: none }
+  /* Visually hidden but still announced, so the logo keeps a name. */
+  .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  .hdr-menu { display: block }
+}
+@media (max-width: 640px) {
+  .top { display: grid; grid-template-columns: 1fr auto auto auto; grid-template-areas: "brand refresh who menu" "tabs tabs tabs tabs"; align-items: center; gap: 10px 8px; padding: 10px 16px }
+  .top > .grow { display: none }
+  .top .brand { grid-area: brand; min-width: 0 }
+  .top nav.segs { grid-area: tabs }
+  .top nav.segs .seg { flex: 1 1 0 }
+  .hdr-right { display: contents }
+  .hdr-refresh { grid-area: refresh }
+  .who { grid-area: who; padding: 0 4px }
+  .who-name { display: none }
+  .hdr-menu { grid-area: menu }
+  /* The sort button joins the status chips' rows and search gets a row of its own. */
+  .toolbar { gap: 8px; padding: 12px 16px }
+  .layout { padding: 0 16px }
+  .banner { margin: 12px 16px 0 }
+  .status-chips { display: contents }
+  .toolbar .search { order: 1; flex: 1 1 100% }
+  /* Rows stack their details under the title so nothing needs horizontal scrolling. */
+  .board { min-width: 0 }
+  .cols { display: none }
+  .row { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "pr pr" "sigs age"; gap: 8px 12px; padding: 10px 12px }
+  .row > :nth-child(1) { grid-area: pr }
+  .row > :nth-child(2) { grid-area: sigs }
+  .row > :nth-child(3) { grid-area: age }
+  .row .sigs { gap: 4px }
+  /* Stacked rows indent their details like their title, clear of the connector gutter. */
+  .row[data-node] > :nth-child(2) { margin-left: var(--indent) }
+  .row .sigs .dot { width: 24px; height: 24px }
+  .stack-mid { flex-direction: row; align-items: center; gap: 8px }
+  .lane-head { gap: 8px; padding: 10px 12px }
+  .lane-head .stackbar { width: 64px }
+  .lane-head > .small { order: 1; flex-basis: 100% }
 }
 
