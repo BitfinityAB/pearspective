@@ -38,14 +38,22 @@ export class TicketSync {
     try {
       if (due) {
         const since = new Date(now - input.config.closedLookbackDays * 86_400_000).toISOString();
-        this.closed = await this.deps.codeHost.fetchClosed(input.repos, since);
+        try {
+          this.closed = await this.deps.codeHost.fetchClosed(input.repos, since);
+        } catch (error) {
+          // Code host problems already surface through its own banners; tickets carry on with the last closed PRs.
+          console.error('Fetching closed PRs failed:', error);
+        }
       }
       const keys = [...new Set([...input.open, ...this.closed].map((pr) => ticketKeyOf(pr)).filter((key): key is string => !!key))]
         .filter((key) => !this.notTickets.has(key));
       const wanted = due ? keys : keys.filter((key) => !this.tickets.has(key) && !this.unanswered.has(key));
       if (due) this.lastRefresh = now;
       if (wanted.length === 0) {
-        if (due) this.lastFullSuccess = now;
+        if (due) {
+          this.lastFullSuccess = now;
+          this.banner = null;
+        }
         return this.state();
       }
       if (!this.authed) {

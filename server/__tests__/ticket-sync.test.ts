@@ -85,4 +85,29 @@ describe('TicketSync', () => {
     const state = await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' })], repos: [], config });
     expect(state.banner?.message).toBe('Ticket refresh failed: jira-cli timed out. Showing ticket status from 25 min ago.');
   });
+
+  it('clears an old banner on a refresh that has no keys to look up', async () => {
+    const { clock, fake, sync } = setup();
+    fake.tracker.checkAuth = async () => ({ ok: false, reason: 'auth', message: 'jira-cli is not logged in' });
+    expect((await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' })], repos: [], config })).banner).not.toBeNull();
+    clock.now += 601_000;
+    expect((await sync.sync({ open: [], repos: [], config })).banner).toBeNull();
+  });
+
+  it('keeps the previous closed PRs when the code host fails, without a ticket banner or a new login check', async () => {
+    const { clock, code, fake, sync } = setup();
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    code.state.closed = [makeClosed({ headRefName: 'XX-2-done', closedAt: '2026-11-19T10:00:00Z' })];
+    await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' })], repos: ['orders-api'], config });
+    code.provider.fetchClosed = async () => { throw new ProviderError('auth', 'gh is not logged in'); };
+    clock.now += 601_000;
+    const state = await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' })], repos: ['orders-api'], config });
+    expect(state.closed).toHaveLength(1);
+    expect(state.banner).toBeNull();
+    expect(Object.keys(state.tickets).sort()).toEqual(['XX-1', 'XX-2']);
+    expect(fake.state.requested).toEqual([['XX-1', 'XX-2'], ['XX-1', 'XX-2']]);
+    expect(fake.state.authCalls).toBe(1);
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
 });
