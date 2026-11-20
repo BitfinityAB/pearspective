@@ -25,4 +25,9 @@ describe('URL state', () => {
   it('ignores unknown values', () => {
     expect(parseUrlState('?tab=nope&group=nope')).toMatchObject({ tab: 'overview', groupBy: 'author' });
   });
+
+  it('reads and writes the tickets tab', () => {
+    expect(parseUrlState('?tab=tickets').tab).toBe('tickets');
+    expect(serializeUrlState({ ...parseUrlState(''), tab: 'tickets' })).toBe('?tab=tickets');
+  });
 });

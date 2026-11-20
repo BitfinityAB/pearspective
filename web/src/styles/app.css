@@ -119,6 +119,11 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
 .ticket-chip.v-grace { border-style: dashed }
 .ticket-chip.v-unknown { opacity: .7 }
 .lane-head .ticket-chip { margin-left: 0 }
+.ticket-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 12px 16px; border-top: 1px solid var(--hair) }
+.ticket-main { display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.ticket-main a.title { color: var(--text); text-decoration: none } .ticket-main a.title:hover { text-decoration: underline }
+.ticket-prs { display: flex; flex-direction: column; gap: 2px; min-width: 0 }
+a.mini { color: var(--text); text-decoration: none }
 /* Keep in sync with NARROW_QUERY in lib/layout.ts. */
 @media (max-width: 1100px) {
   .drawer.empty { display: none }
@@ -141,6 +146,7 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
   .hdr-menu { display: block }
 }
 @media (max-width: 640px) {
+  .ticket-row { grid-template-columns: minmax(0, 1fr); padding: 10px 12px }
   .top { display: grid; grid-template-columns: 1fr auto auto auto; grid-template-areas: "brand refresh who menu" "tabs tabs tabs tabs"; align-items: center; gap: 10px 8px; padding: 10px 16px }
   .top > .grow { display: none }
   .top .brand { grid-area: brand; min-width: 0 }

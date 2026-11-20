@@ -13,6 +13,7 @@ import { stacksZoomHint } from './lib/zoomHint';
 import { useUrlState } from './state/urlState';
 import { MineView } from './views/MineView';
 import { OverviewView } from './views/OverviewView';
+import { TicketsView } from './views/TicketsView';
 import { StacksView } from './views/StacksView';
 
 function useNow(intervalMs: number): number {
@@ -56,12 +57,13 @@ export function App({ api }: { api: DashboardApi }) {
 
   if (!snapshot) return <div className="app"><p className="loading">Loading…</p></div>;
 
-  const ids = url.tab === 'mine' ? [...snapshot.mine.authored, ...snapshot.mine.requested, ...snapshot.mine.team] : snapshot.overviewIds;
+  const tab = url.tab === 'tickets' && !snapshot.settings.ticketsEnabled ? 'overview' : url.tab;
+  const ids = tab === 'mine' ? [...snapshot.mine.authored, ...snapshot.mine.requested, ...snapshot.mine.team] : snapshot.overviewIds;
   return (
     <div className="app">
       <Header
         snapshot={snapshot}
-        tab={url.tab}
+        tab={tab}
         now={now}
         onTab={(tab) => setUrl({ tab })}
         onRefresh={() => refreshNow().then(() => setClientError(null), reportError)}
@@ -75,17 +77,18 @@ export function App({ api }: { api: DashboardApi }) {
           <button type="button" className="icon-btn" aria-label="Dismiss error" onClick={() => setClientError(null)}>×</button>
         </div>
       )}
-      {url.tab === 'stacks'
+      {tab === 'stacks'
         ? <><div className="toolbar"><span className="muted">Every stack in the selected repositories. {stacksZoomHint(navigator.platform || navigator.userAgent)}</span></div>
             <StacksView snapshot={snapshot} views={views} onSelect={(id) => setUrl({ selected: id, tab: 'overview' })} onVisualize={setStackPrId} /></>
         : (
           <>
-            <Toolbar url={url} counts={bucketCounts(ids, views)} onChange={setUrl} />
+            {tab !== 'tickets' && <Toolbar url={url} counts={bucketCounts(ids, views)} onChange={setUrl} />}
+            {tab === 'tickets' && <div className="toolbar"><span className="muted">Tickets referenced by open and recently closed pull requests, checked against their PRs.</span></div>}
             <div className="layout">
               <main className="board-wrap">
-                {url.tab === 'overview'
-                  ? <OverviewView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} onOpenSettings={() => setSettingsOpen(true)} />
-                  : <MineView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} />}
+                {tab === 'overview' && <OverviewView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} onOpenSettings={() => setSettingsOpen(true)} />}
+                {tab === 'mine' && <MineView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} />}
+                {tab === 'tickets' && <TicketsView snapshot={snapshot} selectedId={url.selected} onSelect={select} />}
               </main>
               <Drawer snapshot={snapshot} views={views} selectedId={url.selected} onSelect={select} onVisualize={setStackPrId} onTogglePin={togglePin} onClose={closeDrawer} />
             </div>

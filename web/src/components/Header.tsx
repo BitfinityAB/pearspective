@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { REFRESH_OPTIONS, type RefreshSetting, type Snapshot } from '../../../shared/types';
+import { ticketAttentionCount } from '../../../shared/ticketLanes';
 import { isFirstLoad } from '../lib/firstLoad';
 import type { Tab } from '../state/urlState';
 import { Avatar } from './Avatar';
@@ -59,12 +60,14 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
 
   const { settings, viewer, fetchedAt } = snapshot;
   const updated = fetchedAt ? relativeTime(now - Date.parse(fetchedAt)) : 'never';
+  const attention = ticketAttentionCount(snapshot);
+  const tabs = settings.ticketsEnabled ? [...TABS, { value: 'tickets' as const, label: attention ? `Tickets ${attention}` : 'Tickets' }] : TABS;
   const status = isFirstLoad(snapshot) ? 'Loading…' : settings.refresh === 'off' ? `Auto-refresh off · updated ${updated}` : `Updated ${updated}`;
   return (
     <header className="top">
       <div className="brand"><img src="/favicon.svg" alt="" width="24" height="24" /><b className="brand-name">Pearspective</b><span className="muted hdr-org" style={{ fontSize: 13 }}>{settings.org}</span></div>
       <nav className="segs" aria-label="Views">
-        {TABS.map((item) => (
+        {tabs.map((item) => (
           <button key={item.value} type="button" className={`seg${tab === item.value ? ' on' : ''}`} aria-pressed={tab === item.value} onClick={() => onTab(item.value)}>{item.label}</button>
         ))}
       </nav>

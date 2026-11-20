@@ -61,6 +61,18 @@ describe('Header', () => {
     expect(screen.queryByRole('group', { name: 'More' })).toBeNull();
   });
 
+  it('shows the Tickets tab with the number of tickets needing attention when tickets are enabled', () => {
+    const withTickets = {
+      ...snapshot,
+      settings: { ...snapshot.settings, ticketsEnabled: true },
+      ticketChecks: { 'XX-1': { key: 'XX-1', prState: 'open' as const, verdict: 'mismatch' as const, reason: '', expected: '', since: null } },
+    };
+    const { rerender } = render(<Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+    expect(screen.queryByRole('button', { name: /Tickets/ })).toBeNull();
+    rerender(<Header snapshot={withTickets} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+    expect(screen.getByRole('button', { name: 'Tickets 1' })).toBeInTheDocument();
+  });
+
   it('formats relative times', () => {
     expect(relativeTime(42_000)).toBe('42s ago');
     expect(relativeTime(6 * 60_000)).toBe('6m ago');
