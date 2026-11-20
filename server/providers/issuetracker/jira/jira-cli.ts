@@ -74,9 +74,17 @@ export class JiraCliTracker implements IssueTrackerProvider {
     // --project is required: without it jira-cli silently limits the query to the default project.
     // No ORDER BY: jira-cli appends its own and rejects a second one.
     const result = await this.exec(['issue', 'list', '--project', project, '-q', `key in (${keys.join(', ')})`, '--paginate', String(CHUNK_SIZE), '--raw']);
-    if (result.code === 0) return { tickets: this.parseList(result.stdout), notFound: [] };
     const output = `${result.stdout}\n${result.stderr}`;
-    // jira-cli exits non-zero when a query matches nothing.
+    if (result.code === 0) {
+      try {
+        return { tickets: this.parseList(result.stdout), notFound: [] };
+      } catch (error) {
+        // Parsing first keeps a ticket whose summary contains the phrase from being misread as an empty result.
+        if (NO_RESULT.test(output)) return { tickets: [], notFound: [] };
+        throw error;
+      }
+    }
+    // jira-cli reports a query that matches nothing as a message, likely with a non-zero exit.
     if (NO_RESULT.test(output)) return { tickets: [], notFound: [] };
     // One unknown key fails the whole query; the error names it, so it can be dropped and the rest retried.
     const named = [...output.matchAll(NOT_FOUND)].map((match) => match[1]!).filter((key) => keys.includes(key));

@@ -31,6 +31,8 @@ describe('JiraCliTracker', () => {
   it('treats "No result found" as an empty answer', async () => {
     const { runner } = fakeRunner([{ match: isList, reply: () => fail('No result found for given query in project "XX"') }, noView]);
     expect(await new JiraCliTracker(BASE, runner).getTickets(['XX-1'])).toEqual({ tickets: [], notFound: [] });
+    const exitZero = fakeRunner([{ match: isList, reply: () => ok('No result found for given query in project "XX"') }, noView]);
+    expect(await new JiraCliTracker(BASE, exitZero.runner).getTickets(['XX-1'])).toEqual({ tickets: [], notFound: [] });
   });
 
   it('queries one project at a time with --project and no ORDER BY', async () => {

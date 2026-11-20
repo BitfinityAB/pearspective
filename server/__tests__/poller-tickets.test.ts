@@ -82,4 +82,18 @@ describe('Poller with tickets', () => {
     await poller.tick();
     expect(poller.snapshot().banners.filter((banner) => banner.kind === 'tickets')).toHaveLength(1);
   });
+
+  it('logs a ticket sync that rejects instead of leaving it unhandled', async () => {
+    const config = ConfigSchema.parse({ codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'] }, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test' } });
+    const code = createFakeProvider([makePr({ headRefName: 'XX-1-work' })]);
+    const tickets = new TicketSync({ tracker: createFakeTracker([]).tracker, codeHost: code.provider, now: Date.now });
+    tickets.sync = async () => { throw new Error('unexpected'); };
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const poller = new Poller({ provider: code.provider, config: () => config, tickets });
+    await poller.tick();
+    await expect(poller.ticketWork()).resolves.toBeUndefined();
+    expect(errors).toHaveBeenCalledWith('Ticket sync failed:', expect.any(Error));
+    errors.mockRestore();
+    expect(poller.snapshot().prs).toHaveLength(1);
+  });
 });
