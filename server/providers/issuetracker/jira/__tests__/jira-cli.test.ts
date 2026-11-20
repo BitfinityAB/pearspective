@@ -23,6 +23,16 @@ describe('JiraCliTracker', () => {
     expect(await new JiraCliTracker(BASE, noToken.runner).checkAuth()).toMatchObject({ ok: false, reason: 'auth' });
   });
 
+  it('reports any other spawn error as a failed check instead of throwing', async () => {
+    const denied = fakeRunner([{ match: () => true, reply: () => errno('EACCES') }]);
+    expect(await new JiraCliTracker(BASE, denied.runner).checkAuth()).toMatchObject({ ok: false, reason: 'failed' });
+  });
+
+  it('treats "No result found" as an empty answer', async () => {
+    const { runner } = fakeRunner([{ match: isList, reply: () => fail('No result found for given query in project "XX"') }, noView]);
+    expect(await new JiraCliTracker(BASE, runner).getTickets(['XX-1'])).toEqual({ tickets: [], notFound: [] });
+  });
+
   it('queries one project at a time with --project and no ORDER BY', async () => {
     const { runner, calls } = fakeRunner([{ match: isList, reply: listReply }, noView]);
     const result = await new JiraCliTracker(BASE, runner).getTickets(['XX-1', 'YY-9', 'XX-2']);
@@ -55,14 +65,14 @@ describe('JiraCliTracker', () => {
     expect(calls.filter(isList)).toHaveLength(2);
   });
 
-  it('halves a chunk when a 400 names no key', async () => {
+  it('halves a chunk when a 400 names no key, leaving the unexplained key unanswered rather than not found', async () => {
     const { runner } = fakeRunner([
       { match: (args) => isList(args) && keysIn(args).includes('XX-7'), reply: () => fail("jira: Received unexpected response '400  '.") },
       { match: isList, reply: listReply },
       noView,
     ]);
     const result = await new JiraCliTracker(BASE, runner).getTickets(['XX-1', 'XX-2', 'XX-7']);
-    expect(result.notFound).toEqual(['XX-7']);
+    expect(result.notFound).toEqual([]);
     expect(result.tickets.map((ticket) => ticket.key).sort()).toEqual(['XX-1', 'XX-2']);
   });
 
