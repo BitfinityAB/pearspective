@@ -99,12 +99,14 @@ Pearspective reads tickets through [jira-cli](https://github.com/ankitpokhrel/ji
    }
    ```
 
+These are optional keys inside the `issueTracker` block: `expectedStatuses`, `closedLookbackDays` (14), `ignoreBases` (`["release/*"]`), `graceMinutes` (30) and `refreshIntervalSec` (600).
+
 How tickets are judged:
-- Keys are taken from branch names and titles of open PRs and of PRs merged or closed in the last `closedLookbackDays` (default 14) in your repositories.
-- PRs into branches matching `ignoreBases` (default `["release/*"]`) do not count.
+- Keys are taken from branch names and titles of open PRs and of PRs merged or closed in the last `issueTracker.closedLookbackDays` (default 14) in your repositories.
+- PRs into branches matching `issueTracker.ignoreBases` (default `["release/*"]`) do not count.
 - The least-finished PR decides what the ticket should be: a draft or open PR expects work in progress, merged PRs expect anything but *To Do*, and PRs closed without merging ask a human to look.
-- Without `expectedStatuses`, Jira's built-in categories (To Do / In Progress / Done) are used. Listing status names per PR state (`draft`, `open`, `merged`, `abandoned`) makes the check precise, for example to catch a merged PR whose ticket is still *In Review*.
-- A change is not flagged until it has lasted `graceMinutes` (default 30). Tickets are refreshed every `refreshIntervalSec` (default 600) and only while a dashboard tab is visible.
+- Without `issueTracker.expectedStatuses`, Jira's built-in categories (To Do / In Progress / Done) are used. Listing status names per PR state (`draft`, `open`, `merged`, `abandoned`) makes the check precise, for example to catch a merged PR whose ticket is still *In Review*.
+- A change is not flagged until it has lasted `issueTracker.graceMinutes` (default 30). Tickets are refreshed every `issueTracker.refreshIntervalSec` (default 600, separate from the top-level `refreshIntervalSec` that controls PR polling) and only while a dashboard tab is visible.
 
 ## How it uses the GitHub API
 
