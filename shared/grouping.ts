@@ -2,7 +2,29 @@ import { ageHours } from './age';
 import { blockersOf, bucketOf, signalsOf, type Blocker, type Bucket, type Signal } from './status';
 import { detectStacks, membersBottomUp, stackIndex, type Stack } from './stacks';
 import { ticketKeyOf } from './tickets';
-import type { ChangeRequest, Snapshot } from './types';
+import type { ChangeRequest, Snapshot, Verdict } from './types';
+
+export interface TicketBrief {
+  key: string;
+  summary?: string;
+  statusName?: string;
+  verdict: Verdict;
+  reason: string;
+  expected: string;
+}
+
+export function ticketBrief(key: string, snapshot: Snapshot): TicketBrief {
+  const ticket = snapshot.tickets[key];
+  const check = snapshot.ticketChecks[key];
+  return {
+    key,
+    summary: ticket?.summary,
+    statusName: ticket?.status.name,
+    verdict: check?.verdict ?? 'unknown',
+    reason: check?.reason ?? 'Ticket status is not available yet.',
+    expected: check?.expected ?? '',
+  };
+}
 
 export type GroupBy = 'author' | 'repo' | 'ticket';
 export interface ViewFilters { show: Record<Bucket, boolean>; q: string; newestFirst: boolean }
@@ -15,6 +37,7 @@ export interface PrView {
   bucket: Bucket;
   ageHours: number;
   ticket: string | null;
+  ticketInfo: TicketBrief | null;
   stackedOn: number | null;
 }
 /** pinned units sort first in their lane; a stack is pinned when any member is. */
@@ -26,6 +49,7 @@ export interface LaneModel {
   title: string;
   icon: 'avatar' | 'bot' | 'repo' | 'ticket' | 'team' | 'section';
   avatarUrl?: string;
+  ticket?: TicketBrief;
   counts: Record<Bucket, number>;
   units: Unit[];
   defaultCollapsed: boolean;
@@ -39,6 +63,7 @@ export function buildPrViews(snapshot: Snapshot, now: number): Map<string, PrVie
   const byId = new Map(snapshot.prs.map((pr) => [pr.id, pr]));
   const views = new Map<string, PrView>();
   for (const pr of snapshot.prs) {
+    const key = ticketKeyOf(pr);
     const parentId = stacks.get(pr.id)?.parentId ?? null;
     views.set(pr.id, {
       pr,
@@ -46,7 +71,8 @@ export function buildPrViews(snapshot: Snapshot, now: number): Map<string, PrVie
       blockers: blockersOf(pr),
       bucket: bucketOf(pr),
       ageHours: ageHours(pr.createdAt, now),
-      ticket: ticketKeyOf(pr),
+      ticket: key,
+      ticketInfo: key && snapshot.settings.ticketsEnabled ? ticketBrief(key, snapshot) : null,
       stackedOn: parentId ? byId.get(parentId)?.number ?? null : null,
     });
   }
@@ -93,12 +119,18 @@ function lane(key: string, title: string, icon: LaneModel['icon'], views: PrView
   return { key, title, icon, counts, units: buildUnits(views, input.filters, input.stacks, input.pinned), defaultCollapsed: false, ...extra };
 }
 
+function ticketGroup(view: PrView, snapshot: Snapshot) {
+  if (!view.ticket) return { title: 'No ticket', icon: 'ticket' as const, last: true, views: [] as PrView[] };
+  const brief = view.ticketInfo ?? undefined;
+  return { title: brief?.summary ? `${view.ticket} · ${brief.summary}` : view.ticket, icon: 'ticket' as const, last: false, views: [] as PrView[], ticket: brief };
+}
+
 export function buildOverviewLanes(snapshot: Snapshot, opts: { groupBy: GroupBy; filters: ViewFilters; now: number }): LaneModel[] {
   const views = buildPrViews(snapshot, opts.now);
   const input: LaneInput = { filters: opts.filters, stacks: detectStacks(snapshot.prs), pinned: new Set(snapshot.settings.pinned) };
   const overview = snapshot.overviewIds.map((id) => views.get(id)).filter((view): view is PrView => !!view);
 
-  const groups = new Map<string, { title: string; icon: LaneModel['icon']; avatarUrl?: string; last: boolean; views: PrView[] }>();
+  const groups = new Map<string, { title: string; icon: LaneModel['icon']; avatarUrl?: string; ticket?: TicketBrief; last: boolean; views: PrView[] }>();
   for (const view of overview) {
     const isBot = view.pr.author.kind !== 'human';
     const key =
@@ -108,7 +140,7 @@ export function buildOverviewLanes(snapshot: Snapshot, opts: { groupBy: GroupBy;
     if (!groups.has(key)) {
       groups.set(key,
         opts.groupBy === 'repo' ? { title: view.pr.repo, icon: 'repo', last: false, views: [] }
-        : opts.groupBy === 'ticket' ? { title: view.ticket ?? 'No ticket', icon: 'ticket', last: !view.ticket, views: [] }
+        : opts.groupBy === 'ticket' ? ticketGroup(view, snapshot)
         : isBot ? { title: 'Bots', icon: 'bot', last: true, views: [] }
         : { title: view.pr.author.name ?? view.pr.author.login, icon: 'avatar', avatarUrl: view.pr.author.avatarUrl, last: false, views: [] });
     }
@@ -120,6 +152,7 @@ export function buildOverviewLanes(snapshot: Snapshot, opts: { groupBy: GroupBy;
       group,
       model: lane(key, group.title, group.icon, group.views, input, {
         avatarUrl: group.avatarUrl,
+        ticket: group.ticket,
         defaultCollapsed: key === 'bots',
       }),
     }))

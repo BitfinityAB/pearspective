@@ -1,6 +1,7 @@
-import { buildMineLanes, buildOverviewLanes, DEFAULT_FILTERS, relatedByTicket } from '../grouping';
+import { buildMineLanes, buildOverviewLanes, buildPrViews, DEFAULT_FILTERS, relatedByTicket } from '../grouping';
 import { emptySnapshot, type ChangeRequest, type Snapshot } from '../types';
 import { makePerson, makePr } from '../../test/factories';
+import { makeTicket } from '../../test/fake-tracker';
 
 const now = Date.parse('2026-11-18T12:00:00Z');
 const allBuckets = { ...DEFAULT_FILTERS, show: { blocked: true, waiting: true, ready: true, draft: true } };
@@ -168,5 +169,33 @@ describe('relatedByTicket', () => {
     const unrelated = makePr({ headRefName: 'XX-8-other' });
     const related = relatedByTicket(snapshotOf([backend, frontend, unrelated]), backend.id, now);
     expect(related.map((view) => view.pr.id)).toEqual([frontend.id]);
+  });
+});
+
+describe('ticket info', () => {
+  const now = Date.parse('2026-11-20T12:00:00Z');
+  const pr = makePr({ headRefName: 'XX-1-work' });
+  const withTickets = {
+    ...emptySnapshot('acme'),
+    prs: [pr],
+    overviewIds: [pr.id],
+    tickets: { 'XX-1': makeTicket('XX-1', 'To Do', 'todo') },
+    ticketChecks: { 'XX-1': { key: 'XX-1', prState: 'open' as const, verdict: 'mismatch' as const, reason: 'PR opened 2d ago; ticket is To Do (expected In Progress).', expected: 'In Progress', since: pr.createdAt } },
+  };
+
+  it('is attached to PR views only when tickets are enabled', () => {
+    expect(buildPrViews(withTickets, now).get(pr.id)!.ticketInfo).toBeNull();
+    const enabled = { ...withTickets, settings: { ...withTickets.settings, ticketsEnabled: true } };
+    expect(buildPrViews(enabled, now).get(pr.id)!.ticketInfo).toEqual({
+      key: 'XX-1', summary: 'Summary of XX-1', statusName: 'To Do', verdict: 'mismatch',
+      reason: 'PR opened 2d ago; ticket is To Do (expected In Progress).', expected: 'In Progress',
+    });
+  });
+
+  it('titles ticket lanes with the summary and carries the brief', () => {
+    const enabled = { ...withTickets, settings: { ...withTickets.settings, ticketsEnabled: true } };
+    const [lane] = buildOverviewLanes(enabled, { groupBy: 'ticket', filters: DEFAULT_FILTERS, now });
+    expect(lane!.title).toBe('XX-1 · Summary of XX-1');
+    expect(lane!.ticket?.statusName).toBe('To Do');
   });
 });
