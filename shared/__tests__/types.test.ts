@@ -3,7 +3,10 @@ import { emptySnapshot, REFRESH_OPTIONS, MAX_REPOS } from '../types';
 describe('shared types', () => {
   it('builds an empty snapshot with the 3 minute default refresh', () => {
     const snapshot = emptySnapshot('acme');
-    expect(snapshot.settings).toEqual({ refresh: 3, repos: [], org: 'acme', host: 'github.com', ticketUrl: null, pinned: [] });
+    expect(snapshot.settings).toEqual({ refresh: 3, repos: [], org: 'acme', host: 'github.com', ticketUrl: null, pinned: [], ticketsEnabled: false });
+    expect(snapshot.tickets).toEqual({});
+    expect(snapshot.closed).toEqual([]);
+    expect(snapshot.ticketChecks).toEqual({});
     expect(snapshot.prs).toEqual([]);
   });
 

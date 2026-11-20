@@ -57,6 +57,7 @@ export class Poller {
         host: this.deps.provider.host,
         ticketUrl: tracker?.provider === 'jira' ? `${tracker.baseUrl.replace(/\/$/, '')}/browse/{key}` : null,
         pinned: config.pinned,
+        ticketsEnabled: Boolean(tracker),
       },
     }, notify);
   }

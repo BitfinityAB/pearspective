@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ConfigError, ConfigStore, refreshToSeconds, secondsToRefresh } from '../config';
+import { ConfigError, ConfigSchema, ConfigStore, refreshToSeconds, secondsToRefresh } from '../config';
 
 async function tempConfig(contents?: unknown) {
   const dir = await mkdtemp(join(tmpdir(), 'prdash-'));
@@ -47,5 +47,28 @@ describe('refresh conversion', () => {
     expect(refreshToSeconds(5)).toBe(300);
     expect(secondsToRefresh(0)).toBe('off');
     expect(secondsToRefresh(1800)).toBe(30);
+  });
+});
+
+describe('issueTracker config', () => {
+  const base = { codeHost: { provider: 'github', org: 'acme', repos: [] } };
+
+  it('fills in the ticket defaults', () => {
+    const config = ConfigSchema.parse({ ...base, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test' } });
+    expect(config.issueTracker).toEqual({
+      provider: 'jira',
+      baseUrl: 'https://tracker.example.test',
+      refreshIntervalSec: 600,
+      closedLookbackDays: 14,
+      ignoreBases: ['release/*'],
+      graceMinutes: 30,
+      expectedStatuses: {},
+    });
+  });
+
+  it('accepts status names per PR state and rejects unknown states', () => {
+    const ok = ConfigSchema.parse({ ...base, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test', expectedStatuses: { open: ['In Review'] } } });
+    expect(ok.issueTracker?.expectedStatuses.open).toEqual(['In Review']);
+    expect(() => ConfigSchema.parse({ ...base, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test', expectedStatuses: { review: ['x'] } } })).toThrow();
   });
 });

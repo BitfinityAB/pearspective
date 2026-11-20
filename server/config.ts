@@ -26,9 +26,24 @@ export const ConfigSchema = z.object({
     message: `refreshIntervalSec must be one of ${REFRESH_SECONDS.join(', ')}`,
   }).default(180),
   pinned: z.array(z.string()).max(MAX_PINNED, `At most ${MAX_PINNED} pinned pull requests`).default([]),
-  issueTracker: z.object({ provider: z.string(), baseUrl: z.string().url() }).optional(),
+  issueTracker: z.object({
+    provider: z.string(),
+    baseUrl: z.string().url(),
+    refreshIntervalSec: z.number().int().min(60).default(600),
+    closedLookbackDays: z.number().int().min(1).max(90).default(14),
+    ignoreBases: z.array(z.string()).default(['release/*']),
+    graceMinutes: z.number().int().min(0).default(30),
+    // strict() rejects misspelled PR states, which would otherwise be ignored silently.
+    expectedStatuses: z.object({
+      draft: z.array(z.string()).optional(),
+      open: z.array(z.string()).optional(),
+      merged: z.array(z.string()).optional(),
+      abandoned: z.array(z.string()).optional(),
+    }).strict().default({}),
+  }).optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
+export type IssueTrackerConfig = NonNullable<Config['issueTracker']>;
 
 export class ConfigError extends Error {}
 

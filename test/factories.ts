@@ -1,4 +1,4 @@
-import type { ActorKind, ChangeRequest, Person } from '../shared/types';
+import type { ActorKind, ChangeRequest, ClosedChangeRequest, Person } from '../shared/types';
 
 let sequence = 0;
 
@@ -31,6 +31,24 @@ export function makePr(overrides: Partial<ChangeRequest> = {}): ChangeRequest {
     threads: [],
     reviewRequests: [],
     commentCount: 0,
+    ...overrides,
+  };
+}
+
+export function makeClosed(overrides: Partial<ClosedChangeRequest> = {}): ClosedChangeRequest {
+  sequence += 1;
+  const number = overrides.number ?? 5000 + sequence;
+  return {
+    id: `PR_${number}`,
+    repo: 'orders-api',
+    number,
+    title: `Change ${number}`,
+    url: `https://github.com/acme/orders-api/pull/${number}`,
+    headRefName: `feature-${number}`,
+    baseRefName: 'main',
+    merged: true,
+    closedAt: '2026-11-17T08:00:00Z',
+    author: makePerson('alex'),
     ...overrides,
   };
 }

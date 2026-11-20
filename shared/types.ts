@@ -87,7 +87,7 @@ export const MAX_REPOS = 10;
 export const MAX_PINNED = 200;
 
 export interface BannerMsg {
-  kind: 'missing-cli' | 'auth' | 'rate-limit' | 'stale';
+  kind: 'missing-cli' | 'auth' | 'rate-limit' | 'stale' | 'tickets';
   message: string;
 }
 
@@ -100,9 +100,12 @@ export interface Snapshot {
   stale: boolean;
   banners: BannerMsg[];
   rateLimit: { remaining: number; resetAt: string } | null;
+  tickets: Record<string, Ticket>;
+  closed: ClosedChangeRequest[];
+  ticketChecks: Record<string, TicketCheck>;
   /** ticketUrl is a template with {key}, or null when no issue tracker is configured. */
   /** pinned holds change request ids that sort first in their lane. */
-  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[] };
+  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean };
 }
 
 export interface StackEntryDetail {
@@ -124,6 +127,46 @@ export interface StackDetail {
   entries: StackEntryDetail[];
 }
 
+export type StatusCategory = 'todo' | 'inProgress' | 'done';
+
+export interface Ticket {
+  key: string;
+  summary: string;
+  type: string;
+  /** category is null until the tracker has reported which category the status name belongs to. */
+  status: { name: string; category: StatusCategory | null };
+  assignee?: Person;
+  url: string;
+}
+
+/** A PR merged or closed recently; kept only to judge its ticket. */
+export interface ClosedChangeRequest {
+  id: string;
+  repo: string;
+  number: number;
+  title: string;
+  url: string;
+  headRefName: string;
+  baseRefName: string;
+  merged: boolean;
+  closedAt: string;
+  author: Person;
+}
+
+export type PrState = 'draft' | 'open' | 'merged' | 'abandoned';
+export type Verdict = 'ok' | 'mismatch' | 'review' | 'grace' | 'unknown';
+
+export interface TicketCheck {
+  key: string;
+  /** null when no PR counts for the ticket. */
+  prState: PrState | null;
+  verdict: Verdict;
+  reason: string;
+  /** Human-readable expected statuses, e.g. "Ready for Test or Done"; empty when nothing is expected. */
+  expected: string;
+  since: string | null;
+}
+
 export interface RepoRef {
   name: string;
   openCount?: number;
@@ -141,6 +184,9 @@ export function emptySnapshot(org = '', host = 'github.com'): Snapshot {
     stale: false,
     banners: [],
     rateLimit: null,
-    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [] },
+    tickets: {},
+    closed: [],
+    ticketChecks: {},
+    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false },
   };
 }
