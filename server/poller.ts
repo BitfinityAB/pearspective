@@ -1,6 +1,8 @@
 import { emptySnapshot, type BannerMsg, type ChangeRequest, type ChangeRequestStub, type Snapshot, type Viewer } from '../shared/types';
+import { buildTicketChecks } from '../shared/ticketChecks';
 import { secondsToRefresh, type Config } from './config';
 import { ProviderError, type CodeHostProvider } from './providers/types';
+import type { TicketSync } from './ticket-sync';
 
 export const FULL_SWEEP_MS = 15 * 60_000;
 export const RATE_LIMIT_FLOOR = 500;
@@ -10,6 +12,7 @@ export interface PollerDeps {
   config: () => Config;
   now?: () => number;
   onChange?: (snapshot: Snapshot) => void;
+  tickets?: TicketSync;
 }
 
 // CI completion does not bump updatedAt, so pending checks and unknown mergeability are re-read every tick.
@@ -139,6 +142,18 @@ export class Poller {
       if (rateLimit && rateLimit.remaining < RATE_LIMIT_FLOOR) {
         banners.push({ kind: 'rate-limit', message: `API budget is low (${rateLimit.remaining} left until ${new Date(rateLimit.resetAt).toLocaleTimeString()}). Refreshing half as often.` });
       }
+      let ticketPatch: Partial<Snapshot> = {};
+      const trackerConfig = config.issueTracker;
+      if (this.deps.tickets && trackerConfig) {
+        const open = [...next.values()];
+        const ticketState = await this.deps.tickets.sync({ open, repos, config: trackerConfig });
+        ticketPatch = {
+          tickets: ticketState.tickets,
+          closed: ticketState.closed,
+          ticketChecks: buildTicketChecks({ open, closed: ticketState.closed, tickets: ticketState.tickets, rules: trackerConfig, now }),
+        };
+        if (ticketState.banner) banners.push(ticketState.banner);
+      }
       const known = (list: ChangeRequestStub[]) => uniqueIds(list).filter((id) => next.has(id));
       const outcome: Partial<Snapshot> = fetchFailure
         ? { stale: true, banners: [this.failureBanner(fetchFailure.message)] }
@@ -149,6 +164,7 @@ export class Poller {
         overviewIds: known(overview),
         mine: { authored: known(authored), requested: known(requested), team: known(team) },
         rateLimit,
+        ...ticketPatch,
         ...outcome,
       });
     } catch (error) {

@@ -7,7 +7,8 @@ import { createGhClient } from './gh';
 import { SnapshotHub } from './hub';
 import { Poller } from './poller';
 import { PollLoop, Presence } from './presence';
-import { createCodeHost } from './providers/registry';
+import { createCodeHost, createIssueTracker } from './providers/registry';
+import { TicketSync } from './ticket-sync';
 
 const PORT = 4100;
 const HOST = '127.0.0.1';
@@ -15,10 +16,14 @@ const HOST = '127.0.0.1';
 async function main() {
   const store = await ConfigStore.open(resolve(process.cwd(), 'config.json'));
   const provider = createCodeHost(store.get(), createGhClient());
+  // Changing issueTracker in config.json takes effect after a server restart.
+  const tracker = createIssueTracker(store.get());
+  const tickets = tracker ? new TicketSync({ tracker, codeHost: provider, now: Date.now }) : undefined;
   const hub = new SnapshotHub();
   const poller = new Poller({
     provider,
     config: () => store.get(),
+    tickets,
     onChange: (snapshot) => {
       hub.publish(snapshot);
       // One line per refresh makes it easy to confirm polling stops when no tab is visible.
