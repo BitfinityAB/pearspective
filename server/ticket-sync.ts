@@ -21,7 +21,9 @@ export class TicketSync {
   private readonly notTickets = new Set<string>();
   private closed: ClosedChangeRequest[] = [];
   private lastRefresh = Number.NEGATIVE_INFINITY;
-  private lastSuccess: number | null = null;
+  private lastFullSuccess: number | null = null;
+  // Keys the tracker answered neither way for; retried only on the next full refresh.
+  private readonly unanswered = new Set<string>();
   private banner: BannerMsg | null = null;
   private authed = false;
 
@@ -32,6 +34,7 @@ export class TicketSync {
     const due = now - this.lastRefresh >= input.config.refreshIntervalSec * 1000;
     // After a failure, wait for the next refresh instead of retrying on every tick.
     if (!due && this.banner) return this.state();
+    if (due) this.unanswered.clear();
     try {
       if (due) {
         const since = new Date(now - input.config.closedLookbackDays * 86_400_000).toISOString();
@@ -39,9 +42,12 @@ export class TicketSync {
       }
       const keys = [...new Set([...input.open, ...this.closed].map((pr) => ticketKeyOf(pr)).filter((key): key is string => !!key))]
         .filter((key) => !this.notTickets.has(key));
-      const wanted = due ? keys : keys.filter((key) => !this.tickets.has(key));
+      const wanted = due ? keys : keys.filter((key) => !this.tickets.has(key) && !this.unanswered.has(key));
       if (due) this.lastRefresh = now;
-      if (wanted.length === 0) return this.state();
+      if (wanted.length === 0) {
+        if (due) this.lastFullSuccess = now;
+        return this.state();
+      }
       if (!this.authed) {
         const auth = await this.deps.tracker.checkAuth();
         if (!auth.ok) {
@@ -53,16 +59,17 @@ export class TicketSync {
       }
       const result = await this.deps.tracker.getTickets(wanted);
       result.notFound.forEach((key) => this.notTickets.add(key));
+      wanted.forEach((key) => this.unanswered.add(key));
       if (due) for (const key of [...this.tickets.keys()]) if (!keys.includes(key)) this.tickets.delete(key);
       result.tickets.forEach((ticket) => this.tickets.set(ticket.key, ticket));
-      this.lastSuccess = now;
+      if (due) this.lastFullSuccess = now;
       this.banner = null;
     } catch (error) {
       if (error instanceof ProviderError && (error.kind === 'auth' || error.kind === 'missing-cli')) this.authed = false;
       // The banner shows one line; the full error helps diagnose tracker or CLI changes.
       console.error('Ticket refresh failed:', error);
       const message = error instanceof Error ? error.message : String(error);
-      const age = this.lastSuccess === null ? '' : ` Showing ticket status from ${Math.round((now - this.lastSuccess) / 60_000)} min ago.`;
+      const age = this.lastFullSuccess === null ? '' : ` Showing ticket status from ${Math.round((now - this.lastFullSuccess) / 60_000)} min ago.`;
       this.banner = { kind: 'tickets', message: `Ticket refresh failed: ${message}.${age}` };
       this.lastRefresh = now;
     }

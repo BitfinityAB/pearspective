@@ -61,4 +61,28 @@ describe('TicketSync', () => {
     expect(state.tickets['XX-1']?.status.name).toBe('In Progress');
     expect(state.banner?.message).toBe('Ticket refresh failed: jira-cli timed out. Showing ticket status from 25 min ago.');
   });
+
+  it('does not re-request a key the tracker silently leaves out until the next full refresh', async () => {
+    const { clock, fake, sync } = setup();
+    const requested: string[][] = [];
+    fake.tracker.getTickets = async (keys) => { requested.push(keys); return { tickets: [], notFound: [] }; };
+    const open = [makePr({ headRefName: 'OLD-1-moved' })];
+    await sync.sync({ open, repos: [], config });
+    await sync.sync({ open, repos: [], config });
+    expect(requested).toEqual([['OLD-1']]);
+    clock.now += 601_000;
+    await sync.sync({ open, repos: [], config });
+    expect(requested).toEqual([['OLD-1'], ['OLD-1']]);
+  });
+
+  it('dates the failure banner from the last full refresh, not from a small new-key fetch', async () => {
+    const { clock, fake, sync } = setup();
+    await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' })], repos: [], config });
+    clock.now += 2 * 60_000;
+    await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' }), makePr({ headRefName: 'XX-2-work' })], repos: [], config });
+    fake.tracker.getTickets = async () => { throw new ProviderError('failed', 'jira-cli timed out'); };
+    clock.now += 23 * 60_000;
+    const state = await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' })], repos: [], config });
+    expect(state.banner?.message).toBe('Ticket refresh failed: jira-cli timed out. Showing ticket status from 25 min ago.');
+  });
 });
