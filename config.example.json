@@ -11,5 +11,10 @@
     "ai-review": ["copilot-pull-request-reviewer"],
     "code-analysis": ["codescene-access", "codescene-delta-analysis"]
   },
-  "refreshIntervalSec": 180
+  "refreshIntervalSec": 180,
+  "issueTracker": {
+    "provider": "jira",
+    "baseUrl": "https://jira.example.com",
+    "expectedStatuses": { "open": ["In Review"], "merged": ["Ready for Test", "Done"] }
+  }
 }

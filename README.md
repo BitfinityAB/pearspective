@@ -28,6 +28,7 @@ Pearspective is a small local dashboard that answers them on one screen. It read
 - **Pinning.** Pin a PR from its detail panel and it stays at the top of its lane, whatever the sort order. Pins are saved in `config.json`.
 - **Detail panel** that stays in view while you scroll: failing checks, reviewers, unresolved threads, related PRs for the same ticket, and the stack the PR belongs to.
 - **Ticket links.** Jira-style keys in branch names or titles (`XX-123`) become links when an issue tracker is configured.
+- **Ticket status (optional).** With [jira-cli](https://github.com/ankitpokhrel/jira-cli) set up, each PR shows its ticket's status, and a **Tickets** tab lists tickets whose status disagrees with their PRs, for example a merged PR whose ticket is still *In Review*.
 - **Light and dark themes**, following the system by default.
 
 ## Requirements
@@ -72,7 +73,38 @@ To change the repositories later, use the settings button in the header, or run 
 | `reviewerClasses` | Which bot logins count as AI review and code analysis. A trailing `*` matches a prefix. |
 | `refreshIntervalSec` | `0` (off), `180`, `300`, `600`, `900` or `1800`. Also editable from the header. |
 | `pinned` | IDs of pinned PRs. Managed from the detail panel. |
-| `issueTracker` | Optional, e.g. `{ "provider": "jira", "baseUrl": "https://jira.example.com" }`, to make ticket keys clickable. |
+| `issueTracker` | Optional. Ticket links, and with jira-cli the ticket status and mismatch checks; see [Ticket status](#ticket-status-optional). |
+
+## Ticket status (optional)
+
+Pearspective reads tickets through [jira-cli](https://github.com/ankitpokhrel/jira-cli), which works with Jira Cloud and with self-hosted Jira Server / Data Center. Pearspective never sees your token; jira-cli handles authentication.
+
+1. Install jira-cli and give it a token. For Server / Data Center, create a personal access token in your Jira profile. jira-cli looks for the token in `JIRA_API_TOKEN`, then in `~/.netrc`, then in the keychain. Because Pearspective's server runs jira-cli itself, a `.netrc` entry is the most reliable choice:
+
+   ```
+   machine jira.example.com
+     login jdoe
+     password <your token>
+   ```
+
+   `machine` must be the bare host (no `https://`, no path). `login` must equal the `login:` that `jira init` writes to `~/.config/.jira/.config.yml`. With a personal access token, `jira init` replaces the login you type (say, your email) with your Jira username, so check that file afterwards and add a second `.netrc` entry with the same token if they differ.
+2. Run `jira init` (installation type **Local** and auth type **bearer** for a personal access token) and check that `jira me` prints your username.
+3. Add an `issueTracker` block to `config.json` and restart the server:
+
+   ```json
+   "issueTracker": {
+     "provider": "jira",
+     "baseUrl": "https://jira.example.com",
+     "expectedStatuses": { "open": ["In Review"], "merged": ["Ready for Test", "Done"] }
+   }
+   ```
+
+How tickets are judged:
+- Keys are taken from branch names and titles of open PRs and of PRs merged or closed in the last `closedLookbackDays` (default 14) in your repositories.
+- PRs into branches matching `ignoreBases` (default `["release/*"]`) do not count.
+- The least-finished PR decides what the ticket should be: a draft or open PR expects work in progress, merged PRs expect anything but *To Do*, and PRs closed without merging ask a human to look.
+- Without `expectedStatuses`, Jira's built-in categories (To Do / In Progress / Done) are used. Listing status names per PR state (`draft`, `open`, `merged`, `abandoned`) makes the check precise, for example to catch a merged PR whose ticket is still *In Review*.
+- A change is not flagged until it has lasted `graceMinutes` (default 30). Tickets are refreshed every `refreshIntervalSec` (default 600) and only while a dashboard tab is visible.
 
 ## How it uses the GitHub API
 
