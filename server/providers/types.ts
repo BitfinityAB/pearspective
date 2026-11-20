@@ -1,4 +1,4 @@
-import type { ChangeRequest, ChangeRequestStub, RepoRef, Viewer } from '../../shared/types';
+import type { ChangeRequest, ChangeRequestStub, RepoRef, Ticket, Viewer } from '../../shared/types';
 
 export type ProviderErrorKind = 'missing-cli' | 'auth' | 'rate-limit' | 'too-large' | 'failed';
 
@@ -48,4 +48,16 @@ export interface CodeHostProvider {
   searchMine(kind: MineKind, team?: string): Promise<ChangeRequestStub[]>;
   nativeStackEntries(repo: string, number: number): Promise<NativeStackEntries | null>;
   compareRefs(repo: string, base: string, head: string): Promise<{ behindBy: number }>;
+}
+
+export type TrackerAuthResult =
+  | { ok: true; login: string }
+  | { ok: false; reason: 'missing-cli' | 'auth' | 'failed'; message: string };
+
+export interface IssueTrackerProvider {
+  readonly id: string;
+  checkAuth(): Promise<TrackerAuthResult>;
+  /** Keys that do not exist come back in notFound rather than failing the call. */
+  getTickets(keys: string[]): Promise<{ tickets: Ticket[]; notFound: string[] }>;
+  ticketUrl(key: string): string;
 }

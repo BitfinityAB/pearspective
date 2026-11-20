@@ -8,10 +8,10 @@ export type ProcessRunner = (args: string[], stdin?: string) => Promise<ProcessR
 export const GH_TIMEOUT_MS = 60_000;
 const TIMEOUT_MESSAGE = `gh timed out after ${GH_TIMEOUT_MS / 1000} s`;
 
-export function createSpawnRunner(spawnProcess: typeof spawn = spawn, timeoutMs = GH_TIMEOUT_MS): ProcessRunner {
+export function createCommandRunner(command: string, spawnProcess: typeof spawn = spawn, timeoutMs = GH_TIMEOUT_MS): ProcessRunner {
   return (args, stdin) =>
     new Promise((resolve, reject) => {
-      const child = spawnProcess('gh', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = spawnProcess(command, args, { stdio: ['pipe', 'pipe', 'pipe'] });
       const timer = setTimeout(() => {
         child.kill();
         reject(Object.assign(new Error(TIMEOUT_MESSAGE), { code: 'ETIMEDOUT' }));
@@ -35,6 +35,9 @@ export function createSpawnRunner(spawnProcess: typeof spawn = spawn, timeoutMs 
       child.stdin.end(stdin ?? '');
     });
 }
+
+export const createSpawnRunner = (spawnProcess: typeof spawn = spawn, timeoutMs = GH_TIMEOUT_MS): ProcessRunner =>
+  createCommandRunner('gh', spawnProcess, timeoutMs);
 
 export const spawnGh: ProcessRunner = createSpawnRunner();
 

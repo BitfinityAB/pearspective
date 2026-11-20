@@ -1,0 +1,4 @@
+[
+  { "key": "XX-1", "fields": { "summary": "Add a scheduler lock", "issueType": { "name": "Story" }, "status": { "name": "In Progress" }, "assignee": { "name": "alex", "displayName": "Alex Rivera" } } },
+  { "key": "XX-2", "fields": { "summary": "Show orders offline", "issueType": { "name": "Bug" }, "status": { "name": "Ready for Test" }, "assignee": null } }
+]
