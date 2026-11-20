@@ -3,6 +3,7 @@ import { ageLabel } from '../../../shared/age';
 import type { PrView } from '../../../shared/grouping';
 import { detectStacks, membersBottomUp, stackIndex } from '../../../shared/stacks';
 import type { ChangeRequest, Snapshot } from '../../../shared/types';
+import { ticketKeyOf } from '../../../shared/tickets';
 import { isNarrow } from '../lib/layout';
 import { Avatar } from './Avatar';
 import { PinIcon } from './PinIcon';
@@ -85,6 +86,10 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
   const unresolved = pr.threads.filter((thread) => !thread.resolved);
   const reviewers = reviewerRows(pr);
   const related = view.ticket ? [...views.values()].filter((other) => other.ticket === view.ticket && other.pr.id !== pr.id) : [];
+  const ticketsOn = snapshot.settings.ticketsEnabled && Boolean(view.ticket);
+  const ticket = view.ticket ? snapshot.tickets[view.ticket] : undefined;
+  const ticketCheck = view.ticket ? snapshot.ticketChecks[view.ticket] : undefined;
+  const closedForTicket = ticketsOn ? snapshot.closed.filter((closedPr) => ticketKeyOf(closedPr) === view.ticket) : [];
   const stackEntry = index.get(pr.id);
   const stackMembers = stackEntry ? membersBottomUp(stackEntry.stack).reverse().map((id) => views.get(id)).filter((member): member is PrView => !!member) : [];
   const ticketHref = view.ticket && snapshot.settings.ticketUrl ? snapshot.settings.ticketUrl.replace('{key}', encodeURIComponent(view.ticket)) : null;
@@ -150,7 +155,25 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
         </Section>
       )}
 
-      {related.length > 0 && <Section title={`Related PRs · ${view.ticket}`}>{related.map(mini)}</Section>}
+      {ticketsOn ? (
+        <Section title={`Ticket · ${view.ticket}`}>
+          {ticket ? <a href={ticket.url} target="_blank" rel="noopener noreferrer">{ticket.summary} ↗</a> : <span className="muted">Ticket status unavailable</span>}
+          {ticket && <span className="muted small">{ticket.type}{ticket.assignee ? ` · ${ticket.assignee.name ?? ticket.assignee.login}` : ''}</span>}
+          {ticketCheck && (
+            <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span className={`ticket-chip v-${ticketCheck.verdict}`} style={{ marginLeft: 0 }}>{ticket?.status.name ?? 'Unknown status'}</span>
+              <span className="small">{ticketCheck.reason}</span>
+            </span>
+          )}
+          {related.map(mini)}
+          {closedForTicket.map((closedPr) => (
+            <a key={closedPr.id} className="mini" href={closedPr.url} target="_blank" rel="noopener noreferrer">
+              <i className={closedPr.merged ? 'fill-ready' : 'fill-draft'} />
+              <span><span className="rn">{closedPr.repo} #{closedPr.number}</span> {closedPr.title} · {closedPr.merged ? 'merged' : 'closed'}</span>
+            </a>
+          ))}
+        </Section>
+      ) : related.length > 0 && <Section title={`Related PRs · ${view.ticket}`}>{related.map(mini)}</Section>}
 
       {stackMembers.length > 0 && stackEntry && (
         <Section title="Stack">

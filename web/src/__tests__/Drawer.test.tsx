@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { Drawer } from '../components/Drawer';
 import { buildPrViews } from '../../../shared/grouping';
 import { emptySnapshot, type ChangeRequest } from '../../../shared/types';
-import { makePerson, makePr } from '../../../test/factories';
+import { makeClosed, makePerson, makePr } from '../../../test/factories';
+import { makeTicket } from '../../../test/fake-tracker';
 
 const copilot = makePerson('copilot-pull-request-reviewer', 'ai-review');
 
@@ -182,5 +183,29 @@ describe('Drawer', () => {
     ]);
     await userEvent.click(stack.getByRole('button', { name: 'Visualize stack' }));
     expect(onVisualize).toHaveBeenCalledWith(top.id);
+  });
+
+  it('shows the ticket, its verdict and all of its PRs when tickets are enabled', () => {
+    const pr = makePr({ headRefName: 'XX-1-work', title: 'Add the lock' });
+    const sibling = makePr({ headRefName: 'XX-1-ui', title: 'Lock settings UI' });
+    const base = emptySnapshot('acme');
+    const snapshot = {
+      ...base,
+      prs: [pr, sibling],
+      closed: [makeClosed({ headRefName: 'XX-1-prep', title: 'Prepare the lock', url: 'https://github.com/acme/orders-api/pull/5009' })],
+      settings: { ...base.settings, ticketsEnabled: true },
+      tickets: { 'XX-1': makeTicket('XX-1', 'To Do', 'todo', { summary: 'Scheduler lock', assignee: { login: 'alex', name: 'Alex Rivera', kind: 'human' } }) },
+      ticketChecks: { 'XX-1': { key: 'XX-1', prState: 'open' as const, verdict: 'mismatch' as const, reason: 'PR opened 2d ago; ticket is To Do (expected In Progress).', expected: 'In Progress', since: pr.createdAt } },
+    };
+    const views = buildPrViews(snapshot, Date.parse('2026-11-20T12:00:00Z'));
+    render(<Drawer snapshot={snapshot} views={views} selectedId={pr.id} onSelect={vi.fn()} onVisualize={vi.fn()} onTogglePin={vi.fn()} onClose={vi.fn()} />);
+    const section = within(screen.getByRole('region', { name: 'Ticket · XX-1' }));
+    expect(section.getByRole('link', { name: 'Scheduler lock ↗' })).toHaveAttribute('href', 'https://tracker.example.test/browse/XX-1');
+    expect(section.getByText('Story · Alex Rivera')).toBeInTheDocument();
+    expect(section.getByText('To Do')).toHaveClass('ticket-chip', 'v-mismatch');
+    expect(section.getByText('PR opened 2d ago; ticket is To Do (expected In Progress).')).toBeInTheDocument();
+    expect(section.getByRole('button', { name: /Lock settings UI/ })).toBeInTheDocument();
+    expect(section.getByRole('link', { name: /Prepare the lock · merged/ })).toHaveAttribute('href', 'https://github.com/acme/orders-api/pull/5009');
+    expect(screen.queryByRole('region', { name: /Related PRs/ })).toBeNull();
   });
 });
