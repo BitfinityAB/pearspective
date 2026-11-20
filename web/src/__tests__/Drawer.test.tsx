@@ -14,8 +14,9 @@ function setup(prs: ChangeRequest[], selectedId: string, ticketUrl: string | nul
   const onSelect = vi.fn();
   const onVisualize = vi.fn();
   const onTogglePin = vi.fn();
-  render(<Drawer snapshot={snapshot} views={views} selectedId={selectedId} onSelect={onSelect} onVisualize={onVisualize} onTogglePin={onTogglePin} />);
-  return { onSelect, onVisualize, onTogglePin };
+  const onClose = vi.fn();
+  const result = render(<Drawer snapshot={snapshot} views={views} selectedId={selectedId} onSelect={onSelect} onVisualize={onVisualize} onTogglePin={onTogglePin} onClose={onClose} />);
+  return { onSelect, onVisualize, onTogglePin, onClose, snapshot, views, ...result };
 }
 
 describe('Drawer', () => {
@@ -108,12 +109,49 @@ describe('Drawer', () => {
     expect(screen.getByRole('button', { name: 'Unpin' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  describe('on a narrow screen', () => {
+    beforeEach(() => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('max-width'), media: query }));
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('moves focus to the close button and closes on Escape', async () => {
+      const pr = makePr();
+      const { onClose } = setup([pr], pr.id);
+      expect(screen.getByRole('button', { name: 'Close details' })).toHaveFocus();
+      expect(document.documentElement).toHaveClass('drawer-open');
+      await userEvent.keyboard('{Escape}');
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns focus to the row it was opened from when closed', () => {
+      const pr = makePr();
+      const row = document.createElement('button');
+      document.body.append(row);
+      row.focus();
+      const { rerender, snapshot, views, onClose } = setup([pr], pr.id);
+      rerender(<Drawer snapshot={snapshot} views={views} selectedId={null} onSelect={vi.fn()} onVisualize={vi.fn()} onTogglePin={vi.fn()} onClose={onClose} />);
+      expect(row).toHaveFocus();
+      expect(document.documentElement).not.toHaveClass('drawer-open');
+      row.remove();
+    });
+  });
+
+  it('closes from the close button and ignores Escape on a wide screen', async () => {
+    const pr = makePr();
+    const { onClose } = setup([pr], pr.id);
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Close details' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('URL-encodes the ticket key in the issue tracker link', () => {
     const pr = makePr({ headRefName: 'XX-7-api' });
     const snapshot = { ...emptySnapshot('acme'), prs: [pr], settings: { ...emptySnapshot('acme').settings, ticketUrl: 'https://jira.example.test/browse/{key}' } };
     const views = buildPrViews(snapshot, Date.parse('2026-11-18T12:00:00Z'));
     views.set(pr.id, { ...views.get(pr.id)!, ticket: 'PB 7/x?y' });
-    render(<Drawer snapshot={snapshot} views={views} selectedId={pr.id} onSelect={vi.fn()} onVisualize={vi.fn()} onTogglePin={vi.fn()} />);
+    render(<Drawer snapshot={snapshot} views={views} selectedId={pr.id} onSelect={vi.fn()} onVisualize={vi.fn()} onTogglePin={vi.fn()} onClose={vi.fn()} />);
     expect(screen.getByRole('link', { name: 'PB 7/x?y in Jira ↗' })).toHaveAttribute('href', 'https://jira.example.test/browse/PB%207%2Fx%3Fy');
   });
 

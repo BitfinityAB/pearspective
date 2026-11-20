@@ -44,6 +44,7 @@ export function App({ api }: { api: DashboardApi }) {
   const views = useMemo(() => (snapshot ? buildPrViews(snapshot, now) : new Map<string, PrView>()), [snapshot, now]);
   const select = useCallback((id: string) => setUrl({ selected: id }), [setUrl]);
   const closeStack = useCallback(() => setStackPrId(null), []);
+  const closeDrawer = useCallback(() => setUrl({ selected: null }), [setUrl]);
   const togglePin = useCallback((id: string) => {
     if (!snapshot) return;
     // Drop pins of PRs that are no longer open so the list does not grow forever.
@@ -86,7 +87,7 @@ export function App({ api }: { api: DashboardApi }) {
                   ? <OverviewView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} onOpenSettings={() => setSettingsOpen(true)} />
                   : <MineView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} />}
               </main>
-              <Drawer snapshot={snapshot} views={views} selectedId={url.selected} onSelect={select} onVisualize={setStackPrId} onTogglePin={togglePin} />
+              <Drawer snapshot={snapshot} views={views} selectedId={url.selected} onSelect={select} onVisualize={setStackPrId} onTogglePin={togglePin} onClose={closeDrawer} />
             </div>
           </>
         )}

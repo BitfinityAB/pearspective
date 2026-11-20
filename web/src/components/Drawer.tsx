@@ -1,8 +1,9 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ageLabel } from '../../../shared/age';
 import type { PrView } from '../../../shared/grouping';
 import { detectStacks, membersBottomUp, stackIndex } from '../../../shared/stacks';
 import type { ChangeRequest, Snapshot } from '../../../shared/types';
+import { isNarrow } from '../lib/layout';
 import { Avatar } from './Avatar';
 import { PinIcon } from './PinIcon';
 
@@ -13,6 +14,7 @@ interface DrawerProps {
   onSelect: (id: string) => void;
   onVisualize: (prId: string) => void;
   onTogglePin: (prId: string) => void;
+  onClose: () => void;
 }
 
 const REVIEW_LABEL = { approved: 'Approved', changes_requested: 'Changes requested', commented: 'Commented', dismissed: 'Dismissed' } as const;
@@ -48,11 +50,34 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onTogglePin }: DrawerProps) {
+export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onTogglePin, onClose }: DrawerProps) {
   const index = useMemo(() => stackIndex(detectStacks(snapshot.prs)), [snapshot.prs]);
   const view = selectedId ? views.get(selectedId) : undefined;
+  const open = !!view;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // On narrow screens the panel covers the list, so it takes focus and returns it to the row it was opened from.
+  useEffect(() => {
+    if (!open || !isNarrow()) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      // An open stack dialog handles its own Escape.
+      if (event.key === 'Escape' && !document.querySelector('.modal-backdrop')) onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKey);
+    document.documentElement.classList.add('drawer-open');
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.documentElement.classList.remove('drawer-open');
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [open]);
+
   if (!view) {
-    return <aside className="drawer" aria-label="Pull request detail"><p className="muted">Select a pull request to see its details.</p></aside>;
+    return <aside className="drawer empty" aria-label="Pull request detail"><p className="muted">Select a pull request to see its details.</p></aside>;
   }
   const { pr } = view;
   const pinned = snapshot.settings.pinned.includes(pr.id);
@@ -78,6 +103,7 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
           <button type="button" className={`btn pin-btn${pinned ? ' on' : ''}`} aria-pressed={pinned} onClick={() => onTogglePin(pr.id)}>
             <PinIcon /> {pinned ? 'Unpin' : 'Pin'}
           </button>
+          <button ref={closeRef} type="button" className="icon-btn drawer-close" aria-label="Close details" onClick={onClose}>×</button>
         </div>
         <h2>{pr.title}</h2>
         <span className="muted" style={{ fontSize: 13 }}>{pr.author.name ?? pr.author.login} · opened {ageLabel(view.ageHours)} ago</span>
