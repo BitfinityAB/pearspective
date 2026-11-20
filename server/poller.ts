@@ -34,6 +34,8 @@ export class Poller {
   private inFlight: Promise<void> | null = null;
   private rerun: Promise<void> | null = null;
   private rerunFull = false;
+  private ticketSync: Promise<void> | null = null;
+  private ticketBanner: BannerMsg | null = null;
 
   constructor(private readonly deps: PollerDeps) {
     this.current = emptySnapshot(deps.config().codeHost.org, deps.provider.host);
@@ -60,9 +62,14 @@ export class Poller {
         host: this.deps.provider.host,
         ticketUrl: tracker?.provider === 'jira' ? `${tracker.baseUrl.replace(/\/$/, '')}/browse/{key}` : null,
         pinned: config.pinned,
-        ticketsEnabled: Boolean(tracker),
+        ticketsEnabled: Boolean(tracker?.ticketStatus),
       },
     }, notify);
+  }
+
+  /** Resolves when the ticket work started by the last tick has finished; never rejects. */
+  ticketWork(): Promise<void> {
+    return this.ticketSync ?? Promise.resolve();
   }
 
   backoffFactor(): number {
@@ -101,7 +108,7 @@ export class Poller {
       if (!this.viewer) {
         const auth = await provider.checkAuth();
         if (!auth.ok) {
-          this.publish({ banners: [{ kind: auth.reason === 'missing-cli' ? 'missing-cli' : 'auth', message: auth.message }], stale: this.cache.size > 0 });
+          this.publish({ banners: this.withTicketBanner([{ kind: auth.reason === 'missing-cli' ? 'missing-cli' : 'auth', message: auth.message }]), stale: this.cache.size > 0 });
           return;
         }
         this.viewer = auth.viewer;
@@ -142,18 +149,11 @@ export class Poller {
       if (rateLimit && rateLimit.remaining < RATE_LIMIT_FLOOR) {
         banners.push({ kind: 'rate-limit', message: `API budget is low (${rateLimit.remaining} left until ${new Date(rateLimit.resetAt).toLocaleTimeString()}). Refreshing half as often.` });
       }
-      let ticketPatch: Partial<Snapshot> = {};
-      const trackerConfig = config.issueTracker;
-      if (this.deps.tickets && trackerConfig) {
-        const open = [...next.values()];
-        const ticketState = await this.deps.tickets.sync({ open, repos, config: trackerConfig });
-        ticketPatch = {
-          tickets: ticketState.tickets,
-          closed: ticketState.closed,
-          ticketChecks: buildTicketChecks({ open, closed: ticketState.closed, tickets: ticketState.tickets, rules: trackerConfig, now }),
-        };
-        if (ticketState.banner) banners.push(ticketState.banner);
-      }
+      const trackerConfig = this.ticketConfig();
+      // Cached tickets are re-judged every tick so grace periods expire without a tracker call.
+      const ticketPatch: Partial<Snapshot> = trackerConfig
+        ? { ticketChecks: buildTicketChecks({ open: [...next.values()], closed: this.current.closed, tickets: this.current.tickets, rules: trackerConfig, now }) }
+        : {};
       const known = (list: ChangeRequestStub[]) => uniqueIds(list).filter((id) => next.has(id));
       const outcome: Partial<Snapshot> = fetchFailure
         ? { stale: true, banners: [this.failureBanner(fetchFailure.message)] }
@@ -166,16 +166,49 @@ export class Poller {
         rateLimit,
         ...ticketPatch,
         ...outcome,
+        banners: this.withTicketBanner(outcome.banners ?? []),
       });
+      this.startTicketSync(repos);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ProviderError && (error.kind === 'auth' || error.kind === 'missing-cli')) {
         this.viewer = null;
-        this.publish({ stale: this.cache.size > 0, banners: [{ kind: error.kind, message }] });
+        this.publish({ stale: this.cache.size > 0, banners: this.withTicketBanner([{ kind: error.kind, message }]) });
         return;
       }
-      this.publish({ stale: true, banners: [this.failureBanner(message)] });
+      this.publish({ stale: true, banners: this.withTicketBanner([this.failureBanner(message)]) });
     }
+  }
+
+  private ticketConfig() {
+    const tracker = this.deps.config().issueTracker;
+    return this.deps.tickets && tracker?.ticketStatus ? tracker : null;
+  }
+
+  private withTicketBanner(banners: BannerMsg[]): BannerMsg[] {
+    return this.ticketBanner ? [...banners, this.ticketBanner] : banners;
+  }
+
+  // Detached from the tick so a slow tracker never holds back GitHub data; one sync at a time, later requests are skipped.
+  private startTicketSync(repos: string[]): void {
+    const tickets = this.deps.tickets;
+    const config = this.ticketConfig();
+    if (!tickets || !config || this.ticketSync) return;
+    this.ticketSync = tickets.sync({ open: this.current.prs, repos, config })
+      .then((state) => {
+        // The PRs and rules may have changed while the tracker was busy.
+        const rules = this.ticketConfig();
+        if (!rules) return;
+        this.ticketBanner = state.banner;
+        this.publish({
+          tickets: state.tickets,
+          closed: state.closed,
+          ticketChecks: buildTicketChecks({ open: this.current.prs, closed: state.closed, tickets: state.tickets, rules, now: this.now() }),
+          banners: this.withTicketBanner(this.current.banners.filter((banner) => banner.kind !== 'tickets')),
+        });
+      })
+      .catch((error) => console.error('Ticket sync failed:', error))
+      .finally(() => (this.ticketSync = null));
   }
 
   private failureBanner(message: string): BannerMsg {

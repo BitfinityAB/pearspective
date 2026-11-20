@@ -88,7 +88,7 @@ describe('TicketSync', () => {
 
   it('clears an old banner on a refresh that has no keys to look up', async () => {
     const { clock, fake, sync } = setup();
-    fake.tracker.checkAuth = async () => ({ ok: false, reason: 'auth', message: 'jira-cli is not logged in' });
+    fake.tracker.checkAuth = async () => ({ ok: false, reason: 'auth', message: 'not logged in' });
     expect((await sync.sync({ open: [makePr({ headRefName: 'XX-1-work' })], repos: [], config })).banner).not.toBeNull();
     clock.now += 601_000;
     expect((await sync.sync({ open: [], repos: [], config })).banner).toBeNull();
