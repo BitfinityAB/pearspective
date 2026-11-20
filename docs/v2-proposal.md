@@ -28,7 +28,7 @@ To decide:
 
 ## 3. Where it lives
 
-Should it stay a local folder, become a personal repo, or become a `acme` repo? A hosted multi-user version would need a GitHub App or a service token instead of the personal `gh` token, so it would be a separate design.
+Decided: a public repository (`BitfinityAB/pearspective`), still run locally by each user with their own `gh` login. A hosted multi-user version would need a GitHub App or a service token instead of the personal `gh` token, so it would be a separate design.
 
 ## 4. Jira: a CLI plus ticket/PR status mismatches
 
@@ -69,8 +69,32 @@ These come from a configurable mapping, because each Jira workflow names its sta
 A ticket can have several PRs (backend + frontend + deployment), so the rule looks at **all** PRs that share its key. The least-finished PR decides the expected status.
 
 To decide:
-- The real workflow statuses per project (PB and others). Read them from Jira's workflow API, or keep a hand-written mapping in `config.json`?
+- The real workflow statuses per project. Read them from Jira's workflow API, or keep a hand-written mapping in `config.json`?
 - PRs merged to `release/*` vs `main`: does a release-branch merge count as "merged" for status purposes?
 - Tickets with no PR whose status implies one: should they be included? That needs a JQL scan of the board's active sprint, not just keys found in PRs.
 - Should a mismatch only be flagged after some delay (for example, merged more than 1 hour ago), so normal lag isn't flagged?
 - Should the dashboard ever **fix** a status (one click to transition), or stay strictly read-only?
+
+## 5. Themes
+
+v1 has one look with a light and a dark mode. v2 would add selectable themes, starting with a **Terminal** theme based on a Lovable design exploration. Terminal is **dark only**:
+
+- **Palette:** near-black background with a green tint, one neon-green accent for the active tab, the selected row's left edge and links, and the same red, amber and green status colours, slightly more saturated.
+- **Type:** a monospace font (JetBrains Mono) everywhere, with uppercase, letter-spaced labels for tabs, chips, column headers, section headings and badges.
+- **Shape:** small corner radii, flat filled badges, thin borders, and no shadows.
+- **Layout:** unchanged. A theme changes how things look, never what is shown or where.
+
+The pear-green brand colour suits the Terminal accent, so the logo needs no variant.
+
+How it could work:
+- **Two independent settings.** *Theme* (Default, Terminal, …) and *mode* (system, light, dark). A theme supplies a dark palette, a light palette, or both. A dark-only theme forces dark.
+- **Everything visual becomes a token.** `tokens.css` already holds the colours. Fonts, radii, label case and letter spacing still sit in `app.css` and would move to tokens, so a theme is just a block of overrides under `:root[data-style="terminal"]`.
+- **The D3 stack diagrams** already take their colours from the tokens. Their corner radii and font sizes are set in code (`StackDiagram.tsx`) and would need to read tokens too.
+- **The picker** goes in the settings panel and labels dark-only themes, e.g. "Terminal (dark only)". While such a theme is active, the header's mode toggle is disabled, with a tooltip saying why. The header keeps only the mode toggle.
+
+To decide:
+- Store the theme per browser in `localStorage`, like the mode today, or in `config.json`, like pins?
+- Contrast: neon green on near-black must still meet WCAG AA for text, and the status squares must stay distinguishable for colour-blind users (they already carry ✓ ! ✕ glyphs).
+- Should users be able to add their own themes, for example a CSS file of token overrides next to `config.json`?
+- The Lovable screenshot used real names, so keep it out of the repo and recreate the theme in `docs/mockup/` with the mockup's made-up data.
+
