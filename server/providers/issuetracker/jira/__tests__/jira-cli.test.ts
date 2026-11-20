@@ -1,5 +1,7 @@
 import { JiraCliTracker, projectOf } from '../jira-cli';
 import list from '../fixtures/list.json';
+import view from '../fixtures/view.json';
+import { describeIssueTrackerContract } from '../../../issuetracker-contract';
 import { errno, fail, fakeRunner, ok } from '../../../../../test/fake-runner';
 
 const BASE = 'https://tracker.example.test/';
@@ -80,4 +82,40 @@ describe('JiraCliTracker', () => {
     expect(projectOf('XX-12')).toBe('XX');
     expect(projectOf('AB2-3')).toBe('AB2');
   });
+});
+
+describe('JiraCliTracker status categories', () => {
+  const viewReply = (args: string[]) => {
+    const key = args[2]!;
+    const name = list.find((raw) => raw.key === key)!.fields.status.name;
+    const category = name === 'In Progress' ? 'indeterminate' : 'done';
+    return ok(JSON.stringify({ ...view, key, fields: { status: { name, statusCategory: { key: category } } } }));
+  };
+
+  it('learns each status category once with `issue view` and caches it', async () => {
+    const { runner, calls } = fakeRunner([{ match: isList, reply: listReply }, { match: (args) => args[1] === 'view', reply: viewReply }]);
+    const tracker = new JiraCliTracker(BASE, runner);
+    const first = await tracker.getTickets(['XX-1', 'XX-2']);
+    expect(first.tickets.map((ticket) => ticket.status.category)).toEqual(['inProgress', 'done']);
+    await tracker.getTickets(['XX-1', 'XX-2']);
+    expect(calls.filter((args) => args[1] === 'view')).toHaveLength(2);
+  });
+
+  it('leaves the category null when `issue view` fails, and tries again next time', async () => {
+    const { runner, calls } = fakeRunner([{ match: isList, reply: listReply }, noView]);
+    const tracker = new JiraCliTracker(BASE, runner);
+    expect((await tracker.getTickets(['XX-1'])).tickets[0]!.status.category).toBeNull();
+    await tracker.getTickets(['XX-1']);
+    expect(calls.filter((args) => args[1] === 'view')).toHaveLength(2);
+  });
+});
+
+describeIssueTrackerContract('JiraCliTracker', () => {
+  const { runner } = fakeRunner([
+    { match: (args) => args[0] === 'me', reply: () => ok('alex') },
+    { match: (args) => isList(args) && keysIn(args).includes('XX-404'), reply: () => fail("An issue with key 'XX-404' does not exist for field 'key'.\njira: Received unexpected response '400  '.") },
+    { match: isList, reply: listReply },
+    { match: (args) => args[1] === 'view', reply: () => ok(JSON.stringify(view)) },
+  ]);
+  return { tracker: new JiraCliTracker(BASE, runner), knownKeys: ['XX-1', 'XX-2'], unknownKey: 'XX-404' };
 });

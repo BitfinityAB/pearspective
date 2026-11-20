@@ -1,8 +1,9 @@
 import { createCommandRunner, type ProcessResult, type ProcessRunner } from '../../../gh';
-import type { Ticket } from '../../../../shared/types';
+import type { StatusCategory, Ticket } from '../../../../shared/types';
 import { ProviderError, type IssueTrackerProvider, type TrackerAuthResult } from '../../types';
 
 export const CHUNK_SIZE = 50;
+const CATEGORY: Record<string, StatusCategory> = { new: 'todo', indeterminate: 'inProgress', done: 'done' };
 const NOT_FOUND = /An issue with key '([^']+)' does not exist/g;
 
 export const projectOf = (key: string) => key.slice(0, key.lastIndexOf('-'));
@@ -11,6 +12,9 @@ const firstLine = (text: string) => text.split('\n').map((line) => line.trim()).
 /** Reads tickets through jira-cli, which owns authentication (env var, .netrc or keychain). */
 export class JiraCliTracker implements IssueTrackerProvider {
   readonly id = 'jira';
+
+  /** Status name → category; jira-cli's list output carries only the name. */
+  private readonly categories = new Map<string, StatusCategory>();
 
   constructor(private readonly baseUrl: string, private readonly runner: ProcessRunner = createCommandRunner('jira')) {}
 
@@ -41,7 +45,27 @@ export class JiraCliTracker implements IssueTrackerProvider {
         notFound.push(...chunk.notFound);
       }
     }
-    return { tickets, notFound };
+    await this.learnCategories(tickets);
+    return { tickets: tickets.map((ticket) => ({ ...ticket, status: { ...ticket.status, category: this.categories.get(ticket.status.name) ?? null } })), notFound };
+  }
+
+  // One `issue view` per unseen status name: its full response includes the status category.
+  private async learnCategories(tickets: Ticket[]): Promise<void> {
+    const samples = new Map<string, string>();
+    for (const ticket of tickets) {
+      if (ticket.status.name && !this.categories.has(ticket.status.name) && !samples.has(ticket.status.name)) samples.set(ticket.status.name, ticket.key);
+    }
+    for (const [name, key] of samples) {
+      try {
+        const result = await this.exec(['issue', 'view', key, '--raw']);
+        if (result.code !== 0) continue;
+        const category = CATEGORY[JSON.parse(result.stdout)?.fields?.status?.statusCategory?.key];
+        if (category) this.categories.set(name, category);
+      } catch (error) {
+        // An unlearned category only makes the verdict "unknown"; a missing CLI or lost login must still surface.
+        if (error instanceof ProviderError && error.kind !== 'failed') throw error;
+      }
+    }
   }
 
   private async listChunk(project: string, keys: string[]): Promise<{ tickets: Ticket[]; notFound: string[] }> {
