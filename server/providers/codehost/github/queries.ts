@@ -18,6 +18,15 @@ export function leanRepoPageQuery(org: string, repo: string, after: string): str
   return `query { r0: repository(owner: ${literal(org)}, name: ${literal(repo)}) { ${OPEN_PRS(after)} } ${RATE} }`;
 }
 
+const CLOSED_FIELDS = `id number title url closedAt merged headRefName baseRefName repository { name } author { ${PERSON} }`;
+
+// Aliased per repository: GitHub search would need ten repo: qualifiers and exceed its 256-character limit.
+export function closedReposQuery(org: string, repos: string[]): string {
+  const blocks = repos.map((repo, index) =>
+    `r${index}: repository(owner: ${literal(org)}, name: ${literal(repo)}) { pullRequests(states: [MERGED, CLOSED], first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { ${CLOSED_FIELDS} } } }`);
+  return `query { ${blocks.join('\n')} ${RATE} }`;
+}
+
 // isRequired needs the PR it is evaluated against, so each PR gets its own alias.
 function fullFields(number: number): string {
   return `

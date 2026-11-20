@@ -1,4 +1,4 @@
-import type { ActorKind, ChangeRequest, ChangeRequestStub, Check, MergeState, Person, Review, ReviewDecision, ReviewRequest, Thread } from '../../../../shared/types';
+import type { ActorKind, ChangeRequest, ChangeRequestStub, Check, ClosedChangeRequest, MergeState, Person, Review, ReviewDecision, ReviewRequest, Thread } from '../../../../shared/types';
 import type { ReviewerClasses } from '../../types';
 
 const matches = (login: string, pattern: string) =>
@@ -50,6 +50,21 @@ function toCheck(raw: any): Check {
     : FAILED_CONCLUSIONS.has(raw.conclusion) ? 'failure'
     : 'neutral';
   return { name: raw.name, state, required: !!raw.isRequired, url: raw.detailsUrl ?? undefined };
+}
+
+export function toClosed(raw: any, classes: ReviewerClasses): ClosedChangeRequest {
+  return {
+    id: raw.id,
+    repo: raw.repository.name,
+    number: raw.number,
+    title: raw.title,
+    url: raw.url,
+    headRefName: raw.headRefName,
+    baseRefName: raw.baseRefName,
+    merged: Boolean(raw.merged),
+    closedAt: raw.closedAt,
+    author: toPerson(raw.author, classes),
+  };
 }
 
 const REVIEW_STATES: Record<string, Review['state']> = {

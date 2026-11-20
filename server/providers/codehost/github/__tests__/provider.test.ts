@@ -265,3 +265,28 @@ describe('GithubProvider', () => {
     expect(restPaths).toEqual(['repos/acme/field-app/compare/feature%2Fa...feature%2Fb']);
   });
 });
+
+describe('GithubProvider.fetchClosed', () => {
+  const closedNode = (number: number, closedAt: string, merged = true) => ({
+    id: `PR_${number}`, number, title: `Change ${number}`, url: `https://github.com/acme/orders-api/pull/${number}`,
+    closedAt, merged, headRefName: `XX-${number}-work`, baseRefName: 'main', repository: { name: 'orders-api' },
+    author: { login: 'dev-one_acme', __typename: 'User', name: 'Dev One' },
+  });
+
+  it('asks every repository for merged and closed PRs in one query and keeps those inside the window', async () => {
+    const { gh, queries } = fakeGh([{
+      match: /MERGED, CLOSED/,
+      reply: () => ({
+        r0: { pullRequests: { nodes: [closedNode(1, '2026-11-19T10:00:00Z'), closedNode(2, '2026-10-01T10:00:00Z', false)] } },
+        r1: { pullRequests: { nodes: [closedNode(3, '2026-11-18T10:00:00Z', false)] } },
+        rateLimit,
+      }),
+    }]);
+    const provider = new GithubProvider(gh, 'acme', classes);
+    const closed = await provider.fetchClosed(['orders-api', 'orders-web'], '2026-11-06T00:00:00Z');
+    expect(queries).toHaveLength(1);
+    expect(closed.map((pr) => [pr.number, pr.merged])).toEqual([[1, true], [3, false]]);
+    expect(closed[0]).toMatchObject({ repo: 'orders-api', headRefName: 'XX-1-work', author: { login: 'dev-one_acme', name: 'Dev One', kind: 'human' } });
+    expect(await provider.fetchClosed([], '2026-11-06T00:00:00Z')).toEqual([]);
+  });
+});

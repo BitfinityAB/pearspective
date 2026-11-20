@@ -1,9 +1,9 @@
-import type { ChangeRequest, ChangeRequestStub, RepoRef } from '../../../../shared/types';
+import type { ChangeRequest, ChangeRequestStub, ClosedChangeRequest, RepoRef } from '../../../../shared/types';
 import type { GhClient } from '../../../gh';
 import { ProviderError, type AuthResult, type CodeHostProvider, type MineKind, type NativeStackEntries, type ReviewerClasses } from '../../types';
-import { toChangeRequest, toStub } from './mapping';
+import { toChangeRequest, toClosed, toStub } from './mapping';
 import {
-  ACTIVITY_QUERY, fullQuery, leanRepoPageQuery, leanReposQuery, mineSearch, NATIVE_STACK_QUERY,
+  ACTIVITY_QUERY, closedReposQuery, fullQuery, leanRepoPageQuery, leanReposQuery, mineSearch, NATIVE_STACK_QUERY,
   openCountsQuery, REPO_SEARCH_QUERY, SEARCH_PRS_QUERY, TEAMS_QUERY, VIEWER_ORGS_QUERY, VIEWER_QUERY,
 } from './queries';
 
@@ -79,6 +79,14 @@ export class GithubProvider implements CodeHostProvider {
       }
     }
     return stubs;
+  }
+
+  async fetchClosed(repos: string[], since: string): Promise<ClosedChangeRequest[]> {
+    if (repos.length === 0) return [];
+    const data = await this.query<Record<string, any>>(closedReposQuery(this.org, repos));
+    return repos
+      .flatMap((_, index) => (data[`r${index}`]?.pullRequests?.nodes ?? []).map((raw: any) => toClosed(raw, this.classes)))
+      .filter((pr) => pr.closedAt >= since);
   }
 
   async fetchFull(stubs: ChangeRequestStub[]): Promise<ChangeRequest[]> {
