@@ -4,3 +4,6 @@ config.json
 .DS_Store
 .superpowers/
 HANDOFF.md
+
+# Working documents (plans and design specs) stay local.
+docs/superpowers/
