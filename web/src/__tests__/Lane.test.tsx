@@ -33,4 +33,11 @@ describe('Lane', () => {
     render(<Lane lane={{ ...laneOf(false), units: [] }} selectedId={null} onSelect={() => undefined} onVisualize={() => undefined} />);
     expect(screen.getByText('No pull requests match the filters.')).toBeInTheDocument();
   });
+
+  it('shows the ticket status pill and an expected badge on a mismatching ticket lane', () => {
+    const lane = { ...laneOf(false), icon: 'ticket' as const, title: 'XX-1 · Add lock', ticket: { key: 'XX-1', summary: 'Add lock', statusName: 'In Review', verdict: 'mismatch' as const, reason: 'PR merged 3h ago; ticket is In Review (expected Done).', expected: 'Done' } };
+    render(<Lane lane={lane} selectedId={null} onSelect={vi.fn()} onVisualize={vi.fn()} />);
+    expect(screen.getByText('In Review')).toHaveClass('ticket-chip', 'v-mismatch');
+    expect(screen.getByText('expected Done')).toBeInTheDocument();
+  });
 });

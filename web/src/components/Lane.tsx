@@ -5,6 +5,7 @@ import { Avatar } from './Avatar';
 import { PrRow } from './PrRow';
 import { StackMembers } from './StackMembers';
 import { StackRow } from './StackRow';
+import { TicketChip } from './TicketChip';
 
 const BUCKETS: Bucket[] = ['blocked', 'waiting', 'ready', 'draft'];
 
@@ -45,6 +46,8 @@ export function Lane({ lane, selectedId, onSelect, onVisualize }: LaneProps) {
         </button>
         <LaneIcon lane={lane} />
         <span className="lane-title">{lane.title}</span>
+        {lane.ticket?.statusName && <TicketChip brief={lane.ticket} label={lane.ticket.statusName} />}
+        {lane.ticket?.verdict === 'mismatch' && <span className="badge sev-amber" title={lane.ticket.reason}>expected {lane.ticket.expected}</span>}
         <span className="muted" style={{ fontSize: 13 }}>{total} open</span>
         <span className="grow" />
         <span className="muted small">{summary}</span>

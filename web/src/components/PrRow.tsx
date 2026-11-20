@@ -3,6 +3,7 @@ import type { PrView } from '../../../shared/grouping';
 import { AgeBar } from './AgeBar';
 import { PinIcon } from './PinIcon';
 import { StatusSquares } from './StatusSquares';
+import { TicketChip } from './TicketChip';
 
 interface PrRowProps { view: PrView; selected: boolean; pinned?: boolean; indentPx?: number; onSelect: (id: string) => void }
 
@@ -25,7 +26,7 @@ export function PrRow({ view, selected, pinned = false, indentPx, onSelect }: Pr
     >
       <span className="pr" style={indentPx !== undefined ? { paddingLeft: indentPx } : undefined}>
         <span className="prtext">
-          <span className="rn">{pinned && <span className="pin-mark" title="Pinned"><PinIcon size={12} /><span className="sr-only">Pinned</span></span>}{pr.repo} #{pr.number}</span>
+          <span className="rn">{pinned && <span className="pin-mark" title="Pinned"><PinIcon size={12} /><span className="sr-only">Pinned</span></span>}{pr.repo} #{pr.number}{view.ticketInfo && <TicketChip brief={view.ticketInfo} />}</span>
           <span className="title">{pr.title}</span>
           <span className="badges">
             {badges.map((badge) => <span key={badge.label} className={`badge sev-${badge.severity}`}>{badge.label}</span>)}

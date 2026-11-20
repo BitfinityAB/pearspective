@@ -114,6 +114,11 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
 .settings-list label:hover { background: var(--subtle) }
 
 .drawer-close { display: none; flex: 0 0 auto; font-size: 20px; line-height: 1 }
+.ticket-chip { display: inline-flex; align-items: center; margin-left: 8px; padding: 0 6px; height: 18px; border-radius: 999px; font-size: 11px; font-family: var(--mono); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; vertical-align: 1px }
+.ticket-chip.v-mismatch, .ticket-chip.v-review { color: var(--a-fg); background: var(--a-bg); border-color: transparent }
+.ticket-chip.v-grace { border-style: dashed }
+.ticket-chip.v-unknown { opacity: .7 }
+.lane-head .ticket-chip { margin-left: 0 }
 /* Keep in sync with NARROW_QUERY in lib/layout.ts. */
 @media (max-width: 1100px) {
   .drawer.empty { display: none }

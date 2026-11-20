@@ -38,4 +38,20 @@ describe('PrRow', () => {
     await userEvent.click(row);
     expect(onSelect).toHaveBeenCalledWith(pr.id);
   });
+
+  it('shows the ticket chip with its status and the reason as a tooltip', () => {
+    const pr = makePr({ headRefName: 'XX-1-work' });
+    const snapshot = {
+      ...emptySnapshot('acme'),
+      prs: [pr],
+      settings: { ...emptySnapshot('acme').settings, ticketsEnabled: true },
+      tickets: { 'XX-1': { key: 'XX-1', summary: 'Add lock', type: 'Story', status: { name: 'To Do', category: 'todo' as const }, url: 'https://tracker.example.test/browse/XX-1' } },
+      ticketChecks: { 'XX-1': { key: 'XX-1', prState: 'open' as const, verdict: 'mismatch' as const, reason: 'PR opened 2d ago; ticket is To Do (expected In Progress).', expected: 'In Progress', since: pr.createdAt } },
+    };
+    const view = buildPrViews(snapshot, Date.parse('2026-11-20T12:00:00Z')).get(pr.id)!;
+    render(<PrRow view={view} selected={false} onSelect={vi.fn()} />);
+    const chip = screen.getByText('XX-1 · To Do');
+    expect(chip).toHaveClass('ticket-chip', 'v-mismatch');
+    expect(chip).toHaveAttribute('title', 'PR opened 2d ago; ticket is To Do (expected In Progress).');
+  });
 });
