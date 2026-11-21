@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ConfigError, ConfigSchema, ConfigStore, refreshToSeconds, secondsToRefresh } from '../config';
+import { ConfigError, ConfigSchema, ConfigStore, notificationSettings, refreshToSeconds, secondsToRefresh } from '../config';
 
 async function tempConfig(contents?: unknown) {
   const dir = await mkdtemp(join(tmpdir(), 'prdash-'));
@@ -71,5 +71,26 @@ describe('issueTracker config', () => {
     const ok = ConfigSchema.parse({ ...base, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test', expectedStatuses: { open: ['In Review'] } } });
     expect(ok.issueTracker?.expectedStatuses.open).toEqual(['In Review']);
     expect(() => ConfigSchema.parse({ ...base, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test', expectedStatuses: { review: ['x'] } } })).toThrow();
+  });
+});
+
+describe('notifications config', () => {
+  const base = { codeHost: { provider: 'github', org: 'acme', repos: [] } };
+
+  it('is off without a notifications block', () => {
+    expect(notificationSettings(ConfigSchema.parse(base))).toEqual({
+      enabled: false,
+      events: { ciFailed: true, ciPassed: true, approved: true, changesRequested: true, readyToMerge: true, conflict: true, newComment: true, newThread: true, reviewRequested: false },
+    });
+  });
+
+  it('merges listed events over the defaults and rejects unknown event names', () => {
+    const config = ConfigSchema.parse({ ...base, notifications: { events: { reviewRequested: true, newThread: false } } });
+    const settings = notificationSettings(config);
+    expect(settings.enabled).toBe(true);
+    expect(settings.events.reviewRequested).toBe(true);
+    expect(settings.events.newThread).toBe(false);
+    expect(settings.events.ciFailed).toBe(true);
+    expect(() => ConfigSchema.parse({ ...base, notifications: { events: { pinged: true } } })).toThrow();
   });
 });

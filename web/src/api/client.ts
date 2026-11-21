@@ -1,11 +1,11 @@
-import type { RefreshSetting, RepoRef, Snapshot, StackDetail } from '../../../shared/types';
+import type { NotificationKind, RefreshSetting, RepoRef, Snapshot, StackDetail } from '../../../shared/types';
 
 export interface DashboardApi {
   getSnapshot(): Promise<Snapshot>;
   subscribe(clientId: string, onSnapshot: (snapshot: Snapshot) => void, onOpen?: () => void): () => void;
   setVisible(clientId: string, visible: boolean): Promise<void>;
   refreshNow(): Promise<Snapshot>;
-  updateSettings(patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[] }): Promise<Snapshot['settings']>;
+  updateSettings(patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> } }): Promise<Snapshot['settings']>;
   searchRepos(q: string): Promise<RepoRef[]>;
   stackDetail(prId: string): Promise<StackDetail | null>;
 }

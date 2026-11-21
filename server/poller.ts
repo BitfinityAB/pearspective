@@ -1,6 +1,6 @@
 import { emptySnapshot, type BannerMsg, type ChangeRequest, type ChangeRequestStub, type Snapshot, type Viewer } from '../shared/types';
 import { buildTicketChecks } from '../shared/ticketChecks';
-import { secondsToRefresh, type Config } from './config';
+import { notificationSettings, secondsToRefresh, type Config } from './config';
 import { ProviderError, type CodeHostProvider } from './providers/types';
 import type { TicketSync } from './ticket-sync';
 
@@ -63,6 +63,7 @@ export class Poller {
         ticketUrl: tracker?.provider === 'jira' ? `${tracker.baseUrl.replace(/\/$/, '')}/browse/{key}` : null,
         pinned: config.pinned,
         ticketsEnabled: Boolean(tracker?.ticketStatus),
+        notifications: notificationSettings(config),
       },
     }, notify);
   }

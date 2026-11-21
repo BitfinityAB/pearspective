@@ -48,6 +48,16 @@ describe('HTTP API', () => {
     await api(app).put('/api/settings').send({ refresh: 1 }).expect(400);
   });
 
+  it('saves notification settings and rejects malformed ones', async () => {
+    const { app, store } = await setup();
+    const saved = await api(app).put('/api/settings').send({ notifications: { enabled: true, events: { reviewRequested: true } } }).expect(200);
+    expect(saved.body.notifications.enabled).toBe(true);
+    expect(saved.body.notifications.events.reviewRequested).toBe(true);
+    expect(store.get().notifications).toEqual({ enabled: true, events: { reviewRequested: true } });
+    await api(app).put('/api/settings').send({ notifications: { enabled: 'yes' } }).expect(400);
+    await api(app).put('/api/settings').send({ notifications: { enabled: true, events: { pinged: true } } }).expect(400);
+  });
+
   it('saves pinned ids and rejects a malformed list', async () => {
     const { app, store } = await setup();
     const saved = await api(app).put('/api/settings').send({ pinned: ['PR_1', 'PR_2'] }).expect(200);

@@ -1,6 +1,6 @@
 import express, { type ErrorRequestHandler, type RequestHandler } from 'express';
 import { MAX_PINNED, MAX_REPOS, REFRESH_OPTIONS, type RefreshSetting } from '../shared/types';
-import { refreshToSeconds, type ConfigStore } from './config';
+import { NotificationsSchema, refreshToSeconds, type ConfigStore } from './config';
 import type { SnapshotHub } from './hub';
 import type { Poller } from './poller';
 import type { PollLoop, Presence } from './presence';
@@ -83,9 +83,9 @@ export function createApp({ poller, presence, loop, provider, store, hub, allowe
   });
 
   app.put('/api/settings', async (req, res) => {
-    const { refresh, repos, pinned } = (req.body ?? {}) as { refresh?: RefreshSetting; repos?: unknown; pinned?: unknown };
-    if (refresh === undefined && repos === undefined && pinned === undefined) {
-      res.status(400).json({ error: 'Send refresh, repos or pinned' });
+    const { refresh, repos, pinned, notifications } = (req.body ?? {}) as { refresh?: RefreshSetting; repos?: unknown; pinned?: unknown; notifications?: unknown };
+    if (refresh === undefined && repos === undefined && pinned === undefined && notifications === undefined) {
+      res.status(400).json({ error: 'Send refresh, repos, pinned or notifications' });
       return;
     }
     if (refresh !== undefined && !(REFRESH_OPTIONS as readonly unknown[]).includes(refresh)) {
@@ -100,12 +100,18 @@ export function createApp({ poller, presence, loop, provider, store, hub, allowe
       res.status(400).json({ error: `pinned must be a list of at most ${MAX_PINNED} ids` });
       return;
     }
+    const parsedNotifications = notifications === undefined ? undefined : NotificationsSchema.safeParse(notifications);
+    if (parsedNotifications && !parsedNotifications.success) {
+      res.status(400).json({ error: `notifications are invalid: ${parsedNotifications.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}` });
+      return;
+    }
     const current = store.get();
     await store.save({
       ...current,
       refreshIntervalSec: refresh !== undefined ? refreshToSeconds(refresh) : current.refreshIntervalSec,
       codeHost: { ...current.codeHost, repos: (repos as string[] | undefined) ?? current.codeHost.repos },
       pinned: (pinned as string[] | undefined) ?? current.pinned,
+      notifications: parsedNotifications ? parsedNotifications.data : current.notifications,
     });
     poller.refreshSettings();
     if (repos !== undefined) await poller.tick();

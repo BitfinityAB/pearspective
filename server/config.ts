@@ -1,6 +1,6 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { z } from 'zod';
-import { MAX_PINNED, MAX_REPOS, type RefreshSetting } from '../shared/types';
+import { MAX_PINNED, MAX_REPOS, NOTIFICATION_DEFAULTS, type NotificationSettings, type RefreshSetting } from '../shared/types';
 
 export const DEFAULT_REVIEWER_CLASSES = {
   'ai-review': ['copilot-pull-request-reviewer'],
@@ -8,6 +8,16 @@ export const DEFAULT_REVIEWER_CLASSES = {
 };
 
 const REFRESH_SECONDS = [0, 180, 300, 600, 900, 1800] as const;
+
+const toggle = z.boolean().optional();
+export const NotificationsSchema = z.object({
+  enabled: z.boolean().default(true),
+  // strict() so a misspelled event name is an error instead of a silently ignored setting.
+  events: z.object({
+    ciFailed: toggle, ciPassed: toggle, approved: toggle, changesRequested: toggle,
+    readyToMerge: toggle, conflict: toggle, newComment: toggle, newThread: toggle, reviewRequested: toggle,
+  }).strict().default({}),
+});
 
 export const ConfigSchema = z.object({
   codeHost: z.object({
@@ -43,9 +53,17 @@ export const ConfigSchema = z.object({
       abandoned: z.array(z.string()).optional(),
     }).strict().default({}),
   }).optional(),
+  notifications: NotificationsSchema.optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 export type IssueTrackerConfig = NonNullable<Config['issueTracker']>;
+
+/** No block means notifications are off; listed events override the defaults. */
+export function notificationSettings(config: Config): NotificationSettings {
+  const block = config.notifications;
+  const listed = Object.fromEntries(Object.entries(block?.events ?? {}).filter(([, value]) => value !== undefined));
+  return { enabled: Boolean(block?.enabled), events: { ...NOTIFICATION_DEFAULTS, ...listed } };
+}
 
 export class ConfigError extends Error {}
 

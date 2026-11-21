@@ -105,9 +105,10 @@ export interface Snapshot {
   tickets: Record<string, Ticket>;
   closed: ClosedChangeRequest[];
   ticketChecks: Record<string, TicketCheck>;
+  notification: NotificationBatch | null;
   /** ticketUrl is a template with {key}, or null when no issue tracker is configured. */
   /** pinned holds change request ids that sort first in their lane. */
-  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean };
+  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean; notifications: NotificationSettings };
 }
 
 export interface StackEntryDetail {
@@ -179,6 +180,25 @@ export interface RepoRef {
   cloned?: boolean;
 }
 
+export type NotificationKind =
+  | 'ciFailed' | 'ciPassed' | 'approved' | 'changesRequested'
+  | 'readyToMerge' | 'conflict' | 'newComment' | 'newThread' | 'reviewRequested';
+
+export const NOTIFICATION_KINDS: NotificationKind[] = [
+  'ciFailed', 'ciPassed', 'approved', 'changesRequested', 'readyToMerge', 'conflict', 'newComment', 'newThread', 'reviewRequested',
+];
+
+export const NOTIFICATION_DEFAULTS: Record<NotificationKind, boolean> = {
+  ciFailed: true, ciPassed: true, approved: true, changesRequested: true,
+  readyToMerge: true, conflict: true, newComment: true, newThread: true, reviewRequested: false,
+};
+
+export interface NotificationEvent { kind: NotificationKind; detail?: string }
+export interface NotificationItem { prId: string; repo: string; number: number; title: string; url: string; events: NotificationEvent[] }
+/** id and at are the refresh time (ISO), so later batches compare greater. */
+export interface NotificationBatch { id: string; at: string; items: NotificationItem[] }
+export interface NotificationSettings { enabled: boolean; events: Record<NotificationKind, boolean> }
+
 export function emptySnapshot(org = '', host = 'github.com'): Snapshot {
   return {
     viewer: null,
@@ -192,6 +212,7 @@ export function emptySnapshot(org = '', host = 'github.com'): Snapshot {
     tickets: {},
     closed: [],
     ticketChecks: {},
-    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false },
+    notification: null,
+    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false, notifications: { enabled: false, events: { ...NOTIFICATION_DEFAULTS } } },
   };
 }
