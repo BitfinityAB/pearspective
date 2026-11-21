@@ -126,13 +126,13 @@ Turn them on in the settings panel (or add a `notifications` block to `config.js
 - Events: `ciFailed`, `ciPassed`, `approved`, `changesRequested`, `readyToMerge`, `conflict`, `newComment`, `newThread` (all on by default) and `reviewRequested` (off by default). List only the ones you want to change.
 - Only your own PRs notify, except "review requested". Your own comments and threads, and comments from bots and code-analysis tools, never do.
 - Several changes on one PR arrive as one notification; more than three PRs at once arrive as one summary.
-- While tabs are open but hidden, the server keeps polling every 5 minutes (about 150 GitHub points an hour at ~280 PRs). With no dashboard tab open, nothing is polled and nothing notifies.
+- While tabs are open but hidden, the server keeps polling every 5 minutes, including the full sweep every 15 minutes. At ~280 PRs that is about 400 GitHub points an hour (4 × 75 + 8 × 13). Ticket status is not refreshed meanwhile. Hidden polling is off when auto-refresh is off (`refreshIntervalSec: 0`). With no dashboard tab open, nothing is polled and nothing notifies.
 
 ## How it uses the GitHub API
 
 Pearspective is careful with your GraphQL budget (5,000 points an hour):
 
-- **Cheap poll:** while a dashboard tab is visible, one query per refresh lists the open PRs in your repositories. Nothing is polled while every tab is hidden.
+- **Cheap poll:** while a dashboard tab is visible, one query per refresh lists the open PRs in your repositories. With notifications off, nothing is polled while every tab is hidden.
 - **Full details:** fetched only for PRs that changed or still have checks running, 25 per request, three requests at a time.
 - **Full sweep:** every 15 minutes.
 - **Measured cost**, with 10 repositories, one team and 277 open PRs: a full sweep (also the first load) costs about 75 points and an ordinary refresh about 13. At the default 3-minute interval that is roughly 500 points an hour. It grows with the number of open PRs and with how many have checks running. Under 500 remaining points, a banner appears and refreshes slow down.

@@ -14,6 +14,9 @@ function writeLast(id: string): void {
   try { localStorage.setItem(LAST_NOTIFICATION_KEY, id); } catch { /* storage blocked: tabs may then repeat a batch */ }
 }
 
+const HIDDEN_CLAIM_DELAY_MS = 1000;
+const isShown = (batch: NotificationBatch, last: string | null) => Boolean(last && batch.id <= last);
+
 function messagesOf(batch: NotificationBatch): ToastModel[] {
   if (batch.items.length > SUMMARY_THRESHOLD) {
     return [{ key: batch.id, prId: null, title: `${batch.items.length} of your PRs changed`, body: batch.items.map((item) => `${item.repo} #${item.number}`).join(', ') }];
@@ -44,25 +47,41 @@ export function useNotifications(snapshot: Snapshot | null, handlers: { onOpenPr
       if (batch && (!last || batch.id > last)) writeLast(batch.id);
       return;
     }
-    if (!batch || (last && batch.id <= last)) return;
-    writeLast(batch.id);
+    if (!batch || isShown(batch, last)) return;
     const messages = messagesOf(batch);
-    if (document.visibilityState === 'visible') {
+    const showToasts = () => {
+      writeLast(batch.id);
       setToasts((current) => [...current, ...messages]);
+    };
+    if (document.visibilityState === 'visible') {
+      showToasts();
       return;
     }
+    // A hidden tab that cannot notify must leave the batch for a tab that can show it.
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-    for (const message of messages) {
-      // Some mobile browsers throw "Illegal constructor" even with permission granted; an uncaught throw here would unmount the app.
-      try {
-        const notification = new Notification(message.title, { body: message.body, tag: message.prId ?? 'pearspective-summary' });
-        notification.onclick = () => {
-          window.focus();
-          open(message);
-          notification.close();
-        };
-      } catch { /* notifications unsupported in this context */ }
-    }
+    // Several hidden tabs would all notify; the short delay lets the first one claim the batch.
+    const timer = setTimeout(() => {
+      if (isShown(batch, readLast())) return;
+      if (document.visibilityState === 'visible') {
+        showToasts();
+        return;
+      }
+      writeLast(batch.id);
+      for (const message of messages) {
+        // Some mobile browsers throw "Illegal constructor" even with permission granted; an uncaught throw here would unmount the app.
+        try {
+          // renotify is missing from the DOM typings; it makes a newer notification for the same PR alert again.
+          const options = { body: message.body, tag: message.prId ?? 'pearspective-summary', renotify: true } as NotificationOptions;
+          const notification = new Notification(message.title, options);
+          notification.onclick = () => {
+            window.focus();
+            open(message);
+            notification.close();
+          };
+        } catch { /* notifications unsupported in this context */ }
+      }
+    }, HIDDEN_CLAIM_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [snapshot === null, batch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { toasts, dismiss, open };

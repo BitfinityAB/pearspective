@@ -510,7 +510,7 @@ function render(){
     <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="sr">Search pull requests</span><input id="q" value="${esc(state.q)}" placeholder="Search title, branch, repo"></label>
     <button class="chip" data-act="sort"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 16l4 4 4-4"/><path d="M17 20V4"/><path d="M13 8l4-4 4 4"/></svg>${state.newestFirst ? 'Newest first' : 'Oldest first'}</button>
   </section>
-  <div class="layout"><main>${lanesHtml()}</main>${drawerHtml()}</div>`}<div class="toasts"><div class="toast"><button class="toast-body"><b>orders-api #3412</b><span>CI passed · approved · new comment by Robin Park: 'Looks good now'</span></button><button class="icon" aria-label="Dismiss">×</button></div></div>`;
+  <div class="layout"><main>${lanesHtml()}</main>${drawerHtml()}</div>`}<div class="toasts"><div class="toast"><button class="toast-body"><b>orders-api #3420</b><span>CI passed · approved · new comment by Robin Park: 'Looks good now'</span></button><button class="icon" aria-label="Dismiss">×</button></div></div>`;
   if (state.tab === 'stacks') document.querySelectorAll('svg[data-stack]').forEach(svg => drawStack(svg, svg.dataset.stack, false));
   drawConnectors();
   if (focused === 'q') { const el = document.getElementById('q'); el.focus(); el.setSelectionRange(caret, caret); }

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, renderHook } from '@testing-library/react';
+import { act, cleanup, renderHook } from '@testing-library/react';
 import { LAST_NOTIFICATION_KEY, useNotifications } from '../notifications/useNotifications';
 import { emptySnapshot, type NotificationBatch, type Snapshot } from '../../../shared/types';
 
@@ -17,7 +17,7 @@ beforeEach(() => {
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility });
   vi.stubGlobal('Notification', Object.assign(function (this: object, title: string, options: NotificationOptions) { shown.push({ title, options }); return { close: () => undefined, onclick: null }; }, { permission: 'granted' }));
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 function render(initial: Snapshot | null) {
   const handlers = { onOpenPr: vi.fn(), onOpenMine: vi.fn() };
@@ -58,17 +58,57 @@ describe('useNotifications', () => {
   });
 
   it('sends browser notifications while hidden, tagged by PR', () => {
+    vi.useFakeTimers();
     visibility = 'hidden';
     const { result, rerender } = render(withBatch(null));
     rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
+    act(() => { vi.advanceTimersByTime(1000); });
     expect(result.current.toasts).toEqual([]);
-    expect(shown).toEqual([{ title: 'orders-api #1', options: { body: 'CI failed', tag: 'PR_1' } }]);
+    expect(shown).toEqual([{ title: 'orders-api #1', options: { body: 'CI failed', tag: 'PR_1', renotify: true } }]);
+    expect(localStorage.getItem(LAST_NOTIFICATION_KEY)).toBe('2026-11-21T12:05:00Z');
+  });
+
+  it('leaves the batch unclaimed in a hidden tab that cannot notify, so a visible tab still shows it', () => {
+    visibility = 'hidden';
+    vi.stubGlobal('Notification', Object.assign(function () { throw new Error('unused'); }, { permission: 'default' }));
+    const { rerender } = render(withBatch(null));
+    rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
+    expect(localStorage.getItem(LAST_NOTIFICATION_KEY)).toBeNull();
+    cleanup();
+    visibility = 'visible';
+    const visible = render(withBatch(null));
+    visible.rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
+    expect(visible.result.current.toasts).toHaveLength(1);
+  });
+
+  it('shows nothing from a hidden tab when another tab claimed the batch during the delay', () => {
+    vi.useFakeTimers();
+    visibility = 'hidden';
+    const { result, rerender } = render(withBatch(null));
+    rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
+    localStorage.setItem(LAST_NOTIFICATION_KEY, '2026-11-21T12:05:00Z');
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(shown).toEqual([]);
+    expect(result.current.toasts).toEqual([]);
+  });
+
+  it('shows toasts instead when the tab became visible during the delay', () => {
+    vi.useFakeTimers();
+    visibility = 'hidden';
+    const { result, rerender } = render(withBatch(null));
+    rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
+    visibility = 'visible';
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(shown).toEqual([]);
+    expect(result.current.toasts).toHaveLength(1);
   });
 
   it('does not throw when the browser refuses to construct a notification', () => {
+    vi.useFakeTimers();
     visibility = 'hidden';
     vi.stubGlobal('Notification', Object.assign(function () { throw new TypeError('Illegal constructor'); }, { permission: 'granted' }));
     const { rerender } = render(withBatch(null));
-    expect(() => rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) })).not.toThrow();
+    rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
+    expect(() => act(() => { vi.advanceTimersByTime(1000); })).not.toThrow();
   });
 });
