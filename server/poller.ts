@@ -1,4 +1,5 @@
-import { emptySnapshot, type BannerMsg, type ChangeRequest, type ChangeRequestStub, type Snapshot, type Viewer } from '../shared/types';
+import { emptySnapshot, type BannerMsg, type ChangeRequest, type ChangeRequestStub, type NotificationBatch, type Snapshot, type Viewer } from '../shared/types';
+import { notificationEvents } from '../shared/notifications';
 import { buildTicketChecks } from '../shared/ticketChecks';
 import { notificationSettings, secondsToRefresh, type Config } from './config';
 import { ProviderError, type CodeHostProvider } from './providers/types';
@@ -31,6 +32,8 @@ export class Poller {
   private viewer: Viewer | null = null;
   private lastFullSweep = Number.NEGATIVE_INFINITY;
   private current: Snapshot;
+  /** The last snapshot from a refresh that loaded everything; notifications are judged against it. */
+  private lastComplete: Snapshot | null = null;
   private inFlight: Promise<void> | null = null;
   private rerun: Promise<void> | null = null;
   private rerunFull = false;
@@ -159,7 +162,7 @@ export class Poller {
       const outcome: Partial<Snapshot> = fetchFailure
         ? { stale: true, banners: [this.failureBanner(fetchFailure.message)] }
         : { fetchedAt: new Date(now).toISOString(), stale: false, banners };
-      this.publish({
+      const patch: Partial<Snapshot> = {
         viewer: this.viewer,
         prs: [...next.values()],
         overviewIds: known(overview),
@@ -168,7 +171,11 @@ export class Poller {
         ...ticketPatch,
         ...outcome,
         banners: this.withTicketBanner(outcome.banners ?? []),
-      });
+      };
+      // A partial refresh would show missing PRs as changes, so only complete refreshes are compared.
+      if (!fetchFailure) patch.notification = this.notificationBatch({ ...this.current, ...patch }, now);
+      this.publish(patch);
+      if (!fetchFailure) this.lastComplete = this.current;
       this.startTicketSync(repos);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -179,6 +186,12 @@ export class Poller {
       }
       this.publish({ stale: true, banners: this.withTicketBanner([this.failureBanner(message)]) });
     }
+  }
+
+  private notificationBatch(next: Snapshot, now: number): NotificationBatch | null {
+    const settings = notificationSettings(this.deps.config());
+    if (!settings.enabled || !this.viewer) return null;
+    return notificationEvents({ previous: this.lastComplete, next, viewerLogin: this.viewer.login, enabled: settings.events, at: new Date(now).toISOString() });
   }
 
   private ticketConfig() {
