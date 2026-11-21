@@ -34,12 +34,12 @@ function fullFields(number: number): string {
     repository { name } mergeable mergeStateStatus reviewDecision
     author { ${PERSON} }
     stack { number size baseRefName } stackEntry { position }
-    comments { totalCount }
+    comments { totalCount } lastComment: comments(last: 1) { nodes { bodyText url author { ${PERSON} } } }
     commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 50) { pageInfo { hasNextPage } nodes { __typename
       ... on CheckRun { name status conclusion detailsUrl isRequired(pullRequestNumber: ${number}) }
       ... on StatusContext { context state targetUrl isRequired(pullRequestNumber: ${number}) } } } } } } }
     reviews(last: 10) { nodes { state submittedAt author { ${PERSON} } } }
-    reviewThreads(first: 20) { pageInfo { hasNextPage } nodes { isResolved comments(first: 1) { nodes { bodyText url author { ${PERSON} } } } } }
+    reviewThreads(last: 20) { pageInfo { hasPreviousPage } nodes { isResolved comments(first: 1) { nodes { bodyText url author { ${PERSON} } } } } }
     reviewRequests(first: 5) { nodes { requestedReviewer { __typename
       ... on User { login name avatarUrl(size: 64) } ... on Bot { login avatarUrl(size: 64) } ... on Team { slug avatarUrl(size: 64) } } } }`;
 }

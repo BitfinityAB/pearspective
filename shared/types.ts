@@ -67,6 +67,8 @@ export interface ChangeRequest extends ChangeRequestStub {
   threads: Thread[];
   reviewRequests: ReviewRequest[];
   commentCount: number;
+  /** The newest conversation comment, used to tell who wrote a new comment. */
+  lastComment?: { author: Person; snippet: string; url: string };
 }
 
 export interface Team {

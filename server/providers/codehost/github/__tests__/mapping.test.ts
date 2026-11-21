@@ -75,7 +75,7 @@ describe('toChangeRequest', () => {
   });
 
   it('appends an unresolved marker thread when GitHub says more threads exist than were loaded', () => {
-    const truncated = { ...fullPr, reviewThreads: { ...fullPr.reviewThreads, pageInfo: { hasNextPage: true } } };
+    const truncated = { ...fullPr, reviewThreads: { ...fullPr.reviewThreads, pageInfo: { hasPreviousPage: true } } };
     const mapped = toChangeRequest(truncated, classes);
     expect(mapped.threads).toHaveLength(pr.threads.length + 1);
     expect(mapped.threads.at(-1)).toEqual({
@@ -86,7 +86,17 @@ describe('toChangeRequest', () => {
   });
 
   it('asks for the thread page info so a cut-off list can be detected', () => {
-    expect(fullQuery([{ id: 'PR_1', number: 1 }])).toMatch(/reviewThreads\(first: \d+\) \{ pageInfo \{ hasNextPage \}/);
+    expect(fullQuery([{ id: 'PR_1', number: 1 }])).toMatch(/reviewThreads\(last: \d+\) \{ pageInfo \{ hasPreviousPage \}/);
+    expect(fullQuery([{ id: 'PR_1', number: 1 }])).toMatch(/lastComment: comments\(last: 1\) \{ nodes \{ bodyText url author \{/);
+  });
+
+  it('maps the newest conversation comment with its author', () => {
+    expect(pr.lastComment).toEqual({
+      author: { login: 'dev-two_acme', name: 'Dev Two', kind: 'human', avatarUrl: 'https://avatars.example.test/u/2?v=4' },
+      snippet: 'Looks good after the rebase.',
+      url: 'https://example.test/c/4',
+    });
+    expect(toChangeRequest({ ...fullPr, lastComment: { nodes: [] } }, classes).lastComment).toBeUndefined();
   });
 
   it('maps a deleted author to a ghost person', () => {

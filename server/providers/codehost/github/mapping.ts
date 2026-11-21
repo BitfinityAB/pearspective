@@ -101,7 +101,8 @@ export function toChangeRequest(raw: any, classes: ReviewerClasses): ChangeReque
     return { resolved: thread.isResolved, author: toPerson(first?.author, classes), snippet: (first?.bodyText ?? '').slice(0, 200), url: first?.url ?? raw.url };
   });
   // Same reason as the checks marker: hidden threads must not let Threads look resolved.
-  if (raw.reviewThreads?.pageInfo?.hasNextPage) {
+  // With last: 20, the cut-off older threads are the ones before the loaded page.
+  if (raw.reviewThreads?.pageInfo?.hasPreviousPage) {
     threads.push({ resolved: false, author: { login: 'more-threads-not-loaded', kind: 'human' }, snippet: 'More review threads not loaded', url: raw.url });
   }
   const reviewRequests: ReviewRequest[] = (raw.reviewRequests?.nodes ?? [])
@@ -111,6 +112,9 @@ export function toChangeRequest(raw: any, classes: ReviewerClasses): ChangeReque
       reviewer.__typename === 'Team'
         ? { type: 'team', slug: reviewer.slug, avatarUrl: reviewer.avatarUrl }
         : { type: 'person', person: toPerson(reviewer, classes) });
+
+  const newest = raw.lastComment?.nodes?.[0];
+  const lastComment = newest ? { author: toPerson(newest.author, classes), snippet: (newest.bodyText ?? '').slice(0, 200), url: newest.url ?? raw.url } : undefined;
 
   return {
     ...toStub(raw),
@@ -126,5 +130,6 @@ export function toChangeRequest(raw: any, classes: ReviewerClasses): ChangeReque
     threads,
     reviewRequests,
     commentCount: raw.comments?.totalCount ?? 0,
+    ...(lastComment ? { lastComment } : {}),
   };
 }
