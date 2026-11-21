@@ -98,3 +98,48 @@ To decide:
 - Should users be able to add their own themes, for example a CSS file of token overrides next to `config.json`?
 - The Lovable screenshot used real names, so keep it out of the repo and recreate the theme in `docs/mockup/` with the mockup's made-up data.
 
+## 6. Local database (SQLite)
+
+**Problem:** on a cold start (server just started) the page is empty and says "Loading pull requests… the first load can take a minute", because everything lives in memory and the first full refresh (about 36 s for ~280 PRs) has to finish first.
+
+**Idea:** keep the latest state in a local SQLite database and serve it straight away on start, marked as old, while the first refresh runs:
+- On start, the server builds a snapshot from the database and publishes it with `stale: true` and its original `fetchedAt`.
+- The header shows "Showing data from <timestamp>, updating…" until the first refresh of this run completes, then the normal "Updated …" text.
+- After each successful refresh (and ticket sync) the server writes the changes. A failed refresh never overwrites good data.
+- The poller's caches (full PR details, tickets, learned status categories, not-a-ticket keys) are warmed from the same database, so the first refresh only fetches what changed instead of everything.
+- Stored data does not expire: whatever was last fetched is shown, with its timestamp.
+
+Decided:
+- **A proper relational schema, not a JSON blob**, so other programs and backends can read and write the same database, and the schema can later move to another engine (for example PostgreSQL). It follows the provider-neutral model in `shared/types.ts`, not GitHub's or Jira's field names.
+- **SQLite now; history and trends are v3.** v2 stores the current state only. The schema should make it easy for v3 to add history tables next to it.
+- **The location is configurable:** a new `databasePath` setting in `config.json`, defaulting to `pearspective.db` in the Pearspective folder (gitignored). Pointing it outside the repo folder (for example the OS's app-data directory) keeps your org's PR and ticket data out of the checkout.
+- **One database file for all orgs and repo selections.** Changing the org or the repositories in `config.json` reuses the same file; rows carry their org (an `org` column next to `repo`), and the snapshot shown on start is filtered to the current selection.
+- **PRs that drop out are deleted, for now.** When a PR leaves the selection (its repository was deselected, it is no longer in a Mine search, or it was closed longer ago than `closedLookbackDays`), its row and its checks, reviews, threads and review requests are removed. Keeping them for history is a v3 decision.
+- **Write only what changed.** The poller already knows which PRs it re-fetched; only those rows (and their checks, reviews, threads and review requests) are upserted, PRs that dropped out are deleted, and tickets are written when the ticket sync returns them.
+- **Access through an ORM: Drizzle ORM** on better-sqlite3. The schema is defined in TypeScript, migrations come from `drizzle-kit`, and Drizzle also supports PostgreSQL, so a later move is a driver and schema-type change rather than a rewrite. (Kysely was considered: it is a type-safe query builder, not an ORM. Prisma was considered: heavier, with its own query engine and code generation.)
+
+Schema sketch (v2, current state only):
+
+| Table | Holds |
+|---|---|
+| `schema_version` | One row with the schema version; migrations run in order on start. |
+| `meta` | Key/value: `fetched_at`, `org`, `host`, last successful ticket sync. |
+| `people` | `login` (key), `name`, `kind` (human / ai-review / code-analysis / bot), `avatar_url`. |
+| `change_requests` | One row per PR: `id` (key), `provider`, `org`, `repo`, `number`, `title`, `url`, `author_login`, `created_at`, `updated_at`, `closed_at`, `state` (open / merged / closed), `head_sha`, `head_ref`, `base_ref`, `is_draft`, `merge_state`, `review_decision`, `comment_count`, native stack number/size/position/base. Open and recently closed PRs share this table. |
+| `checks` | `change_request_id`, `name`, `state`, `required`, `url`. |
+| `reviews` | `change_request_id`, `author_login`, `state`, `submitted_at`. |
+| `review_threads` | `change_request_id`, `resolved`, `author_login`, `snippet`, `url`. |
+| `review_requests` | `change_request_id`, `type` (person / team), `login` or `team_slug`. |
+| `views` | Which PRs are in Overview and in each Mine section (`change_request_id`, `view`), so the board can be rebuilt exactly. |
+| `tickets` | `key` (key), `summary`, `type`, `status_name`, `assignee_login`, `mine` (true / false / unknown), `url`, `fetched_at`. |
+| `status_categories` | `status_name` → `category` (todo / inProgress / done), learned from the tracker. |
+| `not_tickets` | Keys the tracker said do not exist. |
+
+Portability rules: ISO-8601 text for timestamps, `0`/`1` integers for booleans, text enums with `CHECK` constraints, no SQLite-only features, so the same DDL works on PostgreSQL with type names swapped. Mismatch verdicts are not stored; they are recomputed from the tables, as today.
+
+Library: Node's built-in `node:sqlite` is unflagged since Node 22.13 but still not stable ("Stability 1.2 – Release candidate" in the current docs). Stable options today:
+- **better-sqlite3**: the widely used, actively maintained driver, synchronous (a good fit for a single local server), with prebuilt binaries for the major platforms. **Recommended.**
+- **@libsql/client** (Turso's SQLite fork): maintained, async, supports a local `file:` database. A reasonable alternative, but it adds a fork of SQLite.
+- node-sqlite3 is archived (July 2026) and should not be used.
+
+All database access goes through one storage module (for example `server/storage/`) built on Drizzle, so the rest of the server never sees SQL or the driver.
