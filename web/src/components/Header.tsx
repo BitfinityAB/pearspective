@@ -22,7 +22,7 @@ const SETTINGS_ICON = icon(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1
 
 const MENU_ICON = icon(<path d="M4 6h16M4 12h16M4 18h16" />);
 
-const TABS: { value: Tab; label: string }[] = [{ value: 'overview', label: 'Overview' }, { value: 'mine', label: 'Mine' }, { value: 'stacks', label: 'Stacks' }];
+const TABS: { value: Tab; label: string; count?: number }[] = [{ value: 'overview', label: 'Overview' }, { value: 'mine', label: 'Mine' }, { value: 'stacks', label: 'Stacks' }];
 
 interface HeaderProps {
   snapshot: Snapshot;
@@ -61,14 +61,14 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
   const { settings, viewer, fetchedAt } = snapshot;
   const updated = fetchedAt ? relativeTime(now - Date.parse(fetchedAt)) : 'never';
   const attention = ticketAttentionCount(snapshot);
-  const tabs = settings.ticketsEnabled ? [...TABS, { value: 'tickets' as const, label: attention ? `Tickets ${attention}` : 'Tickets' }] : TABS;
+  const tabs = settings.ticketsEnabled ? [...TABS, { value: 'tickets' as const, label: 'Tickets', count: attention }] : TABS;
   const status = isFirstLoad(snapshot) ? 'Loading…' : settings.refresh === 'off' ? `Auto-refresh off · updated ${updated}` : `Updated ${updated}`;
   return (
     <header className="top">
       <div className="brand"><img src="/favicon.svg" alt="" width="24" height="24" /><b className="brand-name">Pearspective</b><span className="muted hdr-org" style={{ fontSize: 13 }}>{settings.org}</span></div>
       <nav className="segs" aria-label="Views">
         {tabs.map((item) => (
-          <button key={item.value} type="button" className={`seg${tab === item.value ? ' on' : ''}`} aria-pressed={tab === item.value} onClick={() => onTab(item.value)}>{item.label}</button>
+          <button key={item.value} type="button" className={`seg${tab === item.value ? ' on' : ''}`} aria-pressed={tab === item.value} onClick={() => onTab(item.value)}>{item.label}{item.count ? <> <span className="tab-count">{item.count}</span></> : null}</button>
         ))}
       </nav>
       <span className="grow" />

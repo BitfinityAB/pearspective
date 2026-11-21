@@ -22,10 +22,12 @@ const LANES: { key: Verdict; title: string; defaultCollapsed: boolean }[] = [
   { key: 'grace', title: 'In grace period', defaultCollapsed: true },
   { key: 'ok', title: 'OK', defaultCollapsed: true },
   { key: 'unknown', title: 'Status unavailable', defaultCollapsed: true },
+  { key: 'skipped', title: 'Not checked (ignored branches only)', defaultCollapsed: true },
 ];
 
-export function buildTicketLanes(snapshot: Snapshot): TicketLaneModel[] {
-  const rows = Object.values(snapshot.ticketChecks).map((check): TicketRowModel => ({
+export function buildTicketLanes(snapshot: Snapshot, opts: { mineOnly?: boolean } = {}): TicketLaneModel[] {
+  const checks = Object.values(snapshot.ticketChecks).filter((check) => !opts.mineOnly || snapshot.tickets[check.key]?.mine === true);
+  const rows = checks.map((check): TicketRowModel => ({
     key: check.key,
     ticket: snapshot.tickets[check.key],
     check,
@@ -35,6 +37,11 @@ export function buildTicketLanes(snapshot: Snapshot): TicketLaneModel[] {
   // Oldest change first: the longer a drift has lasted, the more it needs attention.
   const bySince = (a: TicketRowModel, b: TicketRowModel) => (a.check.since ?? '').localeCompare(b.check.since ?? '') || a.key.localeCompare(b.key);
   return LANES.map((lane) => ({ ...lane, rows: rows.filter((row) => row.check.verdict === lane.key).sort(bySince) }));
+}
+
+/** True when some ticket's "mine" flag is unknown, so a Mine filter may hide tickets that are in fact the viewer's. */
+export function mineIsUnknown(snapshot: Snapshot): boolean {
+  return Object.values(snapshot.tickets).some((ticket) => ticket.mine === null || ticket.mine === undefined);
 }
 
 export function ticketAttentionCount(snapshot: Snapshot): number {

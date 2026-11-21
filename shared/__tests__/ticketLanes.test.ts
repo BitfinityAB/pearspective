@@ -1,4 +1,4 @@
-import { buildTicketLanes, ticketAttentionCount } from '../ticketLanes';
+import { buildTicketLanes, mineIsUnknown, ticketAttentionCount } from '../ticketLanes';
 import { emptySnapshot, type TicketCheck } from '../types';
 import { makeClosed, makePr } from '../../test/factories';
 import { makeTicket } from '../../test/fake-tracker';
@@ -11,12 +11,13 @@ describe('buildTicketLanes', () => {
     ...emptySnapshot('acme'),
     prs: [makePr({ headRefName: 'XX-1-work' })],
     closed: [makeClosed({ headRefName: 'XX-2-done' }), makeClosed({ headRefName: 'XX-1-part' })],
-    tickets: { 'XX-1': makeTicket('XX-1', 'To Do', 'todo'), 'XX-2': makeTicket('XX-2', 'In Review', 'inProgress') },
+    tickets: { 'XX-1': makeTicket('XX-1', 'To Do', 'todo', { mine: true }), 'XX-2': makeTicket('XX-2', 'In Review', 'inProgress', { mine: false }) },
     ticketChecks: {
       'XX-1': checkOf('XX-1', 'mismatch', '2026-11-19T08:00:00Z'),
       'XX-2': checkOf('XX-2', 'mismatch', '2026-11-17T08:00:00Z'),
       'XX-3': checkOf('XX-3', 'ok'),
       'XX-4': checkOf('XX-4', 'unknown'),
+      'XX-5': checkOf('XX-5', 'skipped'),
     },
   };
 
@@ -28,6 +29,7 @@ describe('buildTicketLanes', () => {
       ['grace', 'In grace period', 0, true],
       ['ok', 'OK', 1, true],
       ['unknown', 'Status unavailable', 1, true],
+      ['skipped', 'Not checked (ignored branches only)', 1, true],
     ]);
     expect(lanes[0]!.rows.map((row) => row.key)).toEqual(['XX-2', 'XX-1']);
   });
@@ -37,6 +39,16 @@ describe('buildTicketLanes', () => {
     expect(row.open).toHaveLength(1);
     expect(row.closed).toHaveLength(1);
     expect(row.ticket?.status.name).toBe('To Do');
+  });
+
+  it('keeps only the viewer\'s tickets when filtered to mine', () => {
+    const lanes = buildTicketLanes(snapshot, { mineOnly: true });
+    expect(lanes.flatMap((lane) => lane.rows.map((row) => row.key))).toEqual(['XX-1']);
+  });
+
+  it('reports when the tracker could not tell which tickets are mine', () => {
+    expect(mineIsUnknown(snapshot)).toBe(false);
+    expect(mineIsUnknown({ ...snapshot, tickets: { ...snapshot.tickets, 'XX-3': makeTicket('XX-3', 'Done', 'done', { mine: null }) } })).toBe(true);
   });
 
   it('counts mismatches and tickets that need a human', () => {

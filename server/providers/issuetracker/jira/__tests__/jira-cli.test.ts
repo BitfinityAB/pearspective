@@ -5,7 +5,8 @@ import { describeIssueTrackerContract } from '../../../issuetracker-contract';
 import { errno, fail, fakeRunner, ok } from '../../../../../test/fake-runner';
 
 const BASE = 'https://tracker.example.test/';
-const isList = (args: string[]) => args[0] === 'issue' && args[1] === 'list';
+const isMine = (args: string[]) => args[0] === 'issue' && args[1] === 'list' && args.join(' ').includes('currentUser()');
+const isList = (args: string[]) => args[0] === 'issue' && args[1] === 'list' && !isMine(args);
 const keysIn = (args: string[]): string[] => args[args.indexOf('-q') + 1]!.match(/[A-Z]+-\d+/g) ?? [];
 const listReply = (args: string[]) => ok(JSON.stringify(list.filter((raw) => keysIn(args).includes(raw.key))));
 const noView = { match: (args: string[]) => args[1] === 'view', reply: () => fail('') };
@@ -43,7 +44,7 @@ describe('JiraCliTracker', () => {
     expect(lists.every((args) => !/ORDER BY/i.test(args.join(' ')))).toBe(true);
     expect(result.tickets.map((ticket) => ticket.key)).toEqual(['XX-1', 'XX-2']);
     expect(result.tickets[0]).toEqual({
-      key: 'XX-1', summary: 'Add a scheduler lock', type: 'Story', status: { name: 'In Progress', category: null },
+      key: 'XX-1', summary: 'Add a scheduler lock', type: 'Story', status: { name: 'In Progress', category: null }, mine: null,
       assignee: { login: 'alex', name: 'Alex Rivera', kind: 'human' }, url: 'https://tracker.example.test/browse/XX-1',
     });
   });
@@ -93,6 +94,36 @@ describe('JiraCliTracker', () => {
   it('derives the project from a key', () => {
     expect(projectOf('XX-12')).toBe('XX');
     expect(projectOf('AB2-3')).toBe('AB2');
+  });
+});
+
+describe('JiraCliTracker mine flag', () => {
+  const mineReply = (mineKeys: string[]) => (args: string[]) => ok(JSON.stringify(list.filter((raw) => keysIn(args).includes(raw.key) && mineKeys.includes(raw.key))));
+
+  it('marks tickets the viewer created or is or was assignee on, with one extra query per chunk', async () => {
+    const { runner, calls } = fakeRunner([{ match: isMine, reply: mineReply(['XX-2']) }, { match: isList, reply: listReply }, noView]);
+    const result = await new JiraCliTracker(BASE, runner).getTickets(['XX-1', 'XX-2']);
+    expect(result.tickets.map((ticket) => [ticket.key, ticket.mine])).toEqual([['XX-1', false], ['XX-2', true]]);
+    const mineQuery = calls.find(isMine)!;
+    expect(mineQuery[mineQuery.indexOf('-q') + 1]).toBe('key in (XX-1, XX-2) AND (reporter = currentUser() OR assignee WAS currentUser())');
+    expect(mineQuery[mineQuery.indexOf('--project') + 1]).toBe('XX');
+  });
+
+  it('marks nothing as mine when the query finds nothing', async () => {
+    const { runner } = fakeRunner([{ match: isMine, reply: () => fail('No result found for given query in project "XX"') }, { match: isList, reply: listReply }, noView]);
+    expect((await new JiraCliTracker(BASE, runner).getTickets(['XX-1'])).tickets[0]!.mine).toBe(false);
+  });
+
+  it('leaves mine unknown when the query fails, without failing the lookup', async () => {
+    const { runner } = fakeRunner([{ match: isMine, reply: () => fail("jira: Received unexpected response '500  '.") }, { match: isList, reply: listReply }, noView]);
+    const result = await new JiraCliTracker(BASE, runner).getTickets(['XX-1', 'XX-2']);
+    expect(result.tickets.map((ticket) => ticket.mine)).toEqual([null, null]);
+  });
+
+  it('skips the query when no ticket was found', async () => {
+    const { runner, calls } = fakeRunner([{ match: isList, reply: () => ok('[]') }]);
+    await new JiraCliTracker(BASE, runner).getTickets(['XX-1']);
+    expect(calls.some(isMine)).toBe(false);
   });
 });
 

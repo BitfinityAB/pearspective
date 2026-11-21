@@ -64,10 +64,15 @@ describe('buildTicketChecks', () => {
     expect(fresh.since).toBe('2026-11-20T11:50:00Z');
   });
 
-  it('ignores PRs into ignored bases', () => {
-    const result = check({ open: [openPr({ baseRefName: 'release/next' })] });
-    expect(result.verdict).toBe('unknown');
+  it('skips a ticket whose PRs all go into ignored bases and names those branches', () => {
+    const result = check({ open: [openPr({ baseRefName: 'release/next' })], closed: [merged({ baseRefName: 'release/next' }), merged({ baseRefName: 'release/8.15' })] });
+    expect(result.verdict).toBe('skipped');
     expect(result.prState).toBeNull();
+    expect(result.reason).toBe('Only PRs into ignored branches (release/8.15, release/next); nothing to check.');
+  });
+
+  it('judges a ticket on its counted PRs when some go into ignored bases', () => {
+    expect(check({ open: [openPr(), openPr({ baseRefName: 'release/next' })] }).verdict).toBe('ok');
   });
 
   it('reports unknown without a ticket or before the category is learned', () => {

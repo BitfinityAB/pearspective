@@ -7,6 +7,7 @@ import { ticketKeyOf } from '../../../shared/tickets';
 import { isNarrow } from '../lib/layout';
 import { Avatar } from './Avatar';
 import { PinIcon } from './PinIcon';
+import { PrStateBadge } from './PrStateBadge';
 
 interface DrawerProps {
   snapshot: Snapshot;
@@ -169,7 +170,7 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
           {closedForTicket.map((closedPr) => (
             <a key={closedPr.id} className="mini" href={closedPr.url} target="_blank" rel="noopener noreferrer">
               <i className={closedPr.merged ? 'fill-ready' : 'fill-draft'} />
-              <span><span className="rn">{closedPr.repo} #{closedPr.number}</span> {closedPr.title} · {closedPr.merged ? 'merged' : 'closed'}</span>
+              <span className="mini-text"><PrStateBadge state={closedPr.merged ? 'merged' : 'closed'} />{' '}<span className="rn">{closedPr.repo} #{closedPr.number}</span>{' '}<span className="mini-title">{closedPr.title} ↗</span></span>
             </a>
           ))}
         </Section>

@@ -9,7 +9,7 @@ import { makeTicket } from '../../../test/fake-tracker';
 const check = (key: string, verdict: TicketCheck['verdict']): TicketCheck =>
   ({ key, prState: 'merged', verdict, reason: `PR merged 3h ago; ticket is In Review (expected Done).`, expected: 'Done', since: '2026-11-20T09:00:00Z' });
 
-function setup() {
+function setup(mineOnly = false) {
   const open = makePr({ headRefName: 'XX-1-work', title: 'Add the lock' });
   const snapshot = {
     ...emptySnapshot('acme'),
@@ -20,11 +20,16 @@ function setup() {
     ticketChecks: { 'XX-1': check('XX-1', 'mismatch'), 'XX-9': check('XX-9', 'ok') },
   };
   const onSelect = vi.fn();
-  render(<TicketsView snapshot={snapshot} selectedId={null} onSelect={onSelect} />);
+  render(<TicketsView snapshot={snapshot} selectedId={null} onSelect={onSelect} mineOnly={mineOnly} />);
   return { onSelect, open };
 }
 
 describe('TicketsView', () => {
+  it('says so when none of the tickets are the viewer\'s', () => {
+    setup(true);
+    expect(screen.getByText('None of these tickets were created by you or assigned to you.')).toBeInTheDocument();
+  });
+
   it('lists mismatching tickets with actual and expected status and the reason', () => {
     setup();
     const lane = within(screen.getByRole('region', { name: 'Mismatches' }));
@@ -39,7 +44,11 @@ describe('TicketsView', () => {
     const lane = within(screen.getByRole('region', { name: 'Mismatches' }));
     await userEvent.click(lane.getByRole('button', { name: /Add the lock/ }));
     expect(onSelect).toHaveBeenCalledWith(open.id);
-    expect(lane.getByRole('link', { name: /Prepare the lock/ })).toHaveAttribute('href', 'https://github.com/acme/orders-api/pull/5001');
+    const closedLink = lane.getByRole('link', { name: /Prepare the lock/ });
+    expect(closedLink).toHaveAttribute('href', 'https://github.com/acme/orders-api/pull/5001');
+    // The state comes first so long titles cannot hide it, and ↗ marks links that leave the dashboard.
+    expect(closedLink).toHaveTextContent(/^merged.*Prepare the lock ↗$/);
+    expect(lane.getByRole('button', { name: /Add the lock/ })).toHaveTextContent(/^open.*Add the lock$/);
   });
 
   it('keeps calm lanes collapsed until expanded', async () => {

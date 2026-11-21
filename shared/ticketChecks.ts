@@ -42,9 +42,12 @@ function prStateOf(prs: CountedPr[]): { state: PrState; since: string } | null {
   return { state: 'abandoned', since: newest(prs) };
 }
 
-function checkOne(key: string, prs: CountedPr[], ticket: Ticket | undefined, rules: TicketRules, now: number): TicketCheck {
+function checkOne(key: string, prs: CountedPr[], ignoredBases: Set<string>, ticket: Ticket | undefined, rules: TicketRules, now: number): TicketCheck {
   const pr = prStateOf(prs);
-  if (!pr) return { key, prState: null, verdict: 'unknown', reason: 'No pull request counts for this ticket.', expected: '', since: null };
+  if (!pr) {
+    const branches = [...ignoredBases].sort().join(', ');
+    return { key, prState: null, verdict: 'skipped', reason: `Only PRs into ignored branches (${branches}); nothing to check.`, expected: '', since: null };
+  }
   const names = rules.expectedStatuses[pr.state];
   const expected = names?.length ? names.join(' or ') : DEFAULT_CATEGORIES[pr.state].map((category) => CATEGORY_LABEL[category]).join(' or ');
   const base = { key, prState: pr.state, expected, since: pr.since };
@@ -76,14 +79,16 @@ export function buildTicketChecks(input: {
 }): Record<string, TicketCheck> {
   const ignored = input.rules.ignoreBases.map(globToRegExp);
   const counts = (base: string) => !ignored.some((pattern) => pattern.test(base));
-  const byKey = new Map<string, CountedPr[]>();
-  const add = (key: string | null, pr: CountedPr | null) => {
+  const byKey = new Map<string, { counted: CountedPr[]; ignoredBases: Set<string> }>();
+  const add = (key: string | null, base: string, pr: CountedPr) => {
     if (!key) return;
-    const list = byKey.get(key) ?? [];
-    if (pr) list.push(pr);
-    byKey.set(key, list);
+    const entry = byKey.get(key) ?? { counted: [], ignoredBases: new Set<string>() };
+    if (counts(base)) entry.counted.push(pr);
+    else entry.ignoredBases.add(base);
+    byKey.set(key, entry);
   };
-  for (const pr of input.open) add(ticketKeyOf(pr), counts(pr.baseRefName) ? { state: pr.isDraft ? 'draft' : 'open', at: pr.createdAt } : null);
-  for (const pr of input.closed) add(ticketKeyOf(pr), counts(pr.baseRefName) ? { state: pr.merged ? 'merged' : 'closed', at: pr.closedAt } : null);
-  return Object.fromEntries([...byKey].map(([key, prs]) => [key, checkOne(key, prs, input.tickets[key], input.rules, input.now)]));
+  for (const pr of input.open) add(ticketKeyOf(pr), pr.baseRefName, { state: pr.isDraft ? 'draft' : 'open', at: pr.createdAt });
+  for (const pr of input.closed) add(ticketKeyOf(pr), pr.baseRefName, { state: pr.merged ? 'merged' : 'closed', at: pr.closedAt });
+  return Object.fromEntries([...byKey].map(([key, entry]) =>
+    [key, checkOne(key, entry.counted, entry.ignoredBases, input.tickets[key], input.rules, input.now)]));
 }

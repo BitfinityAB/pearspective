@@ -135,6 +135,8 @@ export interface Ticket {
   type: string;
   /** category is null until the tracker has reported which category the status name belongs to. */
   status: { name: string; category: StatusCategory | null };
+  /** Created by, or assigned now or earlier to, the viewer; null when the tracker could not tell. */
+  mine?: boolean | null;
   assignee?: Person;
   url: string;
 }
@@ -154,7 +156,8 @@ export interface ClosedChangeRequest {
 }
 
 export type PrState = 'draft' | 'open' | 'merged' | 'abandoned';
-export type Verdict = 'ok' | 'mismatch' | 'review' | 'grace' | 'unknown';
+/** skipped: every PR of the ticket goes into an ignored base branch, so there is nothing to judge. */
+export type Verdict = 'ok' | 'mismatch' | 'review' | 'grace' | 'unknown' | 'skipped';
 
 export interface TicketCheck {
   key: string;

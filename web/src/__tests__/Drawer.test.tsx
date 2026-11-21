@@ -205,7 +205,9 @@ describe('Drawer', () => {
     expect(section.getByText('To Do')).toHaveClass('ticket-chip', 'v-mismatch');
     expect(section.getByText('PR opened 2d ago; ticket is To Do (expected In Progress).')).toBeInTheDocument();
     expect(section.getByRole('button', { name: /Lock settings UI/ })).toBeInTheDocument();
-    expect(section.getByRole('link', { name: /Prepare the lock · merged/ })).toHaveAttribute('href', 'https://github.com/acme/orders-api/pull/5009');
+    const closedLink = section.getByRole('link', { name: /Prepare the lock/ });
+    expect(closedLink).toHaveAttribute('href', 'https://github.com/acme/orders-api/pull/5009');
+    expect(closedLink).toHaveTextContent(/^merged.*Prepare the lock ↗$/);
     expect(screen.queryByRole('region', { name: /Related PRs/ })).toBeNull();
   });
 });

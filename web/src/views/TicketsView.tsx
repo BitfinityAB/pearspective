@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { buildTicketLanes, type TicketLaneModel, type TicketRowModel } from '../../../shared/ticketLanes';
 import type { Snapshot } from '../../../shared/types';
+import { PrStateBadge } from '../components/PrStateBadge';
 import { FirstLoadMessage, isFirstLoad } from '../lib/firstLoad';
 
-interface TicketsViewProps { snapshot: Snapshot; selectedId: string | null; onSelect: (id: string) => void }
+interface TicketsViewProps { snapshot: Snapshot; selectedId: string | null; onSelect: (id: string) => void; mineOnly?: boolean }
 
 function TicketRow({ row, selectedId, onSelect }: { row: TicketRowModel; selectedId: string | null; onSelect: (id: string) => void }) {
   const { ticket, check } = row;
@@ -22,13 +23,13 @@ function TicketRow({ row, selectedId, onSelect }: { row: TicketRowModel; selecte
         {row.open.map((pr) => (
           <button key={pr.id} type="button" className={`mini${pr.id === selectedId ? ' cur' : ''}`} onClick={() => onSelect(pr.id)}>
             <i className={pr.isDraft ? 'fill-draft' : 'fill-waiting'} />
-            <span><span className="rn">{pr.repo} #{pr.number}</span> {pr.title} · {pr.isDraft ? 'draft' : 'open'}</span>
+            <span className="mini-text"><PrStateBadge state={pr.isDraft ? 'draft' : 'open'} />{' '}<span className="rn">{pr.repo} #{pr.number}</span>{' '}<span className="mini-title">{pr.title}</span></span>
           </button>
         ))}
         {row.closed.map((pr) => (
           <a key={pr.id} className="mini" href={pr.url} target="_blank" rel="noopener noreferrer">
             <i className={pr.merged ? 'fill-ready' : 'fill-draft'} />
-            <span><span className="rn">{pr.repo} #{pr.number}</span> {pr.title} · {pr.merged ? 'merged' : 'closed'}</span>
+            <span className="mini-text"><PrStateBadge state={pr.merged ? 'merged' : 'closed'} />{' '}<span className="rn">{pr.repo} #{pr.number}</span>{' '}<span className="mini-title">{pr.title} ↗</span></span>
           </a>
         ))}
       </div>
@@ -52,10 +53,12 @@ function TicketLane({ lane, selectedId, onSelect }: { lane: TicketLaneModel; sel
   );
 }
 
-export function TicketsView({ snapshot, selectedId, onSelect }: TicketsViewProps) {
-  const lanes = useMemo(() => buildTicketLanes(snapshot), [snapshot]);
+export function TicketsView({ snapshot, selectedId, onSelect, mineOnly = false }: TicketsViewProps) {
+  const lanes = useMemo(() => buildTicketLanes(snapshot, { mineOnly }), [snapshot, mineOnly]);
   if (isFirstLoad(snapshot)) return <FirstLoadMessage />;
   const visible = lanes.filter((lane) => lane.rows.length > 0 || lane.key === 'mismatch' || lane.key === 'review');
-  if (lanes.every((lane) => lane.rows.length === 0)) return <p className="empty-state">No tickets are referenced by open or recently closed pull requests.</p>;
+  if (lanes.every((lane) => lane.rows.length === 0)) {
+    return <p className="empty-state">{mineOnly ? 'None of these tickets were created by you or assigned to you.' : 'No tickets are referenced by open or recently closed pull requests.'}</p>;
+  }
   return <div className="board">{visible.map((lane) => <TicketLane key={lane.key} lane={lane} selectedId={selectedId} onSelect={onSelect} />)}</div>;
 }

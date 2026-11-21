@@ -70,7 +70,9 @@ describe('Header', () => {
     const { rerender } = render(<Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
     expect(screen.queryByRole('button', { name: /Tickets/ })).toBeNull();
     rerender(<Header snapshot={withTickets} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
-    expect(screen.getByRole('button', { name: 'Tickets 1' })).toBeInTheDocument();
+    const ticketsTab = screen.getByRole('button', { name: 'Tickets 1' });
+    // The count is a separate pill so it does not read as part of the label.
+    expect(within(ticketsTab).getByText('1')).toHaveClass('tab-count');
   });
 
   it('formats relative times', () => {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildPrViews, type PrView } from '../../shared/grouping';
 import type { Bucket } from '../../shared/status';
+import { mineIsUnknown } from '../../shared/ticketLanes';
 import type { DashboardApi } from './api/client';
 import { useDashboard } from './api/useDashboard';
 import { Banners } from './components/Banners';
@@ -83,12 +84,25 @@ export function App({ api }: { api: DashboardApi }) {
         : (
           <>
             {tab !== 'tickets' && <Toolbar url={url} counts={bucketCounts(ids, views)} onChange={setUrl} />}
-            {tab === 'tickets' && <div className="toolbar"><span className="muted">Tickets referenced by open and recently closed pull requests, checked against their PRs.</span></div>}
+            {tab === 'tickets' && (
+              <div className="toolbar">
+                <button
+                  type="button"
+                  className={`chip${url.ticketsMine ? '' : ' off'}`}
+                  aria-pressed={url.ticketsMine}
+                  title={mineIsUnknown(snapshot) ? 'Could not tell for every ticket whether it is yours, so some of yours may be hidden.' : 'Tickets you created, or are or were assignee on'}
+                  onClick={() => setUrl({ ticketsMine: !url.ticketsMine })}
+                >
+                  Mine
+                </button>
+                <span className="muted">Tickets referenced by open and recently closed pull requests, checked against their PRs.</span>
+              </div>
+            )}
             <div className="layout">
               <main className="board-wrap">
                 {tab === 'overview' && <OverviewView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} onOpenSettings={() => setSettingsOpen(true)} />}
                 {tab === 'mine' && <MineView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} />}
-                {tab === 'tickets' && <TicketsView snapshot={snapshot} selectedId={url.selected} onSelect={select} />}
+                {tab === 'tickets' && <TicketsView snapshot={snapshot} selectedId={url.selected} onSelect={select} mineOnly={url.ticketsMine} />}
               </main>
               <Drawer snapshot={snapshot} views={views} selectedId={url.selected} onSelect={select} onVisualize={setStackPrId} onTogglePin={togglePin} onClose={closeDrawer} />
             </div>

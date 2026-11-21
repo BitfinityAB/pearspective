@@ -6,6 +6,7 @@ export const CHUNK_SIZE = 50;
 const CATEGORY: Record<string, StatusCategory> = { new: 'todo', indeterminate: 'inProgress', done: 'done' };
 const NOT_FOUND = /An issue with key '([^']+)' does not exist/g;
 const NO_RESULT = /No result found/;
+const MINE_JQL = 'reporter = currentUser() OR assignee WAS currentUser()';
 
 export const projectOf = (key: string) => key.slice(0, key.lastIndexOf('-'));
 const firstLine = (text: string) => text.split('\n').map((line) => line.trim()).find(Boolean) ?? '';
@@ -42,12 +43,34 @@ export class JiraCliTracker implements IssueTrackerProvider {
     for (const [project, projectKeys] of byProject) {
       for (let start = 0; start < projectKeys.length; start += CHUNK_SIZE) {
         const chunk = await this.listChunk(project, projectKeys.slice(start, start + CHUNK_SIZE));
-        tickets.push(...chunk.tickets);
+        const mine = await this.mineKeys(project, chunk.tickets.map((ticket) => ticket.key));
+        tickets.push(...chunk.tickets.map((ticket) => ({ ...ticket, mine: mine ? mine.has(ticket.key) : null })));
         notFound.push(...chunk.notFound);
       }
     }
     await this.learnCategories(tickets);
     return { tickets: tickets.map((ticket) => ({ ...ticket, status: { ...ticket.status, category: this.categories.get(ticket.status.name) ?? null } })), notFound };
+  }
+
+  // History is only queryable through JQL: `assignee WAS` also matches the current assignee.
+  private async mineKeys(project: string, keys: string[]): Promise<Set<string> | null> {
+    if (keys.length === 0) return new Set();
+    try {
+      const result = await this.exec(['issue', 'list', '--project', project, '-q', `key in (${keys.join(', ')}) AND (${MINE_JQL})`, '--paginate', String(CHUNK_SIZE), '--raw']);
+      const output = `${result.stdout}\n${result.stderr}`;
+      if (result.code === 0) {
+        try {
+          return new Set(this.parseList(result.stdout).map((ticket) => ticket.key));
+        } catch {
+          return NO_RESULT.test(output) ? new Set() : null;
+        }
+      }
+      return NO_RESULT.test(output) ? new Set() : null;
+    } catch (error) {
+      // "Mine" is a filter aid, so a failure only leaves it unknown; a missing CLI or lost login must still surface.
+      if (error instanceof ProviderError && error.kind !== 'failed') throw error;
+      return null;
+    }
   }
 
   // One `issue view` per unseen status name: its full response includes the status category.
