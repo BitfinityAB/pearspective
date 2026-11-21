@@ -16,5 +16,9 @@
     "provider": "jira",
     "baseUrl": "https://jira.example.com",
     "expectedStatuses": { "open": ["In Review"], "merged": ["Ready for Test", "Done"] }
+  },
+  "notifications": {
+    "enabled": true,
+    "events": { "reviewRequested": true }
   }
 }

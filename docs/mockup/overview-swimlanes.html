@@ -141,6 +141,10 @@ dialog::backdrop{background:var(--backdrop)}
 .dlg svg{flex:1 1 auto;width:100%;background:var(--canvas);cursor:grab}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:10px 18px;border-top:1px solid var(--hair)}
 .legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:12px;height:12px;border-radius:3px}
+.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 11; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; width: min(380px, calc(100vw - 32px)) }
+.toast { display: flex; align-items: flex-start; gap: 4px; width: 100%; padding: 10px 8px 10px 12px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 24px var(--shadow) }
+.toast-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; border: 0; background: transparent; cursor: pointer; text-align: left; padding: 0; font-size: 13px }
+.toast-body span { color: var(--text2) }
 </style>
 </head>
 <body>
@@ -506,7 +510,7 @@ function render(){
     <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="sr">Search pull requests</span><input id="q" value="${esc(state.q)}" placeholder="Search title, branch, repo"></label>
     <button class="chip" data-act="sort"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 16l4 4 4-4"/><path d="M17 20V4"/><path d="M13 8l4-4 4 4"/></svg>${state.newestFirst ? 'Newest first' : 'Oldest first'}</button>
   </section>
-  <div class="layout"><main>${lanesHtml()}</main>${drawerHtml()}</div>`}`;
+  <div class="layout"><main>${lanesHtml()}</main>${drawerHtml()}</div>`}<div class="toasts"><div class="toast"><button class="toast-body"><b>orders-api #3412</b><span>CI passed · approved · new comment by Robin Park: 'Looks good now'</span></button><button class="icon" aria-label="Dismiss">×</button></div></div>`;
   if (state.tab === 'stacks') document.querySelectorAll('svg[data-stack]').forEach(svg => drawStack(svg, svg.dataset.stack, false));
   drawConnectors();
   if (focused === 'q') { const el = document.getElementById('q'); el.focus(); el.setSelectionRange(caret, caret); }

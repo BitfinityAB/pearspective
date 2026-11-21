@@ -29,6 +29,7 @@ Pearspective is a small local dashboard that answers them on one screen. It read
 - **Detail panel** that stays in view while you scroll: failing checks, reviewers, unresolved threads, related PRs for the same ticket, and the stack the PR belongs to.
 - **Ticket links.** Jira-style keys in branch names or titles (`XX-123`) become links when an issue tracker is configured.
 - **Ticket status (optional).** With [jira-cli](https://github.com/ankitpokhrel/jira-cli) set up, each PR shows its ticket's status, and a **Tickets** tab lists tickets whose status disagrees with their PRs, for example a merged PR whose ticket is still *In Review*.
+- **Notifications.** While a dashboard tab is open, you are told when CI fails or passes, a review lands, a conflict appears, or someone comments on one of your PRs: as a toast when the tab is visible, as a browser notification when it is in the background.
 - **Light and dark themes**, following the system by default.
 
 ## Requirements
@@ -74,6 +75,7 @@ To change the repositories later, use the settings button in the header, or run 
 | `refreshIntervalSec` | `0` (off), `180`, `300`, `600`, `900` or `1800`. Also editable from the header. |
 | `pinned` | IDs of pinned PRs. Managed from the detail panel. |
 | `issueTracker` | Optional. Ticket links, and with jira-cli the ticket status and mismatch checks; see [Ticket status](#ticket-status-optional). |
+| `notifications` | Optional. Notifications on your PRs; see [Notifications](#notifications). |
 
 ## Ticket status (optional)
 
@@ -109,6 +111,22 @@ How tickets are judged:
 - The least-finished PR decides what the ticket should be: a draft or open PR expects work in progress, merged PRs expect anything but *To Do*, and PRs closed without merging ask a human to look.
 - Without `issueTracker.expectedStatuses`, Jira's built-in categories (To Do / In Progress / Done) are used. Listing status names per PR state (`draft`, `open`, `merged`, `abandoned`) makes the check precise, for example to catch a merged PR whose ticket is still *In Review*.
 - A change is not flagged until it has lasted `issueTracker.graceMinutes` (default 30). Tickets are refreshed every `issueTracker.refreshIntervalSec` (default 600, separate from the top-level `refreshIntervalSec` that controls PR polling) and only while a dashboard tab is visible.
+
+## Notifications
+
+Turn them on in the settings panel (or add a `notifications` block to `config.json`), then click **Allow desktop notifications** once per browser.
+
+```json
+"notifications": {
+  "enabled": true,
+  "events": { "reviewRequested": true }
+}
+```
+
+- Events: `ciFailed`, `ciPassed`, `approved`, `changesRequested`, `readyToMerge`, `conflict`, `newComment`, `newThread` (all on by default) and `reviewRequested` (off by default). List only the ones you want to change.
+- Only your own PRs notify, except "review requested". Your own comments and threads, and comments from bots and code-analysis tools, never do.
+- Several changes on one PR arrive as one notification; more than three PRs at once arrive as one summary.
+- While tabs are open but hidden, the server keeps polling every 5 minutes (about 150 GitHub points an hour at ~280 PRs). With no dashboard tab open, nothing is polled and nothing notifies.
 
 ## How it uses the GitHub API
 
