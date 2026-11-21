@@ -1,7 +1,7 @@
-import { PollLoop, Presence } from '../presence';
+import { HIDDEN_POLL_MS, PollLoop, Presence } from '../presence';
 import { emptySnapshot, type Snapshot } from '../../shared/types';
 
-function setup(initialIntervalMs: number | null = 180_000) {
+function setup(initialIntervalMs: number | null = 180_000, hiddenMs: number | null = null) {
   const presence = new Presence();
   let snapshot: Snapshot = emptySnapshot('acme');
   let ticks = 0;
@@ -12,7 +12,7 @@ function setup(initialIntervalMs: number | null = 180_000) {
     snapshot: () => snapshot,
     backoffFactor: () => factor,
   };
-  const loop = new PollLoop({ poller, presence, intervalMs: () => intervalMs });
+  const loop = new PollLoop({ poller, presence, intervalMs: () => intervalMs, hiddenIntervalMs: () => hiddenMs });
   loop.start();
   return {
     presence, loop,
@@ -174,5 +174,45 @@ describe('PollLoop after failures', () => {
     finishTick();
     await vi.advanceTimersByTimeAsync(3_600_000);
     expect(ticks).toBe(1);
+  });
+});
+
+describe('Presence connections', () => {
+  it('knows whether any tab is connected, visible or not', () => {
+    const presence = new Presence();
+    expect(presence.anyConnected()).toBe(false);
+    presence.connect('tab-1');
+    presence.setVisible('tab-1', false);
+    expect(presence.anyConnected()).toBe(true);
+    presence.disconnect('tab-1');
+    expect(presence.anyConnected()).toBe(false);
+  });
+});
+
+describe('PollLoop while hidden', () => {
+  beforeEach(() => vi.useFakeTimers({ now: Date.parse('2026-11-18T12:00:00Z') }));
+  afterEach(() => vi.useRealTimers());
+
+  it('keeps polling every hidden interval while a hidden tab stays connected', async () => {
+    const { presence, ticks } = setup(180_000, HIDDEN_POLL_MS);
+    presence.connect('tab-1');
+    await vi.advanceTimersByTimeAsync(0);
+    presence.setVisible('tab-1', false);
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(ticks()).toBe(1);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(ticks()).toBe(2);
+    presence.disconnect('tab-1');
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(ticks()).toBe(2);
+  });
+
+  it('does not poll a hidden tab when hidden polling is off', async () => {
+    const { presence, ticks } = setup(180_000, null);
+    presence.connect('tab-1');
+    await vi.advanceTimersByTimeAsync(0);
+    presence.setVisible('tab-1', false);
+    await vi.advanceTimersByTimeAsync(900_000);
+    expect(ticks()).toBe(1);
   });
 });

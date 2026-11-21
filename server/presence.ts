@@ -28,6 +28,10 @@ export class Presence {
     return [...this.clients.values()].some(Boolean);
   }
 
+  anyConnected(): boolean {
+    return this.clients.size > 0;
+  }
+
   onChange(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -38,11 +42,15 @@ interface PollLoopDeps {
   poller: Pick<Poller, 'tick' | 'snapshot' | 'backoffFactor'>;
   presence: Presence;
   intervalMs: () => number | null;
+  hiddenIntervalMs?: () => number | null;
   now?: () => number;
 }
 
 /** Off mode retries a failed first load this often, so a broken setup does not spin. */
 export const OFF_MODE_RETRY_MS = 60_000;
+
+/** While tabs are open but hidden, polling slows to this so notifications still arrive. */
+export const HIDDEN_POLL_MS = 300_000;
 
 /** Polls only while someone is looking, so an idle dashboard spends no API budget. */
 export class PollLoop {
@@ -89,8 +97,11 @@ export class PollLoop {
   reschedule() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    if (this.stopped || !this.deps.presence.anyVisible()) return;
-    const interval = this.deps.intervalMs();
+    if (this.stopped) return;
+    const visible = this.deps.presence.anyVisible();
+    const hidden = !visible && this.deps.presence.anyConnected() ? this.deps.hiddenIntervalMs?.() ?? null : null;
+    if (!visible && hidden === null) return;
+    const interval = visible ? this.deps.intervalMs() : hidden;
     const fetchedAt = this.deps.poller.snapshot().fetchedAt;
     const now = this.now();
     if (interval === null) {
