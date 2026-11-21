@@ -6,6 +6,8 @@ import { Toasts } from '../components/Toasts';
 const toast = (n: number) => ({ key: `k${n}`, prId: `PR_${n}`, title: `orders-api #${n}`, body: 'CI failed' });
 
 describe('Toasts', () => {
+  afterEach(() => vi.useRealTimers());
+
   it('shows at most three, counts the rest, and opens or dismisses on click', async () => {
     const onOpen = vi.fn();
     const onDismiss = vi.fn();
@@ -24,6 +26,5 @@ describe('Toasts', () => {
     render(<Toasts toasts={[toast(1)]} onOpen={vi.fn()} onDismiss={onDismiss} />);
     act(() => vi.advanceTimersByTime(8_000));
     expect(onDismiss).toHaveBeenCalledWith('k1');
-    vi.useRealTimers();
   });
 });

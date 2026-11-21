@@ -53,12 +53,15 @@ export function useNotifications(snapshot: Snapshot | null, handlers: { onOpenPr
     }
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     for (const message of messages) {
-      const notification = new Notification(message.title, { body: message.body, tag: message.prId ?? 'pearspective-summary' });
-      notification.onclick = () => {
-        window.focus();
-        open(message);
-        notification.close();
-      };
+      // Some mobile browsers throw "Illegal constructor" even with permission granted; an uncaught throw here would unmount the app.
+      try {
+        const notification = new Notification(message.title, { body: message.body, tag: message.prId ?? 'pearspective-summary' });
+        notification.onclick = () => {
+          window.focus();
+          open(message);
+          notification.close();
+        };
+      } catch { /* notifications unsupported in this context */ }
     }
   }, [snapshot === null, batch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 

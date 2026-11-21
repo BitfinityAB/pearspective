@@ -64,4 +64,11 @@ describe('useNotifications', () => {
     expect(result.current.toasts).toEqual([]);
     expect(shown).toEqual([{ title: 'orders-api #1', options: { body: 'CI failed', tag: 'PR_1' } }]);
   });
+
+  it('does not throw when the browser refuses to construct a notification', () => {
+    visibility = 'hidden';
+    vi.stubGlobal('Notification', Object.assign(function () { throw new TypeError('Illegal constructor'); }, { permission: 'granted' }));
+    const { rerender } = render(withBatch(null));
+    expect(() => rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) })).not.toThrow();
+  });
 });
