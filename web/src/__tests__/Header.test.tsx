@@ -80,4 +80,12 @@ describe('Header', () => {
     expect(relativeTime(6 * 60_000)).toBe('6m ago');
     expect(relativeTime(3 * 3_600_000)).toBe('3h ago');
   });
+
+  it('marks the settings button while desktop permission is still to be asked', () => {
+    vi.stubGlobal('Notification', Object.assign(function () {}, { permission: 'default' }));
+    const withNotifications = { ...snapshot, settings: { ...snapshot.settings, notifications: { ...snapshot.settings.notifications, enabled: true } } };
+    render(<Header snapshot={withNotifications} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveClass('has-dot');
+    vi.unstubAllGlobals();
+  });
 });

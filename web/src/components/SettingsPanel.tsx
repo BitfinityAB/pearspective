@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { MAX_REPOS, type RepoRef } from '../../../shared/types';
+import { MAX_REPOS, type NotificationSettings, type RepoRef } from '../../../shared/types';
 import type { DashboardApi } from '../api/client';
+import { NotificationSettingsSection } from './NotificationSettings';
 
 interface SettingsPanelProps {
   api: Pick<DashboardApi, 'searchRepos'>;
   repos: string[];
   onSave: (repos: string[]) => Promise<void>;
   onClose: () => void;
+  notifications?: { settings: NotificationSettings; onSave: (next: NotificationSettings) => Promise<void> };
 }
 
-export function SettingsPanel({ api, repos, onSave, onClose }: SettingsPanelProps) {
+export function SettingsPanel({ api, repos, onSave, onClose, notifications }: SettingsPanelProps) {
   const [selected, setSelected] = useState<string[]>(repos);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<RepoRef[]>([]);
@@ -62,6 +64,7 @@ export function SettingsPanel({ api, repos, onSave, onClose }: SettingsPanelProp
             );
           })}
         </div>
+        {notifications && <NotificationSettingsSection settings={notifications.settings} onSave={notifications.onSave} />}
         {error && <p role="alert" className="banner sev-red">{error}</p>}
         <div className="modal-head" style={{ borderTop: '1px solid var(--hair)', borderBottom: 0, justifyContent: 'flex-end' }}>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
