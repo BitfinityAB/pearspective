@@ -9,7 +9,7 @@ export function useDashboard(api: DashboardApi) {
   useEffect(() => {
     let active = true;
     api.getSnapshot().then((initial) => active && setSnapshot(initial)).catch(() => undefined);
-    // The server polls only while some tab is visible, to save API budget.
+    // The server polls slowly while every tab is hidden, and not at all with none open, to save API budget.
     const onVisibility = () => void api.setVisible(clientId, document.visibilityState === 'visible');
     const unsubscribe = api.subscribe(clientId, setSnapshot, onVisibility);
     document.addEventListener('visibilitychange', onVisibility);

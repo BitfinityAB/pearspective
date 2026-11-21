@@ -90,6 +90,24 @@ describe('PollLoop', () => {
   });
 });
 
+describe('PollLoop visibility hint', () => {
+  beforeEach(() => vi.useFakeTimers({ now: Date.parse('2026-11-18T12:00:00Z') }));
+  afterEach(() => vi.useRealTimers());
+
+  it('tells the poller whether any tab was visible', async () => {
+    const presence = new Presence();
+    const tick = vi.fn(async () => undefined);
+    const poller = { tick, snapshot: () => emptySnapshot('acme'), backoffFactor: () => 1 };
+    new PollLoop({ poller, presence, intervalMs: () => 180_000, hiddenIntervalMs: () => 300_000 }).start();
+    presence.connect('tab-1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(tick).toHaveBeenLastCalledWith({ hidden: false });
+    presence.setVisible('tab-1', false);
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(tick).toHaveBeenLastCalledWith({ hidden: true });
+  });
+});
+
 describe('PollLoop after failures', () => {
   beforeEach(() => vi.useFakeTimers({ now: Date.parse('2026-11-18T12:00:00Z') }));
   afterEach(() => vi.useRealTimers());

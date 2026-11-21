@@ -25,6 +25,19 @@ function needsEnrichment(cached: ChangeRequest | undefined, stub: ChangeRequestS
     || cached.checks.some((check) => check.state === 'pending');
 }
 
+/** The provider computes mergeability lazily, so an unknown state keeps the last known one and a later change is still noticed. */
+export function withKnownMergeStates(next: Snapshot, previous: Snapshot | null): Snapshot {
+  if (!previous) return next;
+  const before = new Map(previous.prs.map((pr) => [pr.id, pr.mergeState]));
+  return {
+    ...next,
+    prs: next.prs.map((pr) => {
+      const known = before.get(pr.id);
+      return pr.mergeState === 'unknown' && known && known !== 'unknown' ? { ...pr, mergeState: known } : pr;
+    }),
+  };
+}
+
 const uniqueIds = (stubs: ChangeRequestStub[]) => [...new Set(stubs.map((stub) => stub.id))];
 
 export class Poller {
@@ -37,6 +50,7 @@ export class Poller {
   private inFlight: Promise<void> | null = null;
   private rerun: Promise<void> | null = null;
   private rerunFull = false;
+  private rerunHidden = true;
   private ticketSync: Promise<void> | null = null;
   private ticketBanner: BannerMsg | null = null;
 
@@ -82,19 +96,23 @@ export class Poller {
   }
 
   /** A call during a running tick gets one follow-up run, so changes made meanwhile (e.g. saved settings) are not lost. */
-  tick(opts: { full?: boolean } = {}): Promise<void> {
+  tick(opts: { full?: boolean; hidden?: boolean } = {}): Promise<void> {
     if (!this.inFlight) return this.start(opts);
     this.rerunFull ||= !!opts.full;
+    // Ticket work is skipped only when every caller was hidden.
+    this.rerunHidden &&= !!opts.hidden;
     this.rerun ??= this.inFlight.catch(() => undefined).then(() => {
       const full = this.rerunFull;
+      const hidden = this.rerunHidden;
       this.rerun = null;
       this.rerunFull = false;
-      return this.inFlight ?? this.start({ full });
+      this.rerunHidden = true;
+      return this.inFlight ?? this.start({ full, hidden });
     });
     return this.rerun;
   }
 
-  private start(opts: { full?: boolean }): Promise<void> {
+  private start(opts: { full?: boolean; hidden?: boolean }): Promise<void> {
     this.inFlight = this.run(opts).finally(() => (this.inFlight = null));
     return this.inFlight;
   }
@@ -104,7 +122,7 @@ export class Poller {
     if (notify) this.deps.onChange?.(this.current);
   }
 
-  private async run({ full = false }: { full?: boolean }): Promise<void> {
+  private async run({ full = false, hidden = false }: { full?: boolean; hidden?: boolean }): Promise<void> {
     const { provider } = this.deps;
     const config = this.deps.config();
     const now = this.now();
@@ -175,8 +193,9 @@ export class Poller {
       // A partial refresh would show missing PRs as changes, so only complete refreshes are compared.
       if (!fetchFailure) patch.notification = this.notificationBatch({ ...this.current, ...patch }, now);
       this.publish(patch);
-      if (!fetchFailure) this.lastComplete = this.current;
-      this.startTicketSync(repos);
+      if (!fetchFailure) this.lastComplete = withKnownMergeStates(this.current, this.lastComplete);
+      // Ticket changes never notify, so a hidden tick would only spend tracker and API calls.
+      if (!hidden) this.startTicketSync(repos);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ProviderError && (error.kind === 'auth' || error.kind === 'missing-cli')) {

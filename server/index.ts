@@ -26,7 +26,7 @@ async function main() {
     tickets,
     onChange: (snapshot) => {
       hub.publish(snapshot);
-      // One line per refresh makes it easy to confirm polling stops when no tab is visible.
+      // One line per refresh makes it easy to confirm polling slows down or stops when no tab is visible.
       console.log(`[${new Date().toLocaleTimeString()}] ${snapshot.prs.length} PRs, ${snapshot.rateLimit?.remaining ?? '?'} API points left${snapshot.stale ? ', stale' : ''}`);
     },
   });

@@ -1,4 +1,5 @@
-import { Poller } from '../poller';
+import { Poller, withKnownMergeStates } from '../poller';
+import { emptySnapshot } from '../../shared/types';
 import { ConfigSchema } from '../config';
 import { ProviderError } from '../providers/types';
 import { createFakeProvider } from '../../test/fake-provider';
@@ -55,5 +56,40 @@ describe('Poller notifications', () => {
     advance(60_000);
     await poller.tick();
     expect(poller.snapshot().notification).toBeNull();
+  });
+
+  it('keeps the last known merge state through an unknown reading so a later conflict still notifies', async () => {
+    const { poller, code, pr, advance } = setup();
+    await poller.tick();
+    code.state.prs = [{ ...pr, mergeState: 'unknown', updatedAt: '2026-11-21T12:01:00Z' }];
+    advance(60_000);
+    await poller.tick();
+    expect(poller.snapshot().prs[0]?.mergeState).toBe('unknown');
+    code.state.prs = [{ ...pr, mergeState: 'conflicts', updatedAt: '2026-11-21T12:02:00Z' }];
+    advance(60_000);
+    await poller.tick();
+    expect(poller.snapshot().notification?.items[0]?.events).toContainEqual({ kind: 'conflict' });
+  });
+});
+
+describe('withKnownMergeStates', () => {
+  const snapshotOf = (...prs: ReturnType<typeof makePr>[]) => ({ ...emptySnapshot('acme'), prs });
+
+  it('replaces an unknown state with the previous known one and leaves everything else alone', () => {
+    const stays = makePr({ id: 'PR_stays', mergeState: 'clean' });
+    const unknownNow = makePr({ id: 'PR_unknown', mergeState: 'unknown', title: 'Fresh title' });
+    const brandNew = makePr({ id: 'PR_new', mergeState: 'unknown' });
+    const stillUnknown = makePr({ id: 'PR_still', mergeState: 'unknown' });
+    const previous = snapshotOf(makePr({ id: 'PR_stays', mergeState: 'conflicts' }), makePr({ id: 'PR_unknown', mergeState: 'conflicts' }), makePr({ id: 'PR_still', mergeState: 'unknown' }));
+    const next = snapshotOf(stays, unknownNow, brandNew, stillUnknown);
+    const merged = withKnownMergeStates(next, previous);
+    expect(merged.prs.map((pr) => pr.mergeState)).toEqual(['clean', 'conflicts', 'unknown', 'unknown']);
+    expect(merged.prs[1]?.title).toBe('Fresh title');
+    expect(next.prs[1]?.mergeState).toBe('unknown');
+  });
+
+  it('returns the snapshot as is when there is no previous one', () => {
+    const next = snapshotOf(makePr({ mergeState: 'unknown' }));
+    expect(withKnownMergeStates(next, null)).toBe(next);
   });
 });

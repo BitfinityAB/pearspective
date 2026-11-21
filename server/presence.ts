@@ -52,7 +52,7 @@ export const OFF_MODE_RETRY_MS = 60_000;
 /** While tabs are open but hidden, polling slows to this so notifications still arrive. */
 export const HIDDEN_POLL_MS = 300_000;
 
-/** Polls only while someone is looking, so an idle dashboard spends no API budget. */
+/** Polls while a tab is visible, and slowly while tabs are only hidden (when enabled); with no tab open it stays idle. */
 export class PollLoop {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private unsubscribe: (() => void) | null = null;
@@ -82,8 +82,9 @@ export class PollLoop {
   // Failed ticks leave fetchedAt unchanged, so the attempt time is what paces retries.
   private attempt(): Promise<void> {
     this.lastAttemptAt = this.now();
+    const hidden = !this.deps.presence.anyVisible();
     // The poller reports failures through its snapshot; a rejection must not end the loop.
-    return this.deps.poller.tick().catch((error) => console.error('Poll tick failed:', error));
+    return this.deps.poller.tick({ hidden }).catch((error) => console.error('Poll tick failed:', error));
   }
 
   private async runTick() {

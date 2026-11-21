@@ -96,4 +96,49 @@ describe('Poller with tickets', () => {
     errors.mockRestore();
     expect(poller.snapshot().prs).toHaveLength(1);
   });
+
+  function ticketSetup() {
+    const now = Date.parse('2026-11-20T12:00:00Z');
+    const config = ConfigSchema.parse({ codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'] }, notifications: { enabled: true }, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test' } });
+    const code = createFakeProvider([makePr({ headRefName: 'XX-1-work' })]);
+    const fake = createFakeTracker([makeTicket('XX-1', 'To Do', 'todo')]);
+    const lookups = vi.spyOn(fake.tracker, 'getTickets');
+    const tickets = new TicketSync({ tracker: fake.tracker, codeHost: code.provider, now: () => now });
+    return { poller: new Poller({ provider: code.provider, config: () => config, now: () => now, tickets }), lookups };
+  }
+
+  it('starts ticket sync on a visible tick but not on a hidden one', async () => {
+    const hiddenSetup = ticketSetup();
+    await hiddenSetup.poller.tick({ hidden: true });
+    await hiddenSetup.poller.ticketWork();
+    expect(hiddenSetup.lookups).not.toHaveBeenCalled();
+    expect(hiddenSetup.poller.snapshot().tickets).toEqual({});
+
+    const visibleSetup = ticketSetup();
+    await visibleSetup.poller.tick({ hidden: false });
+    await visibleSetup.poller.ticketWork();
+    expect(visibleSetup.lookups).toHaveBeenCalled();
+  });
+
+  it('leaves the notification field unchanged when a ticket sync publishes', async () => {
+    const clock = { now: Date.parse('2026-11-20T12:00:00Z') };
+    const config = ConfigSchema.parse({ codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'] }, notifications: { enabled: true }, issueTracker: { provider: 'jira', baseUrl: 'https://tracker.example.test' } });
+    const pr = makePr({ headRefName: 'XX-1-work', reviewDecision: 'review_required' });
+    const code = createFakeProvider([pr]);
+    code.state.mine.authored = [pr.id];
+    const fake = createFakeTracker([makeTicket('XX-1', 'To Do', 'todo')]);
+    const tickets = new TicketSync({ tracker: fake.tracker, codeHost: code.provider, now: () => clock.now });
+    const poller = new Poller({ provider: code.provider, config: () => config, now: () => clock.now, tickets });
+
+    await poller.tick();
+    await poller.ticketWork();
+    code.state.prs = [{ ...pr, checks: [{ name: 'build', state: 'failure', required: true }], updatedAt: '2026-11-20T12:01:00Z' }];
+    clock.now += 60_000;
+    await poller.tick();
+    const batch = poller.snapshot().notification;
+    expect(batch?.items).toHaveLength(1);
+    await poller.ticketWork();
+    expect(poller.snapshot().tickets['XX-1']).toBeDefined();
+    expect(poller.snapshot().notification).toBe(batch);
+  });
 });
