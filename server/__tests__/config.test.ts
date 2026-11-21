@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ConfigError, ConfigSchema, ConfigStore, notificationSettings, refreshToSeconds, secondsToRefresh } from '../config';
+import { ConfigError, ConfigSchema, ConfigStore, hiddenPollInterval, notificationSettings, refreshToSeconds, secondsToRefresh } from '../config';
 
 async function tempConfig(contents?: unknown) {
   const dir = await mkdtemp(join(tmpdir(), 'prdash-'));
@@ -92,5 +92,13 @@ describe('notifications config', () => {
     expect(settings.events.newThread).toBe(false);
     expect(settings.events.ciFailed).toBe(true);
     expect(() => ConfigSchema.parse({ ...base, notifications: { events: { pinged: true } } })).toThrow();
+  });
+
+  it('polls hidden tabs every 5 minutes only when notifications are on and auto-refresh is on', () => {
+    const on = ConfigSchema.parse({ ...base, refreshIntervalSec: 180, notifications: { enabled: true } });
+    expect(hiddenPollInterval(on)).toBe(300_000);
+    const autoRefreshOff = ConfigSchema.parse({ ...base, refreshIntervalSec: 0, notifications: { enabled: true } });
+    expect(hiddenPollInterval(autoRefreshOff)).toBeNull();
+    expect(hiddenPollInterval(ConfigSchema.parse({ ...base, refreshIntervalSec: 180 }))).toBeNull();
   });
 });

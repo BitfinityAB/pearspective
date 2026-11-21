@@ -1,6 +1,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { z } from 'zod';
 import { MAX_PINNED, MAX_REPOS, NOTIFICATION_DEFAULTS, type NotificationSettings, type RefreshSetting } from '../shared/types';
+import { HIDDEN_POLL_MS } from './presence';
 
 export const DEFAULT_REVIEWER_CLASSES = {
   'ai-review': ['copilot-pull-request-reviewer'],
@@ -63,6 +64,11 @@ export function notificationSettings(config: Config): NotificationSettings {
   const block = config.notifications;
   const listed = Object.fromEntries(Object.entries(block?.events ?? {}).filter(([, value]) => value !== undefined));
   return { enabled: Boolean(block?.enabled), events: { ...NOTIFICATION_DEFAULTS, ...listed } };
+}
+
+/** Auto-refresh off means no background API use, so hidden tabs do not poll either. */
+export function hiddenPollInterval(config: Config): number | null {
+  return notificationSettings(config).enabled && config.refreshIntervalSec !== 0 ? HIDDEN_POLL_MS : null;
 }
 
 export class ConfigError extends Error {}

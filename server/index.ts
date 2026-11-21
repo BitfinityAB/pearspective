@@ -2,11 +2,11 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import express from 'express';
 import { createApp } from './app';
-import { ConfigError, ConfigStore, notificationSettings } from './config';
+import { ConfigError, ConfigStore, hiddenPollInterval } from './config';
 import { createGhClient } from './gh';
 import { SnapshotHub } from './hub';
 import { Poller } from './poller';
-import { HIDDEN_POLL_MS, PollLoop, Presence } from './presence';
+import { PollLoop, Presence } from './presence';
 import { createCodeHost, createIssueTracker } from './providers/registry';
 import { TicketSync } from './ticket-sync';
 
@@ -35,7 +35,7 @@ async function main() {
     poller,
     presence,
     intervalMs: () => (store.get().refreshIntervalSec === 0 ? null : store.get().refreshIntervalSec * 1000),
-    hiddenIntervalMs: () => (notificationSettings(store.get()).enabled ? HIDDEN_POLL_MS : null),
+    hiddenIntervalMs: () => hiddenPollInterval(store.get()),
   });
   const app = createApp({ poller, presence, loop, provider, store, hub });
 
