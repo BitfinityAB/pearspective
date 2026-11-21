@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { permissionHintVisible } from '../notifications/permission';
+import { usePermissionHint } from '../notifications/permission';
 import { REFRESH_OPTIONS, type RefreshSetting, type Snapshot } from '../../../shared/types';
 import { ticketAttentionCount } from '../../../shared/ticketLanes';
 import { isFirstLoad } from '../lib/firstLoad';
@@ -32,7 +32,7 @@ interface HeaderProps {
   onTab: (tab: Tab) => void;
   onRefresh: () => Promise<void>;
   onRefreshSetting: (setting: RefreshSetting) => void;
-  onOpenSettings: () => void;
+  onOpenSettings: (focusPermission: boolean) => void;
 }
 
 export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting, onOpenSettings }: HeaderProps) {
@@ -60,7 +60,7 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
   }, [menuOpen]);
 
   const { settings, viewer, fetchedAt } = snapshot;
-  const hint = permissionHintVisible(settings.notifications);
+  const hint = usePermissionHint(settings.notifications);
   const updated = fetchedAt ? relativeTime(now - Date.parse(fetchedAt)) : 'never';
   const attention = ticketAttentionCount(snapshot);
   const tabs = settings.ticketsEnabled ? [...TABS, { value: 'tickets' as const, label: 'Tickets', count: attention }] : TABS;
@@ -87,18 +87,18 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
         </span>
         <span className="hdr-secondary">
           <ThemeToggle />
-          <button type="button" className={`icon-btn${hint ? ' has-dot' : ''}`} aria-label="Settings" onClick={onOpenSettings}>{SETTINGS_ICON}</button>
+          <button type="button" className={`icon-btn${hint ? ' has-dot' : ''}`} aria-label={hint ? 'Settings (desktop notifications not yet allowed)' : 'Settings'} onClick={() => onOpenSettings(hint)}>{SETTINGS_ICON}</button>
         </span>
         {viewer && <span className="who"><Avatar name={viewer.name ?? viewer.login} url={viewer.avatarUrl} size={24} /><span className="who-name" title={viewer.login}>{viewer.name ?? viewer.login}</span></span>}
         {/* Narrow screens move the secondary controls into this menu so the bar stays on one tidy layout. */}
         <div className="hdr-menu" ref={menuRef}>
-          <button ref={menuButtonRef} type="button" className={`icon-btn${hint ? ' has-dot' : ''}`} aria-label="More" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{MENU_ICON}</button>
+          <button ref={menuButtonRef} type="button" className={`icon-btn${hint ? ' has-dot' : ''}`} aria-label={hint ? 'More (desktop notifications not yet allowed)' : 'More'} aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{MENU_ICON}</button>
           {menuOpen && (
             <div id="header-menu" className="menu-panel" role="group" aria-label="More">
               <div className="menu-row"><span className="muted">Organisation</span><b>{settings.org}</b></div>
               <div className="menu-row"><span className="muted">{status}</span></div>
               <div className="menu-row"><span className="muted">Theme</span><ThemeToggle /></div>
-              <button type="button" className="btn menu-item" onClick={() => { setMenuOpen(false); onOpenSettings(); }}>{SETTINGS_ICON} Settings</button>
+              <button type="button" className="btn menu-item" onClick={() => { setMenuOpen(false); onOpenSettings(hint); }}>{SETTINGS_ICON} Settings</button>
             </div>
           )}
         </div>

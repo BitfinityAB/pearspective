@@ -54,4 +54,31 @@ describe('NotificationSettingsSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Not now' }));
     expect(localStorage.getItem(PERMISSION_HINT_KEY)).toBe('1');
   });
+
+  it('shows each description as visible text tied to its checkbox', () => {
+    stubPermission('granted');
+    render(<NotificationSettingsSection settings={settings} onSave={vi.fn()} />);
+    expect(screen.getByRole('checkbox', { name: 'CI failed' })).toHaveAccessibleDescription('A check on your PR failed.');
+    expect(screen.getByText('A check on your PR failed.')).toBeVisible();
+  });
+
+  it('shows a save failure inside the section', async () => {
+    stubPermission('granted');
+    render(<NotificationSettingsSection settings={settings} onSave={vi.fn(async () => { throw new Error('Save failed'); })} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'CI failed' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Save failed');
+  });
+
+  it('focuses the permission row when asked to', () => {
+    stubPermission('default');
+    render(<NotificationSettingsSection settings={settings} onSave={vi.fn()} focusPermission />);
+    expect(document.getElementById('notify-permission')).toHaveFocus();
+  });
+
+  it('re-reads the permission when the request rejects', async () => {
+    stubPermission('default', vi.fn(async () => { throw new Error('nope'); }));
+    render(<NotificationSettingsSection settings={settings} onSave={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Allow desktop notifications' }));
+    expect(screen.getByRole('button', { name: 'Allow desktop notifications' })).toBeInTheDocument();
+  });
 });

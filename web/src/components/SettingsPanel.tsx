@@ -8,10 +8,11 @@ interface SettingsPanelProps {
   repos: string[];
   onSave: (repos: string[]) => Promise<void>;
   onClose: () => void;
+  focusPermission?: boolean;
   notifications?: { settings: NotificationSettings; onSave: (next: NotificationSettings) => Promise<void> };
 }
 
-export function SettingsPanel({ api, repos, onSave, onClose, notifications }: SettingsPanelProps) {
+export function SettingsPanel({ api, repos, onSave, onClose, notifications, focusPermission }: SettingsPanelProps) {
   const [selected, setSelected] = useState<string[]>(repos);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<RepoRef[]>([]);
@@ -64,7 +65,7 @@ export function SettingsPanel({ api, repos, onSave, onClose, notifications }: Se
             );
           })}
         </div>
-        {notifications && <NotificationSettingsSection settings={notifications.settings} onSave={notifications.onSave} />}
+        {notifications && <NotificationSettingsSection settings={notifications.settings} onSave={notifications.onSave} focusPermission={focusPermission} />}
         {error && <p role="alert" className="banner sev-red">{error}</p>}
         <div className="modal-head" style={{ borderTop: '1px solid var(--hair)', borderBottom: 0, justifyContent: 'flex-end' }}>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>

@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Header, relativeTime } from '../components/Header';
 import { emptySnapshot } from '../../../shared/types';
+import { dismissPermissionHint, PERMISSION_HINT_KEY } from '../notifications/permission';
 
 const snapshot = { ...emptySnapshot('acme'), viewer: { login: 'alex', teams: [] }, fetchedAt: '2026-11-18T11:59:18Z' };
 const now = Date.parse('2026-11-18T12:00:00Z');
 
 describe('Header', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => vi.unstubAllGlobals());
+
   it('shows the viewer, how fresh the data is and the current interval', () => {
     render(<Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
     expect(screen.getByText('alex')).toBeInTheDocument();
@@ -81,11 +85,48 @@ describe('Header', () => {
     expect(relativeTime(3 * 3_600_000)).toBe('3h ago');
   });
 
-  it('marks the settings button while desktop permission is still to be asked', () => {
-    vi.stubGlobal('Notification', Object.assign(function () {}, { permission: 'default' }));
-    const withNotifications = { ...snapshot, settings: { ...snapshot.settings, notifications: { ...snapshot.settings.notifications, enabled: true } } };
-    render(<Header snapshot={withNotifications} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
-    expect(screen.getByRole('button', { name: 'Settings' })).toHaveClass('has-dot');
-    vi.unstubAllGlobals();
+  describe('permission dot', () => {
+    const withNotifications = (enabled: boolean) => ({ ...snapshot, settings: { ...snapshot.settings, notifications: { ...snapshot.settings.notifications, enabled } } });
+    const renderHeader = (enabled = true, onOpenSettings = vi.fn()) => {
+      render(<Header snapshot={withNotifications(enabled)} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={onOpenSettings} />);
+      return onOpenSettings;
+    };
+    const stubPermission = (permission: string) => vi.stubGlobal('Notification', Object.assign(function () {}, { permission }));
+
+    it('marks Settings and More while desktop permission is still to be asked', () => {
+      stubPermission('default');
+      renderHeader();
+      expect(screen.getByRole('button', { name: 'Settings (desktop notifications not yet allowed)' })).toHaveClass('has-dot');
+      expect(screen.getByRole('button', { name: 'More (desktop notifications not yet allowed)' })).toHaveClass('has-dot');
+    });
+
+    it('asks the app to focus the permission row only while the dot shows', async () => {
+      stubPermission('default');
+      const onOpenSettings = renderHeader();
+      await userEvent.click(screen.getByRole('button', { name: /^Settings/ }));
+      expect(onOpenSettings).toHaveBeenLastCalledWith(true);
+    });
+
+    it('shows no dot when permission is granted, notifications are off or the hint was dismissed', () => {
+      stubPermission('granted');
+      const { unmount } = render(<Header snapshot={withNotifications(true)} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+      expect(screen.getByRole('button', { name: 'Settings' })).not.toHaveClass('has-dot');
+      unmount();
+      stubPermission('default');
+      const off = render(<Header snapshot={withNotifications(false)} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+      expect(screen.getByRole('button', { name: 'Settings' })).not.toHaveClass('has-dot');
+      off.unmount();
+      localStorage.setItem(PERMISSION_HINT_KEY, '1');
+      renderHeader();
+      expect(screen.getByRole('button', { name: 'Settings' })).not.toHaveClass('has-dot');
+    });
+
+    it('clears the dot right after the hint is dismissed', () => {
+      stubPermission('default');
+      renderHeader();
+      expect(screen.getByRole('button', { name: /^Settings/ })).toHaveClass('has-dot');
+      act(() => dismissPermissionHint());
+      expect(screen.getByRole('button', { name: 'Settings' })).not.toHaveClass('has-dot');
+    });
   });
 });

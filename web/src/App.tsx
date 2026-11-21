@@ -43,6 +43,7 @@ export function App({ api }: { api: DashboardApi }) {
   const now = useNow(15_000);
   const [stackPrId, setStackPrId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [focusPermission, setFocusPermission] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const reportError = useCallback((error: unknown) => setClientError(error instanceof Error ? error.message : String(error)), []);
   const views = useMemo(() => (snapshot ? buildPrViews(snapshot, now) : new Map<string, PrView>()), [snapshot, now]);
@@ -76,7 +77,7 @@ export function App({ api }: { api: DashboardApi }) {
         onTab={(tab) => setUrl({ tab })}
         onRefresh={() => refreshNow().then(() => setClientError(null), reportError)}
         onRefreshSetting={(refresh) => void updateSettings({ refresh }).catch(reportError)}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={(focus) => { setFocusPermission(focus); setSettingsOpen(true); }}
       />
       <Banners banners={snapshot.banners} />
       {clientError && (
@@ -128,7 +129,7 @@ export function App({ api }: { api: DashboardApi }) {
         />
       )}
       {settingsOpen && (
-        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={() => setSettingsOpen(false)} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }) }} />
+        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={() => setSettingsOpen(false)} focusPermission={focusPermission} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }).catch(reportError) }} />
       )}
       <Toasts toasts={notifications.toasts} onOpen={notifications.open} onDismiss={notifications.dismiss} />
     </div>
