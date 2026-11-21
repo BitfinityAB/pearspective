@@ -44,6 +44,8 @@ export function App({ api }: { api: DashboardApi }) {
   const [stackPrId, setStackPrId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focusPermission, setFocusPermission] = useState(false);
+  const openSettings = useCallback((focus = false) => { setFocusPermission(focus); setSettingsOpen(true); }, []);
+  const closeSettings = useCallback(() => { setFocusPermission(false); setSettingsOpen(false); }, []);
   const [clientError, setClientError] = useState<string | null>(null);
   const reportError = useCallback((error: unknown) => setClientError(error instanceof Error ? error.message : String(error)), []);
   const views = useMemo(() => (snapshot ? buildPrViews(snapshot, now) : new Map<string, PrView>()), [snapshot, now]);
@@ -77,7 +79,7 @@ export function App({ api }: { api: DashboardApi }) {
         onTab={(tab) => setUrl({ tab })}
         onRefresh={() => refreshNow().then(() => setClientError(null), reportError)}
         onRefreshSetting={(refresh) => void updateSettings({ refresh }).catch(reportError)}
-        onOpenSettings={(focus) => { setFocusPermission(focus); setSettingsOpen(true); }}
+        onOpenSettings={openSettings}
       />
       <Banners banners={snapshot.banners} />
       {clientError && (
@@ -108,7 +110,7 @@ export function App({ api }: { api: DashboardApi }) {
             )}
             <div className="layout">
               <main className="board-wrap">
-                {tab === 'overview' && <OverviewView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} onOpenSettings={() => setSettingsOpen(true)} />}
+                {tab === 'overview' && <OverviewView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} onOpenSettings={() => openSettings()} />}
                 {tab === 'mine' && <MineView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} />}
                 {tab === 'tickets' && <TicketsView snapshot={snapshot} selectedId={url.selected} onSelect={select} mineOnly={url.ticketsMine} />}
               </main>
@@ -129,7 +131,7 @@ export function App({ api }: { api: DashboardApi }) {
         />
       )}
       {settingsOpen && (
-        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={() => setSettingsOpen(false)} focusPermission={focusPermission} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }).catch(reportError) }} />
+        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={closeSettings} focusPermission={focusPermission} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }) }} />
       )}
       <Toasts toasts={notifications.toasts} onOpen={notifications.open} onDismiss={notifications.dismiss} />
     </div>

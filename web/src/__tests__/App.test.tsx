@@ -92,4 +92,38 @@ describe('App', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Auto-refresh interval' }), 'off');
     expect(await screen.findByText('Unknown origin')).toBeInTheDocument();
   });
+
+  describe('notification settings', () => {
+    const withNotifications = (api: DashboardApi, repos?: string[]): DashboardApi => ({
+      ...api,
+      getSnapshot: async () => {
+        const base = await api.getSnapshot();
+        return { ...base, settings: { ...base.settings, ...(repos ? { repos } : {}), notifications: { ...base.settings.notifications, enabled: true } } };
+      },
+    });
+
+    beforeEach(() => {
+      localStorage.clear();
+      vi.stubGlobal('Notification', Object.assign(function () {}, { permission: 'default' }));
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('shows a failed notification save inside the dialog', async () => {
+      const api = withNotifications(fakeApi({ updateSettings: async () => { throw new Error('Save failed'); } }));
+      render(<App api={api} />);
+      await userEvent.click(await screen.findByRole('button', { name: /^Settings/ }));
+      const dialog = screen.getByRole('dialog', { name: 'Repositories in Overview' });
+      await userEvent.click(within(dialog).getByRole('checkbox', { name: 'CI failed' }));
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent('Save failed');
+    });
+
+    it('focuses the permission row only when opened from the dot', async () => {
+      render(<App api={withNotifications(fakeApi(), [])} />);
+      await userEvent.click(await screen.findByRole('button', { name: 'Settings (desktop notifications not yet allowed)' }));
+      expect(screen.getByRole('group', { name: 'Desktop notifications' })).toHaveFocus();
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Choose repositories' }));
+      expect(screen.getByRole('group', { name: 'Desktop notifications' })).not.toHaveFocus();
+    });
+  });
 });

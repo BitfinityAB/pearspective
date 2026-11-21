@@ -76,9 +76,10 @@ describe('NotificationSettingsSection', () => {
   });
 
   it('re-reads the permission when the request rejects', async () => {
-    stubPermission('default', vi.fn(async () => { throw new Error('nope'); }));
+    const requestPermission = vi.fn(async () => { (Notification as unknown as { permission: string }).permission = 'granted'; throw new Error('nope'); });
+    stubPermission('default', requestPermission);
     render(<NotificationSettingsSection settings={settings} onSave={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: 'Allow desktop notifications' }));
-    expect(screen.getByRole('button', { name: 'Allow desktop notifications' })).toBeInTheDocument();
+    expect(await screen.findByText('Allowed')).toBeInTheDocument();
   });
 });

@@ -48,7 +48,7 @@ export function NotificationSettingsSection({ settings, onSave, focusPermission 
           </div>
         ))}
       </div>
-      <div className="notify-permission" id="notify-permission" tabIndex={-1} ref={permissionRow}>
+      <div className="notify-permission" id="notify-permission" role="group" aria-label="Desktop notifications" tabIndex={-1} ref={permissionRow}>
         <span className="muted small">Desktop notifications</span>
         {permission === 'unsupported' && <span className="small">Not supported in this browser</span>}
         {permission === 'granted' && <span className="small">Allowed</span>}
@@ -60,7 +60,7 @@ export function NotificationSettingsSection({ settings, onSave, focusPermission 
           </>
         )}
       </div>
-    {error && <p role="alert" className="banner sev-red">{error}</p>}
+      {error && <p role="alert" className="banner sev-red">{error}</p>}
     </section>
   );
 }
