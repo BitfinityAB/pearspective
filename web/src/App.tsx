@@ -9,8 +9,10 @@ import { Drawer } from './components/Drawer';
 import { Header } from './components/Header';
 import { SettingsPanel } from './components/SettingsPanel';
 import { StackDialog } from './components/StackDialog';
+import { Toasts } from './components/Toasts';
 import { Toolbar } from './components/Toolbar';
 import { stacksZoomHint } from './lib/zoomHint';
+import { useNotifications } from './notifications/useNotifications';
 import { useUrlState } from './state/urlState';
 import { MineView } from './views/MineView';
 import { OverviewView } from './views/OverviewView';
@@ -55,6 +57,11 @@ export function App({ api }: { api: DashboardApi }) {
     const pinned = current.includes(id) ? current.filter((pinnedId) => pinnedId !== id) : [...current, id];
     updateSettings({ pinned }).catch(reportError);
   }, [snapshot, updateSettings, reportError]);
+
+  const notifications = useNotifications(snapshot, {
+    onOpenPr: (prId) => setUrl({ selected: prId, tab: url.tab === 'stacks' ? 'mine' : url.tab }),
+    onOpenMine: () => setUrl({ tab: 'mine' }),
+  });
 
   if (!snapshot) return <div className="app"><p className="loading">Loading…</p></div>;
 
@@ -123,6 +130,7 @@ export function App({ api }: { api: DashboardApi }) {
       {settingsOpen && (
         <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={() => setSettingsOpen(false)} />
       )}
+      <Toasts toasts={notifications.toasts} onOpen={notifications.open} onDismiss={notifications.dismiss} />
     </div>
   );
 }
