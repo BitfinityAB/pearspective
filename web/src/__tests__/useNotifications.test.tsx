@@ -62,7 +62,7 @@ describe('useNotifications', () => {
     visibility = 'hidden';
     const { result, rerender } = render(withBatch(null));
     rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => { vi.advanceTimersByTime(2000); });
     expect(result.current.toasts).toEqual([]);
     expect(shown).toEqual([{ title: 'orders-api #1', options: { body: 'CI failed', tag: 'PR_1', renotify: true } }]);
     expect(localStorage.getItem(LAST_NOTIFICATION_KEY)).toBe('2026-11-21T12:05:00Z');
@@ -87,7 +87,7 @@ describe('useNotifications', () => {
     const { result, rerender } = render(withBatch(null));
     rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
     localStorage.setItem(LAST_NOTIFICATION_KEY, '2026-11-21T12:05:00Z');
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => { vi.advanceTimersByTime(2000); });
     expect(shown).toEqual([]);
     expect(result.current.toasts).toEqual([]);
   });
@@ -98,7 +98,7 @@ describe('useNotifications', () => {
     const { result, rerender } = render(withBatch(null));
     rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
     visibility = 'visible';
-    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => { vi.advanceTimersByTime(2000); });
     expect(shown).toEqual([]);
     expect(result.current.toasts).toHaveLength(1);
   });
@@ -109,6 +109,6 @@ describe('useNotifications', () => {
     vi.stubGlobal('Notification', Object.assign(function () { throw new TypeError('Illegal constructor'); }, { permission: 'granted' }));
     const { rerender } = render(withBatch(null));
     rerender({ snapshot: withBatch(batch('2026-11-21T12:05:00Z')) });
-    expect(() => act(() => { vi.advanceTimersByTime(1000); })).not.toThrow();
+    expect(() => act(() => { vi.advanceTimersByTime(2000); })).not.toThrow();
   });
 });

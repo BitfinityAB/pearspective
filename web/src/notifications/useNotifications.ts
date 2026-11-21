@@ -14,7 +14,8 @@ function writeLast(id: string): void {
   try { localStorage.setItem(LAST_NOTIFICATION_KEY, id); } catch { /* storage blocked: tabs may then repeat a batch */ }
 }
 
-const HIDDEN_CLAIM_DELAY_MS = 1000;
+// Jitter keeps hidden tabs that got the same batch from claiming it at the same moment.
+const hiddenClaimDelay = () => 1000 + Math.random() * 1000;
 const isShown = (batch: NotificationBatch, last: string | null) => Boolean(last && batch.id <= last);
 
 function messagesOf(batch: NotificationBatch): ToastModel[] {
@@ -80,7 +81,7 @@ export function useNotifications(snapshot: Snapshot | null, handlers: { onOpenPr
           };
         } catch { /* notifications unsupported in this context */ }
       }
-    }, HIDDEN_CLAIM_DELAY_MS);
+    }, hiddenClaimDelay());
     return () => clearTimeout(timer);
   }, [snapshot === null, batch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
