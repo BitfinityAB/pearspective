@@ -3,7 +3,7 @@ import { ageLabel } from '../../../shared/age';
 import type { PrView } from '../../../shared/grouping';
 import { detectStacks, membersBottomUp, stackIndex } from '../../../shared/stacks';
 import type { ChangeRequest, Snapshot } from '../../../shared/types';
-import { ticketKeyOf } from '../../../shared/tickets';
+import { prTicketKey } from '../../../shared/tickets';
 import { isNarrow } from '../lib/layout';
 import { Avatar } from './Avatar';
 import { PinIcon } from './PinIcon';
@@ -90,7 +90,7 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
   const ticketsOn = snapshot.settings.ticketsEnabled && Boolean(view.ticket);
   const ticket = view.ticket ? snapshot.tickets[view.ticket] : undefined;
   const ticketCheck = view.ticket ? snapshot.ticketChecks[view.ticket] : undefined;
-  const closedForTicket = ticketsOn ? snapshot.closed.filter((closedPr) => ticketKeyOf(closedPr) === view.ticket) : [];
+  const closedForTicket = ticketsOn ? snapshot.closed.filter((closedPr) => prTicketKey(closedPr) === view.ticket) : [];
   const stackEntry = index.get(pr.id);
   const stackMembers = stackEntry ? membersBottomUp(stackEntry.stack).reverse().map((id) => views.get(id)).filter((member): member is PrView => !!member) : [];
   const ticketHref = view.ticket && snapshot.settings.ticketUrl ? snapshot.settings.ticketUrl.replace('{key}', encodeURIComponent(view.ticket)) : null;

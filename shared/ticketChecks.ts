@@ -1,5 +1,5 @@
 import { ageLabel } from './age';
-import { ticketKeyOf } from './tickets';
+import { prTicketKey } from './tickets';
 import type { ChangeRequest, ClosedChangeRequest, PrState, StatusCategory, Ticket, TicketCheck } from './types';
 
 export interface TicketRules {
@@ -87,8 +87,8 @@ export function buildTicketChecks(input: {
     else entry.ignoredBases.add(base);
     byKey.set(key, entry);
   };
-  for (const pr of input.open) add(ticketKeyOf(pr), pr.baseRefName, { state: pr.isDraft ? 'draft' : 'open', at: pr.createdAt });
-  for (const pr of input.closed) add(ticketKeyOf(pr), pr.baseRefName, { state: pr.merged ? 'merged' : 'closed', at: pr.closedAt });
+  for (const pr of input.open) add(prTicketKey(pr), pr.baseRefName, { state: pr.isDraft ? 'draft' : 'open', at: pr.createdAt });
+  for (const pr of input.closed) add(prTicketKey(pr), pr.baseRefName, { state: pr.merged ? 'merged' : 'closed', at: pr.closedAt });
   return Object.fromEntries([...byKey].map(([key, entry]) =>
     [key, checkOne(key, entry.counted, entry.ignoredBases, input.tickets[key], input.rules, input.now)]));
 }

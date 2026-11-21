@@ -80,6 +80,11 @@ describe('buildTicketChecks', () => {
     expect(check({ open: [openPr()], status: ticket('Doing', null) }).verdict).toBe('unknown');
   });
 
+  it('does not check keys on PRs opened by bots', () => {
+    const bot = makePr({ headRefName: 'dependabot/actions/setup-node', title: '[ACTION-6] Bump setup-node', author: { login: 'dependabot', kind: 'bot' } });
+    expect(buildTicketChecks({ open: [bot], closed: [], tickets: {}, rules, now })).toEqual({});
+  });
+
   it('only creates checks for keys found in PRs', () => {
     const checks = buildTicketChecks({ open: [makePr({ headRefName: 'no-key' })], closed: [], tickets: {}, rules, now });
     expect(checks).toEqual({});

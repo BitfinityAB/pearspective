@@ -1,7 +1,7 @@
 import { ageHours } from './age';
 import { blockersOf, bucketOf, signalsOf, type Blocker, type Bucket, type Signal } from './status';
 import { detectStacks, membersBottomUp, stackIndex, type Stack } from './stacks';
-import { ticketKeyOf } from './tickets';
+import { prTicketKey } from './tickets';
 import type { ChangeRequest, Snapshot, Verdict } from './types';
 
 export interface TicketBrief {
@@ -63,7 +63,7 @@ export function buildPrViews(snapshot: Snapshot, now: number): Map<string, PrVie
   const byId = new Map(snapshot.prs.map((pr) => [pr.id, pr]));
   const views = new Map<string, PrView>();
   for (const pr of snapshot.prs) {
-    const key = ticketKeyOf(pr);
+    const key = prTicketKey(pr);
     const parentId = stacks.get(pr.id)?.parentId ?? null;
     views.set(pr.id, {
       pr,

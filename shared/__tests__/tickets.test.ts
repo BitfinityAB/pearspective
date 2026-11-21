@@ -1,4 +1,4 @@
-import { ticketKeyOf } from '../tickets';
+import { prTicketKey, ticketKeyOf } from '../tickets';
 
 describe('ticketKeyOf', () => {
   it('reads the key from the branch name first', () => {
@@ -20,3 +20,22 @@ describe('ticketKeyOf', () => {
     expect(ticketKeyOf({ headRefName: 'feature/SHA-256-XX-123-hashing', title: 'Add hashing' })).toBe('XX-123');
   });
 });
+
+describe('ticketKeyOf with version numbers', () => {
+  it('ignores a key-like part of a dotted version such as QA-2.118.3', () => {
+    expect(ticketKeyOf({ headRefName: 'service-QA-2.118.3', title: 'Align 2.118.3 with production' })).toBeNull();
+    expect(ticketKeyOf({ headRefName: 'service-QA-2.118.3', title: '[XX-5] Align versions' })).toBe('XX-5');
+  });
+
+  it('still reads a key followed by a sentence full stop', () => {
+    expect(ticketKeyOf({ headRefName: 'main', title: 'Fix the lock for XX-12.' })).toBe('XX-12');
+  });
+});
+
+describe('prTicketKey', () => {
+  it('ignores keys on PRs opened by bots, whose title prefixes only look like ticket keys', () => {
+    expect(prTicketKey({ headRefName: 'dependabot/nuget/sdk-8.0', title: '[SDK-10] Bump dotnet/sdk', author: { kind: 'bot' } })).toBeNull();
+    expect(prTicketKey({ headRefName: 'XX-7-work', title: 'Work', author: { kind: 'human' } })).toBe('XX-7');
+  });
+});
+

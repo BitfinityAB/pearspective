@@ -1,4 +1,4 @@
-import { ticketKeyOf } from './tickets';
+import { prTicketKey } from './tickets';
 import type { ChangeRequest, ClosedChangeRequest, Snapshot, Ticket, TicketCheck, Verdict } from './types';
 
 export interface TicketRowModel {
@@ -31,8 +31,8 @@ export function buildTicketLanes(snapshot: Snapshot, opts: { mineOnly?: boolean 
     key: check.key,
     ticket: snapshot.tickets[check.key],
     check,
-    open: snapshot.prs.filter((pr) => ticketKeyOf(pr) === check.key),
-    closed: snapshot.closed.filter((pr) => ticketKeyOf(pr) === check.key),
+    open: snapshot.prs.filter((pr) => prTicketKey(pr) === check.key),
+    closed: snapshot.closed.filter((pr) => prTicketKey(pr) === check.key),
   }));
   // Oldest change first: the longer a drift has lasted, the more it needs attention.
   const bySince = (a: TicketRowModel, b: TicketRowModel) => (a.check.since ?? '').localeCompare(b.check.since ?? '') || a.key.localeCompare(b.key);

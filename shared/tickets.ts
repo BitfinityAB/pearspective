@@ -7,8 +7,16 @@ export function ticketKeyOf(pr: { headRefName: string; title: string }, pattern 
   for (const text of [pr.headRefName, pr.title]) {
     for (const match of text.matchAll(globalPattern)) {
       const key = match[1];
-      if (key && !VERSION_LIKE.test(key)) return key;
+      // A key-like part of a dotted version (e.g. QA-2.118.3) is a release number, not a ticket.
+      const partOfVersion = /^\.\d/.test(text.slice((match.index ?? 0) + match[0].length));
+      if (key && !VERSION_LIKE.test(key) && !partOfVersion) return key;
     }
   }
   return null;
 }
+
+/** Bots such as Dependabot prefix titles with labels like "SDK-10" that look like ticket keys but are not, so their PRs have no ticket. */
+export function prTicketKey(pr: { headRefName: string; title: string; author?: { kind: string } }): string | null {
+  return pr.author?.kind === 'bot' ? null : ticketKeyOf(pr);
+}
+

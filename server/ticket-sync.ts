@@ -1,4 +1,4 @@
-import { ticketKeyOf } from '../shared/tickets';
+import { prTicketKey } from '../shared/tickets';
 import type { BannerMsg, ChangeRequest, ClosedChangeRequest, Ticket } from '../shared/types';
 import type { IssueTrackerConfig } from './config';
 import { ProviderError, type CodeHostProvider, type IssueTrackerProvider } from './providers/types';
@@ -45,7 +45,7 @@ export class TicketSync {
           console.error('Fetching closed PRs failed:', error);
         }
       }
-      const keys = [...new Set([...input.open, ...this.closed].map((pr) => ticketKeyOf(pr)).filter((key): key is string => !!key))]
+      const keys = [...new Set([...input.open, ...this.closed].map((pr) => prTicketKey(pr)).filter((key): key is string => !!key))]
         .filter((key) => !this.notTickets.has(key));
       const wanted = due ? keys : keys.filter((key) => !this.tickets.has(key) && !this.unanswered.has(key));
       if (due) this.lastRefresh = now;
