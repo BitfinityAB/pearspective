@@ -81,6 +81,7 @@ export function App({ api }: { api: DashboardApi }) {
         onRefresh={() => refreshNow().then(() => setClientError(null), reportError)}
         onRefreshSetting={(refresh) => void updateSettings({ refresh }).catch(reportError)}
         onOpenSettings={openSettings}
+        ticketsMine={url.ticketsMine}
       />
       <Banners banners={snapshot.banners} />
       {clientError && (

@@ -34,6 +34,22 @@ describe('buildTicketLanes', () => {
     expect(lanes[0]!.rows.map((row) => row.key)).toEqual(['XX-2', 'XX-1']);
   });
 
+  it('lists OK tickets that still have open PRs first, oldest first within each group', () => {
+    const ok = {
+      ...snapshot,
+      prs: [makePr({ headRefName: 'XX-7-work' }), makePr({ headRefName: 'XX-9-work' })],
+      closed: [makeClosed({ headRefName: 'XX-6-done' }), makeClosed({ headRefName: 'XX-8-done' })],
+      ticketChecks: {
+        'XX-6': checkOf('XX-6', 'ok', '2026-11-10T08:00:00Z'),
+        'XX-7': checkOf('XX-7', 'ok', '2026-11-12T08:00:00Z'),
+        'XX-8': checkOf('XX-8', 'ok', '2026-11-11T08:00:00Z'),
+        'XX-9': checkOf('XX-9', 'ok', '2026-11-09T08:00:00Z'),
+      },
+    };
+    const lane = buildTicketLanes(ok).find((candidate) => candidate.key === 'ok')!;
+    expect(lane.rows.map((row) => row.key)).toEqual(['XX-9', 'XX-7', 'XX-6', 'XX-8']);
+  });
+
   it('attaches open and closed PRs to each ticket', () => {
     const row = buildTicketLanes(snapshot)[0]!.rows.find((candidate) => candidate.key === 'XX-1')!;
     expect(row.open).toHaveLength(1);
@@ -53,5 +69,9 @@ describe('buildTicketLanes', () => {
 
   it('counts mismatches and tickets that need a human', () => {
     expect(ticketAttentionCount(snapshot)).toBe(2);
+  });
+
+  it('counts only the viewer\'s tickets when the Mine filter is on', () => {
+    expect(ticketAttentionCount(snapshot, { mineOnly: true })).toBe(1);
   });
 });

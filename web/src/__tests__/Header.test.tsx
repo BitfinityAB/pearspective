@@ -3,6 +3,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Header, relativeTime } from '../components/Header';
 import { emptySnapshot } from '../../../shared/types';
+import { makeTicket } from '../../../test/fake-tracker';
 import { dismissPermissionHint, PERMISSION_HINT_KEY } from '../notifications/permission';
 
 const snapshot = { ...emptySnapshot('acme'), viewer: { login: 'alex', teams: [] }, fetchedAt: '2026-11-18T11:59:18Z' };
@@ -155,5 +156,20 @@ describe('Header', () => {
     render(<Header snapshot={stored} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
     expect(screen.getAllByText(/^Showing data from [^,]+$/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/updating/)).toBeNull();
+  });
+
+  it('shows the Tickets count for the viewer\'s tickets while the Mine filter is on', () => {
+    const check = (key: string) => ({ key, prState: 'merged' as const, verdict: 'mismatch' as const, reason: 'reason', expected: 'Done', since: '2026-11-18T08:00:00Z' });
+    const withTickets = {
+      ...snapshot,
+      settings: { ...snapshot.settings, ticketsEnabled: true },
+      tickets: { 'XX-1': makeTicket('XX-1', 'To Do', 'todo', { mine: true }), 'XX-2': makeTicket('XX-2', 'To Do', 'todo', { mine: false }) },
+      ticketChecks: { 'XX-1': check('XX-1'), 'XX-2': check('XX-2') },
+    };
+    const props = { tab: 'tickets' as const, now, onTab: () => undefined, onRefresh: async () => undefined, onRefreshSetting: () => undefined, onOpenSettings: () => undefined };
+    const { rerender } = render(<Header snapshot={withTickets} {...props} />);
+    expect(screen.getByRole('button', { name: /^Tickets/ })).toHaveTextContent('Tickets 2');
+    rerender(<Header snapshot={withTickets} {...props} ticketsMine />);
+    expect(screen.getByRole('button', { name: /^Tickets/ })).toHaveTextContent('Tickets 1');
   });
 });

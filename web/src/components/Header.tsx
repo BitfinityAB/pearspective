@@ -34,9 +34,11 @@ interface HeaderProps {
   onRefresh: () => Promise<void>;
   onRefreshSetting: (setting: RefreshSetting) => void;
   onOpenSettings: (focusPermission: boolean) => void;
+  /** The Tickets tab's Mine filter, so its count matches what the tab shows. */
+  ticketsMine?: boolean;
 }
 
-export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting, onOpenSettings }: HeaderProps) {
+export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting, onOpenSettings, ticketsMine = false }: HeaderProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -63,7 +65,7 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
   const { settings, viewer, fetchedAt } = snapshot;
   const hint = usePermissionHint(settings.notifications);
   const updated = fetchedAt ? relativeTime(now - Date.parse(fetchedAt)) : 'never';
-  const attention = ticketAttentionCount(snapshot);
+  const attention = ticketAttentionCount(snapshot, { mineOnly: ticketsMine });
   const tabs = settings.ticketsEnabled ? [...TABS, { value: 'tickets' as const, label: 'Tickets', count: attention }] : TABS;
   // Without sign-in or the CLI no refresh is coming, so do not promise one.
   const noUpdateComing = snapshot.banners.some((banner) => banner.kind === 'auth' || banner.kind === 'missing-cli');
