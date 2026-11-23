@@ -3,6 +3,7 @@ import { ageLabel } from '../../../shared/age';
 import type { PrView } from '../../../shared/grouping';
 import { detectStacks, membersBottomUp, stackIndex } from '../../../shared/stacks';
 import { SIGNAL_LABELS } from '../../../shared/status';
+import { isTruncatedThreadsPlaceholder } from '../../../shared/threads';
 import type { ActorKind, ChangeRequest, Snapshot, Thread } from '../../../shared/types';
 import { prTicketKey } from '../../../shared/tickets';
 import { isNarrow } from '../lib/layout';
@@ -63,10 +64,13 @@ function ThreadLink({ thread }: { thread: Thread }) {
 }
 
 function UnresolvedThreads({ threads }: { threads: Thread[] }) {
+  // The placeholder only says the list is incomplete; it is not a thread anyone started.
+  const truncated = threads.find(isTruncatedThreadsPlaceholder);
+  const real = threads.filter((thread) => !isTruncatedThreadsPlaceholder(thread));
   return (
     <>
       {THREAD_GROUPS.map(({ kind, label }) => {
-        const group = threads.filter((thread) => thread.author.kind === kind);
+        const group = real.filter((thread) => thread.author.kind === kind);
         if (group.length === 0) return null;
         const title = `${label} (${group.length})`;
         const links = group.map((thread) => <ThreadLink key={thread.url} thread={thread} />);
@@ -74,6 +78,7 @@ function UnresolvedThreads({ threads }: { threads: Thread[] }) {
           ? <div key={kind} className="thread-group"><span className="muted small">{title}</span>{links}</div>
           : <details key={kind} className="thread-group"><summary className="muted small">{title}</summary>{links}</details>;
       })}
+      {truncated && <a className="muted small" href={truncated.url} target="_blank" rel="noopener noreferrer">Some threads were not loaded; open the pull request to see them all ↗</a>}
     </>
   );
 }

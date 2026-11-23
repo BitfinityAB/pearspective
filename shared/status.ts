@@ -1,3 +1,4 @@
+import { isTruncatedThreadsPlaceholder } from './threads';
 import type { ActorKind, ChangeRequest, Review, SignalColor } from './types';
 
 export type SignalKey = 'ci' | 'aiReview' | 'codeAnalysis' | 'review' | 'threads' | 'mergeable';
@@ -14,7 +15,9 @@ const makeSignal = (key: SignalKey, color: SignalColor, detail: string, glyph = 
   ({ key, label: SIGNAL_LABELS[key], color, glyph, detail });
 
 const unresolvedBy = (pr: ChangeRequest, kind: ActorKind) =>
-  pr.threads.filter((thread) => !thread.resolved && thread.author.kind === kind).length;
+  pr.threads.filter((thread) => !thread.resolved && thread.author.kind === kind && !isTruncatedThreadsPlaceholder(thread)).length;
+// Threads beyond the loaded page could be unresolved, so a cut-off list never reads as all clear.
+const threadsCutOff = (pr: ChangeRequest) => pr.threads.some(isTruncatedThreadsPlaceholder);
 
 /** Reviewers often review several times; only their newest review counts. */
 function latestReviewPerAuthor(reviews: Review[], kind: ActorKind): Review[] {
@@ -84,9 +87,9 @@ function reviewSignal(pr: ChangeRequest): Signal {
 
 function threadsSignal(pr: ChangeRequest): Signal {
   const unresolved = unresolvedBy(pr, 'human');
-  return unresolved > 0
-    ? makeSignal('threads', 'amber', `${unresolved} unresolved`, String(unresolved))
-    : makeSignal('threads', 'green', 'None unresolved');
+  const cutOff = threadsCutOff(pr);
+  if (unresolved > 0) return makeSignal('threads', 'amber', `${unresolved} unresolved${cutOff ? ', more not loaded' : ''}`, String(unresolved));
+  return cutOff ? makeSignal('threads', 'amber', 'Not all threads loaded', '?') : makeSignal('threads', 'green', 'None unresolved');
 }
 
 function mergeableSignal(pr: ChangeRequest): Signal {
@@ -113,6 +116,7 @@ export function blockersOf(pr: ChangeRequest): Blocker[] {
   if (pr.reviewDecision === 'changes_requested') blockers.push({ label: 'Changes requested', severity: 'red' });
   const unresolved = unresolvedBy(pr, 'human');
   if (unresolved > 0) blockers.push({ label: `${unresolved} unresolved thread${unresolved === 1 ? '' : 's'}`, severity: 'red' });
+  if (unresolved === 0 && threadsCutOff(pr)) blockers.push({ label: 'Not all threads loaded', severity: 'amber' });
   if (pr.reviewDecision === 'review_required') blockers.push({ label: 'Needs approval', severity: 'amber' });
   return blockers;
 }
@@ -121,6 +125,6 @@ export function bucketOf(pr: ChangeRequest): Bucket {
   if (pr.isDraft) return 'draft';
   if (blockersOf(pr).some((blocker) => blocker.severity === 'red')) return 'blocked';
   const checksRunning = pr.checks.some((check) => check.state === 'pending');
-  if (pr.reviewDecision === 'review_required' || checksRunning || pr.mergeState === 'unknown') return 'waiting';
+  if (pr.reviewDecision === 'review_required' || checksRunning || pr.mergeState === 'unknown' || threadsCutOff(pr)) return 'waiting';
   return 'ready';
 }

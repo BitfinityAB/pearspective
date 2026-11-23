@@ -6,6 +6,7 @@ import { buildPrViews } from '../../../shared/grouping';
 import { emptySnapshot, type ChangeRequest } from '../../../shared/types';
 import { makeClosed, makePerson, makePr } from '../../../test/factories';
 import { makeTicket } from '../../../test/fake-tracker';
+import { truncatedThreadsPlaceholder } from '../../../shared/threads';
 
 const copilot = makePerson('copilot-pull-request-reviewer', 'ai-review');
 
@@ -66,6 +67,17 @@ describe('Drawer', () => {
     expect(automated).toHaveAttribute('open');
     expect(within(automated).getAllByRole('link')).toHaveLength(2);
     expect(threads.queryByText(/Already fixed/)).toBeNull();
+  });
+
+  it('shows threads that were not loaded as a note, not as a thread from people', () => {
+    const pr = makePr({ threads: [{ resolved: false, author: copilot, snippet: 'Rename this', url: 'https://github.example.test/t/20' }] });
+    setup([{ ...pr, threads: [...pr.threads, truncatedThreadsPlaceholder(pr.url)] }], pr.id);
+
+    const threads = within(screen.getByRole('region', { name: 'Unresolved threads' }));
+    expect(threads.queryByText(/From people/)).toBeNull();
+    expect(threads.queryByText(/more-threads-not-loaded/)).toBeNull();
+    expect(threads.getByRole('link', { name: /Some threads were not loaded/ })).toHaveAttribute('href', pr.url);
+    expect(threads.getByText('From Copilot (1)')).toBeInTheDocument();
   });
 
   it('shows people by display name, falling back to the login', () => {

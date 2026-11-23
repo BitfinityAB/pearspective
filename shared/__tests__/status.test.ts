@@ -1,5 +1,6 @@
 import { blockersOf, bucketOf, reviewCounts, signalsOf } from '../status';
 import { makePerson, makePr } from '../../test/factories';
+import { truncatedThreadsPlaceholder } from '../threads';
 
 const signal = (pr: ReturnType<typeof makePr>, key: string) => signalsOf(pr).find((s) => s.key === key)!;
 const copilot = makePerson('copilot-pull-request-reviewer', 'ai-review');
@@ -96,6 +97,20 @@ describe('signalsOf', () => {
         ],
       });
       expect(signal(pr, 'threads')).toMatchObject({ color: 'amber', glyph: '2', detail: '2 unresolved' });
+    });
+
+    it('does not count the not-loaded marker as an unresolved thread, but stays amber and waiting', () => {
+      const pr = makePr({ threads: [truncatedThreadsPlaceholder('https://example.test/pr/1')] });
+      expect(signal(pr, 'threads')).toMatchObject({ color: 'amber', glyph: '?', detail: 'Not all threads loaded' });
+      expect(blockersOf(pr)).toContainEqual({ label: 'Not all threads loaded', severity: 'amber' });
+      expect(blockersOf(pr).some((blocker) => /unresolved thread/.test(blocker.label))).toBe(false);
+      expect(bucketOf(pr)).toBe('waiting');
+    });
+
+    it('counts the real unresolved threads when the list is also cut off', () => {
+      const pr = makePr({ threads: [{ resolved: false, author: makePerson('robin'), snippet: 'a', url: 'u' }, truncatedThreadsPlaceholder('https://example.test/pr/1')] });
+      expect(signal(pr, 'threads')).toMatchObject({ color: 'amber', glyph: '1', detail: '1 unresolved, more not loaded' });
+      expect(blockersOf(pr)).toContainEqual({ label: '1 unresolved thread', severity: 'red' });
     });
   });
 
