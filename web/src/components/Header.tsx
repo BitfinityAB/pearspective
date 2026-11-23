@@ -3,6 +3,7 @@ import { usePermissionHint } from '../notifications/permission';
 import { REFRESH_OPTIONS, type RefreshSetting, type Snapshot } from '../../../shared/types';
 import { ticketAttentionCount } from '../../../shared/ticketLanes';
 import { isFirstLoad } from '../lib/firstLoad';
+import { storedTime } from '../lib/storedTime';
 import type { Tab } from '../state/urlState';
 import { Avatar } from './Avatar';
 import { ThemeToggle } from './ThemeToggle';
@@ -64,7 +65,11 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
   const updated = fetchedAt ? relativeTime(now - Date.parse(fetchedAt)) : 'never';
   const attention = ticketAttentionCount(snapshot);
   const tabs = settings.ticketsEnabled ? [...TABS, { value: 'tickets' as const, label: 'Tickets', count: attention }] : TABS;
-  const status = isFirstLoad(snapshot) ? 'Loading…' : settings.refresh === 'off' ? `Auto-refresh off · updated ${updated}` : `Updated ${updated}`;
+  // Without sign-in or the CLI no refresh is coming, so do not promise one.
+  const noUpdateComing = snapshot.banners.some((banner) => banner.kind === 'auth' || banner.kind === 'missing-cli');
+  const status = snapshot.fromStore && fetchedAt
+    ? `Showing data from ${storedTime(fetchedAt, now)}${noUpdateComing ? '' : ', updating…'}`
+    : isFirstLoad(snapshot) ? 'Loading…' : settings.refresh === 'off' ? `Auto-refresh off · updated ${updated}` : `Updated ${updated}`;
   return (
     <header className="top">
       <div className="brand"><img src="/favicon.svg" alt="" width="24" height="24" /><b className="brand-name">Pearspective</b><span className="muted hdr-org" style={{ fontSize: 13 }}>{settings.org}</span></div>

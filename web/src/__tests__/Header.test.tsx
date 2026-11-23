@@ -129,4 +129,18 @@ describe('Header', () => {
       expect(screen.getByRole('button', { name: 'Settings' })).not.toHaveClass('has-dot');
     });
   });
+
+  it('says the board shows stored data while the first refresh runs', () => {
+    const stored = { ...snapshot, fromStore: true, stale: true, fetchedAt: '2026-11-18T11:00:00Z' };
+    render(<Header snapshot={stored} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+    expect(screen.getAllByText(/^Showing data from .+, updating…$/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^Updated /)).toBeNull();
+  });
+
+  it('does not promise an update when stored data is shown but sign-in is missing', () => {
+    const stored = { ...snapshot, fromStore: true, stale: true, fetchedAt: '2026-11-18T11:00:00Z', banners: [{ kind: 'auth' as const, message: 'Not logged in' }] };
+    render(<Header snapshot={stored} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+    expect(screen.getAllByText(/^Showing data from [^,]+$/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/updating/)).toBeNull();
+  });
 });
