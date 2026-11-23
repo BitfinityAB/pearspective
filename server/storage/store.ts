@@ -30,6 +30,19 @@ export interface RefreshWrite {
   mine: { authored: string[]; requested: string[]; team: string[] };
 }
 
+export interface TicketsWrite {
+  org: string;
+  provider: string;
+  at: string;
+  upserted: Ticket[];
+  removedKeys: string[];
+  notTickets: string[];
+  /** Replaces the org's recently closed PRs when present. */
+  closed?: ClosedChangeRequest[];
+  /** Set only after a full sync, so a restart knows when the next full one is due. */
+  syncedAt?: string;
+}
+
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 type PersonRow = typeof s.people.$inferSelect;
 const VIEWS = ['overview', 'authored', 'requested', 'team'] as const;
@@ -127,17 +140,35 @@ export class Store {
     const teams = this.db.select().from(s.viewerTeams).all().map((team) => ({ slug: team.slug, ...(team.avatarUrl ? { avatarUrl: team.avatarUrl } : {}) }));
     const viewerName = this.meta(this.db, 'viewer_name');
     const viewerAvatarUrl = this.meta(this.db, 'viewer_avatar_url');
+    const statusCategories = Object.fromEntries(this.db.select().from(s.statusCategories).all().map((row) => [row.statusName, row.category as StatusCategory]));
+    const tickets = Object.fromEntries(this.db.select().from(s.tickets).all().map((row): [string, Ticket] => [row.key, {
+      key: row.key,
+      summary: row.summary,
+      type: row.type,
+      status: { name: row.statusName, category: statusCategories[row.statusName] ?? null },
+      mine: row.mine === null ? null : row.mine === 1,
+      ...(row.assigneeLogin ? { assignee: person(row.assigneeLogin) } : {}),
+      url: row.url,
+    }]));
+    const closed = this.db.select().from(s.changeRequests)
+      .where(and(eq(s.changeRequests.org, org), ne(s.changeRequests.state, 'open'))).orderBy(asc(s.changeRequests.id)).all()
+      .filter((row) => repos.includes(row.repo))
+      .map((row): ClosedChangeRequest => ({
+        id: row.id, repo: row.repo, number: row.number, title: row.title, url: row.url,
+        headRefName: row.headRef, baseRefName: row.baseRef, merged: row.state === 'merged',
+        closedAt: row.closedAt ?? '', author: person(row.authorLogin),
+      }));
     return {
       fetchedAt,
       viewer: viewerLogin ? { login: viewerLogin, ...(viewerName ? { name: viewerName } : {}), ...(viewerAvatarUrl ? { avatarUrl: viewerAvatarUrl } : {}), teams } : null,
       prs,
       overviewIds: listed('overview').filter((id) => repos.includes(prs.find((pr) => pr.id === id)!.repo)),
       mine: { authored: listed('authored'), requested: listed('requested'), team: listed('team') },
-      closed: [],
-      tickets: {},
-      ticketsSyncedAt: null,
-      statusCategories: {},
-      notTickets: [],
+      closed,
+      tickets,
+      ticketsSyncedAt: this.meta(this.db, 'tickets_synced_at'),
+      statusCategories,
+      notTickets: this.db.select().from(s.notTickets).all().map((row) => row.key),
     };
   }
 
@@ -157,6 +188,56 @@ export class Store {
       for (const pr of write.upserted) this.upsertPr(tx, write.org, pr);
       this.replaceViews(tx, write);
     });
+  }
+
+  saveTickets(write: TicketsWrite): void {
+    this.db.transaction((tx) => {
+      this.upsertPeople(tx, [
+        ...write.upserted.flatMap((ticket) => (ticket.assignee ? [ticket.assignee] : [])),
+        ...(write.closed ?? []).map((pr) => pr.author),
+      ]);
+      for (const ticket of write.upserted) {
+        const row = {
+          key: ticket.key, summary: ticket.summary, type: ticket.type, statusName: ticket.status.name,
+          assigneeLogin: ticket.assignee?.login ?? null,
+          mine: ticket.mine === undefined || ticket.mine === null ? null : ticket.mine ? 1 : 0,
+          url: ticket.url, fetchedAt: write.at,
+        };
+        tx.insert(s.tickets).values(row).onConflictDoUpdate({ target: s.tickets.key, set: row }).run();
+      }
+      if (write.removedKeys.length) tx.delete(s.tickets).where(inArray(s.tickets.key, write.removedKeys)).run();
+      if (write.notTickets.length) tx.insert(s.notTickets).values(write.notTickets.map((key) => ({ key }))).onConflictDoNothing().run();
+      if (write.closed) this.replaceClosed(tx, write.org, write.provider, write.closed);
+      if (write.syncedAt) this.setMeta(tx, 'tickets_synced_at', write.syncedAt);
+    });
+  }
+
+  saveStatusCategories(categories: Record<string, StatusCategory>): void {
+    const rows = Object.entries(categories).map(([statusName, category]) => ({ statusName, category }));
+    if (!rows.length) return;
+    this.db.insert(s.statusCategories).values(rows)
+      .onConflictDoUpdate({ target: s.statusCategories.statusName, set: { category: sql`excluded.category` } }).run();
+  }
+
+  private replaceClosed(tx: Tx, org: string, provider: string, closed: ClosedChangeRequest[]): void {
+    tx.delete(s.changeRequests).where(and(eq(s.changeRequests.org, org), ne(s.changeRequests.state, 'open'))).run();
+    for (const pr of closed) {
+      const row = {
+        id: pr.id, provider, org, repo: pr.repo, number: pr.number, title: pr.title, url: pr.url,
+        authorLogin: pr.author.login, createdAt: null, updatedAt: null, closedAt: pr.closedAt,
+        state: pr.merged ? 'merged' : 'closed', headSha: null, headRef: pr.headRefName, baseRef: pr.baseRefName,
+        isDraft: 0, mergeState: null, reviewDecision: null, commentCount: 0,
+        stackNumber: null, stackSize: null, stackPosition: null, stackBaseRef: null,
+        lastCommentAuthorLogin: null, lastCommentSnippet: null, lastCommentUrl: null, threadsTruncated: 0,
+      };
+      // The same id may still be stored as open until the next refresh drops it.
+      tx.insert(s.changeRequests).values(row).onConflictDoUpdate({ target: s.changeRequests.id, set: row }).run();
+    }
+    const ids = closed.map((pr) => pr.id);
+    if (ids.length) {
+      this.deleteChildren(tx, ids);
+      tx.delete(s.views).where(inArray(s.views.changeRequestId, ids)).run();
+    }
   }
 
   private upsertPr(tx: Tx, org: string, pr: ChangeRequest): void {

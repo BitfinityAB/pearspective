@@ -89,7 +89,7 @@ export const MAX_REPOS = 10;
 export const MAX_PINNED = 200;
 
 export interface BannerMsg {
-  kind: 'missing-cli' | 'auth' | 'rate-limit' | 'stale' | 'tickets';
+  kind: 'missing-cli' | 'auth' | 'rate-limit' | 'stale' | 'tickets' | 'database';
   message: string;
 }
 

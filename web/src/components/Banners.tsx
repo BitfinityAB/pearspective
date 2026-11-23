@@ -1,6 +1,6 @@
 import type { BannerMsg } from '../../../shared/types';
 
-const SEVERITY: Record<BannerMsg['kind'], string> = { 'missing-cli': 'sev-red', auth: 'sev-red', 'rate-limit': 'sev-amber', stale: 'sev-amber', tickets: 'sev-amber' };
+const SEVERITY: Record<BannerMsg['kind'], string> = { 'missing-cli': 'sev-red', auth: 'sev-red', 'rate-limit': 'sev-amber', stale: 'sev-amber', tickets: 'sev-amber', database: 'sev-amber' };
 
 export function Banners({ banners }: { banners: BannerMsg[] }) {
   if (banners.length === 0) return null;

@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { Store, type RefreshWrite } from '../store';
 import { truncatedThreadsPlaceholder } from '../../../shared/threads';
-import { makePerson, makePr } from '../../../test/factories';
+import { makeClosed, makePerson, makePr } from '../../../test/factories';
+import { makeTicket } from '../../../test/fake-tracker';
 import type { ChangeRequest } from '../../../shared/types';
 
 const viewer = { login: 'alex', name: 'Alex Rivera', avatarUrl: 'https://avatars.example.test/alex', teams: [{ slug: 'core', avatarUrl: 'https://avatars.example.test/core' }] };
@@ -122,6 +123,59 @@ describe('Store', () => {
     const state = store.load(selection)!;
     expect(state.overviewIds).toEqual([pr.id]);
     expect(state.mine.authored).toEqual([pr.id]);
+    store.close();
+  });
+});
+
+describe('Store tickets', () => {
+  const saved = () => {
+    const store = Store.open(':memory:');
+    store.saveRefresh(refresh());
+    return store;
+  };
+
+  it('round-trips tickets with their category, not-a-ticket keys, closed PRs and the sync time', () => {
+    const store = saved();
+    const assigned = makeTicket('XX-1', 'In Review', null, { mine: true, assignee: makePerson('kim') });
+    const unassigned = makeTicket('XX-2', 'Done', null, { mine: null });
+    const closed = [makeClosed({ repo: 'orders-api', merged: true }), makeClosed({ repo: 'orders-api', merged: false })];
+    store.saveStatusCategories({ 'In Review': 'inProgress', Done: 'done' });
+    store.saveTickets({ org: 'acme', provider: 'github', at: '2026-11-23T08:00:00.000Z', upserted: [assigned, unassigned], removedKeys: [], notTickets: ['XX-9'], closed, syncedAt: '2026-11-23T08:00:00.000Z' });
+    const state = store.load(selection)!;
+    expect(state.tickets).toEqual({
+      'XX-1': { ...assigned, status: { name: 'In Review', category: 'inProgress' } },
+      'XX-2': { ...unassigned, status: { name: 'Done', category: 'done' } },
+    });
+    expect(state.statusCategories).toEqual({ 'In Review': 'inProgress', Done: 'done' });
+    expect(state.notTickets).toEqual(['XX-9']);
+    expect(state.closed).toEqual(closed);
+    expect(state.ticketsSyncedAt).toBe('2026-11-23T08:00:00.000Z');
+    store.close();
+  });
+
+  it('deletes removed tickets and replaces closed PRs only when a closed list is given', () => {
+    const store = saved();
+    const first = makeClosed({ repo: 'orders-api' });
+    store.saveTickets({ org: 'acme', provider: 'github', at: '2026-11-23T08:00:00.000Z', upserted: [makeTicket('XX-1', 'Done', 'done'), makeTicket('XX-2', 'Done', 'done')], removedKeys: [], notTickets: [], closed: [first] });
+    store.saveTickets({ org: 'acme', provider: 'github', at: '2026-11-23T08:05:00.000Z', upserted: [], removedKeys: ['XX-2'], notTickets: [] });
+    expect(Object.keys(store.load(selection)!.tickets)).toEqual(['XX-1']);
+    expect(store.load(selection)!.closed).toEqual([first]);
+    const second = makeClosed({ repo: 'orders-api' });
+    store.saveTickets({ org: 'acme', provider: 'github', at: '2026-11-23T08:10:00.000Z', upserted: [], removedKeys: [], notTickets: [], closed: [second] });
+    expect(store.load(selection)!.closed).toEqual([second]);
+    store.close();
+  });
+
+  it('keeps a PR stored as closed when a later refresh removes it from the open lists', () => {
+    const store = Store.open(':memory:');
+    const pr = makePr();
+    store.saveRefresh(refresh({ upserted: [pr] }));
+    const closed = makeClosed({ id: pr.id, number: pr.number, repo: pr.repo });
+    store.saveTickets({ org: 'acme', provider: 'github', at: '2026-11-23T08:05:00.000Z', upserted: [], removedKeys: [], notTickets: [], closed: [closed] });
+    store.saveRefresh(refresh({ upserted: [], removedIds: [pr.id], overviewIds: [] }));
+    const state = store.load(selection)!;
+    expect(state.prs).toEqual([]);
+    expect(state.closed).toEqual([closed]);
     store.close();
   });
 });
