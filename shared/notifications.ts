@@ -1,9 +1,9 @@
 import { bucketOf, signalsOf } from './status';
+import { isTruncatedThreadsPlaceholder } from './threads';
 import type { ChangeRequest, NotificationBatch, NotificationEvent, NotificationItem, NotificationKind, Person, Snapshot } from './types';
 
 /** More items than this in one batch are shown as a single summary. */
 export const SUMMARY_THRESHOLD = 3;
-const THREAD_PLACEHOLDER = 'more-threads-not-loaded';
 const SNIPPET_LENGTH = 80;
 
 const LABELS: Record<NotificationKind, string> = {
@@ -41,7 +41,7 @@ function prEvents(before: ChangeRequest, after: ChangeRequest, viewerLogin: stri
   const known = new Set(before.threads.map((thread) => thread.url));
   const byAuthor = new Map<string, { name: string; snippets: string[] }>();
   for (const thread of after.threads) {
-    if (known.has(thread.url) || thread.author.login === THREAD_PLACEHOLDER || thread.author.login === viewerLogin) continue;
+    if (known.has(thread.url) || isTruncatedThreadsPlaceholder(thread) || thread.author.login === viewerLogin) continue;
     const entry = byAuthor.get(thread.author.login) ?? { name: nameOf(thread.author), snippets: [] };
     entry.snippets.push(thread.snippet);
     byAuthor.set(thread.author.login, entry);

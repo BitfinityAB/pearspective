@@ -1,4 +1,5 @@
 import type { ActorKind, ChangeRequest, ChangeRequestStub, Check, ClosedChangeRequest, MergeState, Person, Review, ReviewDecision, ReviewRequest, Thread } from '../../../../shared/types';
+import { truncatedThreadsPlaceholder } from '../../../../shared/threads';
 import type { ReviewerClasses } from '../../types';
 
 const matches = (login: string, pattern: string) =>
@@ -103,7 +104,7 @@ export function toChangeRequest(raw: any, classes: ReviewerClasses): ChangeReque
   // Same reason as the checks marker: hidden threads must not let Threads look resolved.
   // With last: 20, the cut-off older threads are the ones before the loaded page.
   if (raw.reviewThreads?.pageInfo?.hasPreviousPage) {
-    threads.push({ resolved: false, author: { login: 'more-threads-not-loaded', kind: 'human' }, snippet: 'More review threads not loaded', url: raw.url });
+    threads.push(truncatedThreadsPlaceholder(raw.url));
   }
   const reviewRequests: ReviewRequest[] = (raw.reviewRequests?.nodes ?? [])
     .map((request: any) => request.requestedReviewer)
