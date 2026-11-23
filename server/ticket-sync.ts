@@ -1,12 +1,16 @@
 import { prTicketKey } from '../shared/tickets';
 import type { BannerMsg, ChangeRequest, ClosedChangeRequest, Ticket } from '../shared/types';
 import type { IssueTrackerConfig } from './config';
+import type { SafeStore } from './storage/safe-store';
+import type { StoredState } from './storage/store';
 import { ProviderError, type CodeHostProvider, type IssueTrackerProvider } from './providers/types';
 
 export interface TicketSyncDeps {
   tracker: IssueTrackerProvider;
   codeHost: CodeHostProvider;
   now: () => number;
+  store?: SafeStore;
+  stored?: StoredState | null;
 }
 
 export interface TicketState {
@@ -27,9 +31,17 @@ export class TicketSync {
   private banner: BannerMsg | null = null;
   private authed = false;
 
-  constructor(private readonly deps: TicketSyncDeps) {}
+  constructor(private readonly deps: TicketSyncDeps) {
+    const stored = deps.stored;
+    if (!stored) return;
+    for (const [key, ticket] of Object.entries(stored.tickets)) this.tickets.set(key, ticket);
+    stored.notTickets.forEach((key) => this.notTickets.add(key));
+    this.closed = stored.closed;
+    // The stored sync time decides whether the first sync after a restart is a full one.
+    if (stored.ticketsSyncedAt) this.lastRefresh = this.lastFullSuccess = Date.parse(stored.ticketsSyncedAt);
+  }
 
-  async sync(input: { open: ChangeRequest[]; repos: string[]; config: IssueTrackerConfig }): Promise<TicketState> {
+  async sync(input: { org: string; open: ChangeRequest[]; repos: string[]; config: IssueTrackerConfig }): Promise<TicketState> {
     const now = this.deps.now();
     const due = now - this.lastRefresh >= input.config.refreshIntervalSec * 1000;
     // After a failure, wait for the next refresh instead of retrying on every tick.
@@ -53,6 +65,7 @@ export class TicketSync {
         if (due) {
           this.lastFullSuccess = now;
           this.banner = null;
+          this.persist({ org: input.org, now, due, upserted: [], removedKeys: [], notTickets: [] });
         }
         return this.state();
       }
@@ -68,8 +81,16 @@ export class TicketSync {
       const result = await this.deps.tracker.getTickets(wanted);
       result.notFound.forEach((key) => this.notTickets.add(key));
       wanted.forEach((key) => this.unanswered.add(key));
-      if (due) for (const key of [...this.tickets.keys()]) if (!keys.includes(key)) this.tickets.delete(key);
+      const removedKeys: string[] = [];
+      if (due) {
+        for (const key of [...this.tickets.keys()]) {
+          if (keys.includes(key)) continue;
+          this.tickets.delete(key);
+          removedKeys.push(key);
+        }
+      }
       result.tickets.forEach((ticket) => this.tickets.set(ticket.key, ticket));
+      this.persist({ org: input.org, now, due, upserted: result.tickets, removedKeys, notTickets: result.notFound });
       if (due) this.lastFullSuccess = now;
       this.banner = null;
     } catch (error) {
@@ -82,6 +103,19 @@ export class TicketSync {
       this.lastRefresh = now;
     }
     return this.state();
+  }
+
+  private persist(input: { org: string; now: number; due: boolean; upserted: Ticket[]; removedKeys: string[]; notTickets: string[] }): void {
+    const store = this.deps.store;
+    if (!store) return;
+    const at = new Date(input.now).toISOString();
+    store.saveTickets({
+      org: input.org, provider: this.deps.codeHost.id, at,
+      upserted: input.upserted, removedKeys: input.removedKeys, notTickets: input.notTickets,
+      ...(input.due ? { closed: this.closed, syncedAt: at } : {}),
+    });
+    const categories = this.deps.tracker.statusCategories?.();
+    if (categories) store.saveStatusCategories(categories);
   }
 
   private state(): TicketState {

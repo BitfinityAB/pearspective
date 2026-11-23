@@ -161,4 +161,15 @@ describeIssueTrackerContract('JiraCliTracker', () => {
     { match: (args) => args[1] === 'view', reply: () => ok(JSON.stringify(view)) },
   ]);
   return { tracker: new JiraCliTracker(BASE, runner), knownKeys: ['XX-1', 'XX-2'], unknownKey: 'XX-404' };
+
+  it('uses seeded status categories instead of looking them up, and reports what it knows', async () => {
+    const first = list[0] as any;
+    const { runner, calls } = fakeRunner([{ match: isList, reply: listReply }, { match: isMine, reply: () => ok('[]') }, noView]);
+    const tracker = new JiraCliTracker(BASE, runner);
+    tracker.seedStatusCategories({ [first.fields.status.name]: 'inProgress' });
+    const result = await tracker.getTickets([first.key]);
+    expect(calls.some((args) => args[1] === 'view')).toBe(false);
+    expect(result.tickets[0]?.status.category).toBe('inProgress');
+    expect(tracker.statusCategories()).toEqual({ [first.fields.status.name]: 'inProgress' });
+  });
 });

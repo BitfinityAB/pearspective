@@ -52,6 +52,14 @@ export class JiraCliTracker implements IssueTrackerProvider {
     return { tickets: tickets.map((ticket) => ({ ...ticket, status: { ...ticket.status, category: this.categories.get(ticket.status.name) ?? null } })), notFound };
   }
 
+  statusCategories(): Record<string, StatusCategory> {
+    return Object.fromEntries(this.categories);
+  }
+
+  seedStatusCategories(categories: Record<string, StatusCategory>): void {
+    for (const [name, category] of Object.entries(categories)) this.categories.set(name, category);
+  }
+
   // History is only queryable through JQL: `assignee WAS` also matches the current assignee.
   private async mineKeys(project: string, keys: string[]): Promise<Set<string> | null> {
     if (keys.length === 0) return new Set();

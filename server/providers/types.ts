@@ -1,4 +1,4 @@
-import type { ChangeRequest, ChangeRequestStub, ClosedChangeRequest, RepoRef, Ticket, Viewer } from '../../shared/types';
+import type { ChangeRequest, ChangeRequestStub, ClosedChangeRequest, RepoRef, StatusCategory, Ticket, Viewer } from '../../shared/types';
 
 export type ProviderErrorKind = 'missing-cli' | 'auth' | 'rate-limit' | 'too-large' | 'failed';
 
@@ -62,4 +62,7 @@ export interface IssueTrackerProvider {
   /** Keys that do not exist come back in notFound rather than failing the call. */
   getTickets(keys: string[]): Promise<{ tickets: Ticket[]; notFound: string[] }>;
   ticketUrl(key: string): string;
+  /** Learned status categories, so they survive a restart; optional for trackers that report categories directly. */
+  statusCategories?(): Record<string, StatusCategory>;
+  seedStatusCategories?(categories: Record<string, StatusCategory>): void;
 }

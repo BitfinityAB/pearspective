@@ -227,7 +227,7 @@ export class Poller {
     const tickets = this.deps.tickets;
     const config = this.ticketConfig();
     if (!tickets || !config || this.ticketSync) return;
-    this.ticketSync = tickets.sync({ open: this.current.prs, repos, config })
+    this.ticketSync = tickets.sync({ org: this.deps.config().codeHost.org, open: this.current.prs, repos, config })
       .then((state) => {
         // The PRs and rules may have changed while the tracker was busy.
         const rules = this.ticketConfig();
