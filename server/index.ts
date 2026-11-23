@@ -8,26 +8,32 @@ import { SnapshotHub } from './hub';
 import { Poller } from './poller';
 import { PollLoop, Presence } from './presence';
 import { createCodeHost, createIssueTracker } from './providers/registry';
+import { openStorage } from './storage/startup';
 import { TicketSync } from './ticket-sync';
 
 const PORT = 4100;
 const HOST = '127.0.0.1';
 
 async function main() {
-  const store = await ConfigStore.open(resolve(process.cwd(), 'config.json'));
+  const configPath = resolve(process.cwd(), 'config.json');
+  const store = await ConfigStore.open(configPath);
   const provider = createCodeHost(store.get(), createGhClient());
   // Changing issueTracker in config.json takes effect after a server restart.
   const tracker = createIssueTracker(store.get());
-  const tickets = tracker ? new TicketSync({ tracker, codeHost: provider, now: Date.now }) : undefined;
+  const { store: database, stored } = openStorage(store.get(), configPath);
+  if (stored) tracker?.seedStatusCategories?.(stored.statusCategories);
+  const tickets = tracker ? new TicketSync({ tracker, codeHost: provider, now: Date.now, store: database, stored }) : undefined;
   const hub = new SnapshotHub();
   const poller = new Poller({
     provider,
     config: () => store.get(),
     tickets,
+    store: database,
+    stored,
     onChange: (snapshot) => {
       hub.publish(snapshot);
       // One line per refresh makes it easy to confirm polling slows down or stops when no tab is visible.
-      console.log(`[${new Date().toLocaleTimeString()}] ${snapshot.prs.length} PRs, ${snapshot.rateLimit?.remaining ?? '?'} API points left${snapshot.stale ? ', stale' : ''}`);
+      console.log(`[${new Date().toLocaleTimeString()}] ${snapshot.prs.length} PRs, ${snapshot.rateLimit?.remaining ?? '?'} API points left${snapshot.stale ? ', stale' : ''}${snapshot.fromStore ? ', from local database' : ''}`);
     },
   });
   const presence = new Presence();
@@ -47,6 +53,13 @@ async function main() {
 
   app.listen(PORT, HOST, () => console.log(`pearspective API on http://${HOST}:${PORT}`));
   loop.start();
+
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(signal, () => {
+      database.close();
+      process.exit(0);
+    });
+  }
 }
 
 main().catch((error) => {

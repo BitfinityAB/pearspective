@@ -76,6 +76,7 @@ To change the repositories later, use the settings button in the header, or run 
 | `pinned` | IDs of pinned PRs. Managed from the detail panel. |
 | `issueTracker` | Optional. Ticket links, and with jira-cli the ticket status and mismatch checks; see [Ticket status](#ticket-status-optional). |
 | `notifications` | Optional. Notifications on your PRs; see [Notifications](#notifications). |
+| `databasePath` | Optional. Where the local database lives; default `pearspective.db` next to `config.json`. See [Local database](#local-database). |
 
 ## Ticket status (optional)
 
@@ -126,7 +127,17 @@ Turn them on in the settings panel (or add a `notifications` block to `config.js
 - Events: `ciFailed`, `ciPassed`, `approved`, `changesRequested`, `readyToMerge`, `conflict`, `newComment`, `newThread` (all on by default) and `reviewRequested` (off by default). List only the ones you want to change.
 - Only your own PRs notify, except "review requested". Your own comments and threads, and comments from bots and code-analysis tools, never do.
 - Several changes on one PR arrive as one notification; more than three PRs at once arrive as one summary.
+- After a restart, changes made while Pearspective was stopped arrive as one notification (or a summary) on the first refresh.
 - While tabs are open but hidden, the server keeps polling every 5 minutes, including the full sweep every 15 minutes. At ~280 PRs that is about 400 GitHub points an hour (4 × 75 + 8 × 13). Ticket status is not refreshed meanwhile. Hidden polling is off when auto-refresh is off (`refreshIntervalSec: 0`). With no dashboard tab open, nothing is polled and nothing notifies.
+
+## Local database
+
+Pearspective keeps its latest state (pull requests, checks, reviews, threads, tickets) in a local SQLite file, so a restart shows the last data at once, marked "Showing data from …, updating…", while the first refresh fetches only what changed.
+
+- The file is `pearspective.db` next to `config.json`. Set `databasePath` to put it elsewhere, for example outside the checkout, so your org's PR and ticket data never sits in the repository folder.
+- Only the current state is stored. PRs that leave your selection are deleted on the next refresh.
+- The file is a cache: delete it whenever you like and it is rebuilt on the next start. If it cannot be opened, a banner says so and Pearspective works as before, loading everything from GitHub on each start.
+- One file holds every org you have configured; only the current org and repositories are shown.
 
 ## How it uses the GitHub API
 
