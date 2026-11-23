@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_FILTERS, type GroupBy, type ViewFilters } from '../../../shared/grouping';
 import type { Bucket } from '../../../shared/status';
 
@@ -41,14 +41,28 @@ export function serializeUrlState(state: UrlState): string {
   return text ? `?${text}` : '';
 }
 
+// Changing view or opening a PR or ticket is a step Back and Forward should retrace; filter and search edits are not, so typing does not fill the history.
+const NAVIGATION_KEYS = ['tab', 'selected', 'ticket'] as const;
+
 export function useUrlState(): [UrlState, (patch: Partial<UrlState>) => void] {
   const [state, setState] = useState(() => parseUrlState(window.location.search));
+
+  useEffect(() => {
+    const onPopState = () => setState(parseUrlState(window.location.search));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   const update = useCallback((patch: Partial<UrlState>) => {
-    setState((current) => {
-      const next = { ...current, ...patch };
-      window.history.replaceState(null, '', `${window.location.pathname}${serializeUrlState(next)}`);
-      return next;
-    });
+    // The URL is the source of truth, so several updates in one tick build on each other.
+    const current = parseUrlState(window.location.search);
+    const next = { ...current, ...patch };
+    const search = serializeUrlState(next);
+    if (search !== window.location.search) {
+      const navigates = NAVIGATION_KEYS.some((key) => key in patch && patch[key] !== current[key]);
+      window.history[navigates ? 'pushState' : 'replaceState'](null, '', `${window.location.pathname}${search}`);
+    }
+    setState(next);
   }, []);
   return [state, update];
 }
