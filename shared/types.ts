@@ -100,6 +100,8 @@ export interface Snapshot {
   mine: { authored: string[]; requested: string[]; team: string[] };
   fetchedAt: string | null;
   stale: boolean;
+  /** True while the board shows data from the local database and this run's first refresh has not finished. */
+  fromStore: boolean;
   banners: BannerMsg[];
   rateLimit: { remaining: number; resetAt: string } | null;
   tickets: Record<string, Ticket>;
@@ -207,6 +209,7 @@ export function emptySnapshot(org = '', host = 'github.com'): Snapshot {
     mine: { authored: [], requested: [], team: [] },
     fetchedAt: null,
     stale: false,
+    fromStore: false,
     banners: [],
     rateLimit: null,
     tickets: {},

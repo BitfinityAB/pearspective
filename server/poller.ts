@@ -3,6 +3,8 @@ import { notificationEvents } from '../shared/notifications';
 import { buildTicketChecks } from '../shared/ticketChecks';
 import { notificationSettings, secondsToRefresh, type Config } from './config';
 import { ProviderError, type CodeHostProvider } from './providers/types';
+import type { SafeStore } from './storage/safe-store';
+import type { StoredState } from './storage/store';
 import type { TicketSync } from './ticket-sync';
 
 export const FULL_SWEEP_MS = 15 * 60_000;
@@ -14,6 +16,9 @@ export interface PollerDeps {
   now?: () => number;
   onChange?: (snapshot: Snapshot) => void;
   tickets?: TicketSync;
+  store?: SafeStore;
+  /** State from the local database, shown until the first refresh of this run completes. */
+  stored?: StoredState | null;
 }
 
 // CI completion does not bump updatedAt, so pending checks and unknown mergeability are re-read every tick.
@@ -53,10 +58,37 @@ export class Poller {
   private rerunHidden = true;
   private ticketSync: Promise<void> | null = null;
   private ticketBanner: BannerMsg | null = null;
+  /** The stored viewer may be outdated, so the login is still checked once per run. */
+  private authChecked = false;
+  /** With stored data the first refresh only fetches what changed; the next one sweeps. */
+  private warm = false;
 
   constructor(private readonly deps: PollerDeps) {
     this.current = emptySnapshot(deps.config().codeHost.org, deps.provider.host);
     this.refreshSettings(false);
+    if (deps.stored) this.warmStart(deps.stored);
+  }
+
+  private warmStart(stored: StoredState): void {
+    this.cache = new Map(stored.prs.map((pr) => [pr.id, pr]));
+    this.viewer = stored.viewer;
+    this.warm = true;
+    const rules = this.ticketConfig();
+    this.publish({
+      viewer: stored.viewer,
+      prs: stored.prs,
+      overviewIds: stored.overviewIds,
+      mine: stored.mine,
+      fetchedAt: stored.fetchedAt,
+      stale: true,
+      fromStore: true,
+      tickets: stored.tickets,
+      closed: stored.closed,
+      ticketChecks: rules ? buildTicketChecks({ open: stored.prs, closed: stored.closed, tickets: stored.tickets, rules, now: this.now() }) : {},
+      banners: this.withSideBanners([]),
+    }, false);
+    // The stored state is the baseline, so changes made while the server was stopped notify.
+    this.lastComplete = this.current;
   }
 
   private now() {
@@ -127,13 +159,14 @@ export class Poller {
     const config = this.deps.config();
     const now = this.now();
     try {
-      if (!this.viewer) {
+      if (!this.viewer || !this.authChecked) {
         const auth = await provider.checkAuth();
         if (!auth.ok) {
-          this.publish({ banners: this.withTicketBanner([{ kind: auth.reason === 'missing-cli' ? 'missing-cli' : 'auth', message: auth.message }]), stale: this.cache.size > 0 });
+          this.publish({ banners: this.withSideBanners([{ kind: auth.reason === 'missing-cli' ? 'missing-cli' : 'auth', message: auth.message }]), stale: this.cache.size > 0 });
           return;
         }
         this.viewer = auth.viewer;
+        this.authChecked = true;
       }
 
       const repos = config.codeHost.repos.filter((repo) => !config.codeHost.excludeRepos.includes(repo));
@@ -144,7 +177,7 @@ export class Poller {
       const team = (await Promise.all(teams.map((slug) => provider.searchMine('team-review-requested', slug)))).flat();
 
       const stubs = new Map([...overview, ...authored, ...requested, ...team].map((stub) => [stub.id, stub]));
-      const sweep = full || now - this.lastFullSweep >= FULL_SWEEP_MS;
+      const sweep = full || (!this.warm && now - this.lastFullSweep >= FULL_SWEEP_MS);
       const toFetch = [...stubs.values()].filter((stub) => sweep || needsEnrichment(this.cache.get(stub.id), stub));
       let fetchFailure: ProviderError | null = null;
       let fetched: ChangeRequest[];
@@ -163,6 +196,8 @@ export class Poller {
         const pr = fresh.get(id) ?? this.cache.get(id);
         if (pr) next.set(id, pr);
       }
+      const removedIds = [...this.cache.keys()].filter((id) => !next.has(id));
+      const upserted = fetched.filter((pr) => next.has(pr.id));
       this.cache = next;
       if (sweep && !fetchFailure) this.lastFullSweep = now;
 
@@ -177,18 +212,24 @@ export class Poller {
         ? { ticketChecks: buildTicketChecks({ open: [...next.values()], closed: this.current.closed, tickets: this.current.tickets, rules: trackerConfig, now }) }
         : {};
       const known = (list: ChangeRequestStub[]) => uniqueIds(list).filter((id) => next.has(id));
+      const overviewIds = known(overview);
+      const mine = { authored: known(authored), requested: known(requested), team: known(team) };
       const outcome: Partial<Snapshot> = fetchFailure
         ? { stale: true, banners: [this.failureBanner(fetchFailure.message)] }
-        : { fetchedAt: new Date(now).toISOString(), stale: false, banners };
+        : { fetchedAt: new Date(now).toISOString(), stale: false, fromStore: false, banners };
+      if (!fetchFailure) {
+        this.deps.store?.saveRefresh({ org: config.codeHost.org, host: provider.host, fetchedAt: new Date(now).toISOString(), viewer: this.viewer, upserted, removedIds, overviewIds, mine });
+        this.warm = false;
+      }
       const patch: Partial<Snapshot> = {
         viewer: this.viewer,
         prs: [...next.values()],
-        overviewIds: known(overview),
-        mine: { authored: known(authored), requested: known(requested), team: known(team) },
+        overviewIds,
+        mine,
         rateLimit,
         ...ticketPatch,
         ...outcome,
-        banners: this.withTicketBanner(outcome.banners ?? []),
+        banners: this.withSideBanners(outcome.banners ?? []),
       };
       // A partial refresh would show missing PRs as changes, so only complete refreshes are compared.
       if (!fetchFailure) patch.notification = this.notificationBatch({ ...this.current, ...patch }, now);
@@ -200,10 +241,11 @@ export class Poller {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ProviderError && (error.kind === 'auth' || error.kind === 'missing-cli')) {
         this.viewer = null;
-        this.publish({ stale: this.cache.size > 0, banners: this.withTicketBanner([{ kind: error.kind, message }]) });
+        this.authChecked = false;
+        this.publish({ stale: this.cache.size > 0, banners: this.withSideBanners([{ kind: error.kind, message }]) });
         return;
       }
-      this.publish({ stale: true, banners: this.withTicketBanner([this.failureBanner(message)]) });
+      this.publish({ stale: true, banners: this.withSideBanners([this.failureBanner(message)]) });
     }
   }
 
@@ -218,8 +260,13 @@ export class Poller {
     return this.deps.tickets && tracker?.ticketStatus ? tracker : null;
   }
 
-  private withTicketBanner(banners: BannerMsg[]): BannerMsg[] {
-    return this.ticketBanner ? [...banners, this.ticketBanner] : banners;
+  private withSideBanners(banners: BannerMsg[]): BannerMsg[] {
+    const database = this.deps.store?.error;
+    return [
+      ...banners,
+      ...(this.ticketBanner ? [this.ticketBanner] : []),
+      ...(database ? [{ kind: 'database' as const, message: database }] : []),
+    ];
   }
 
   // Detached from the tick so a slow tracker never holds back GitHub data; one sync at a time, later requests are skipped.
@@ -237,7 +284,7 @@ export class Poller {
           tickets: state.tickets,
           closed: state.closed,
           ticketChecks: buildTicketChecks({ open: this.current.prs, closed: state.closed, tickets: state.tickets, rules, now: this.now() }),
-          banners: this.withTicketBanner(this.current.banners.filter((banner) => banner.kind !== 'tickets')),
+          banners: this.withSideBanners(this.current.banners.filter((banner) => banner.kind !== 'tickets' && banner.kind !== 'database')),
         });
       })
       .catch((error) => console.error('Ticket sync failed:', error))
