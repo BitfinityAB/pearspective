@@ -102,4 +102,26 @@ describe('Store', () => {
     expect(store.load({ org: 'globex', repos: ['orders-api'] })!.prs.map((pr) => pr.id)).toEqual([otherOrg.id]);
     store.close();
   });
+
+  it('keeps a person\'s name and avatar when a bare reference to them is saved in the same batch', () => {
+    const store = Store.open(':memory:');
+    const named = makePr({ reviews: [{ author: { login: 'robin', name: 'Robin Park', kind: 'human', avatarUrl: 'https://avatars.example.test/robin' }, state: 'approved', submittedAt: '2026-11-22T10:00:00Z' }] });
+    const bare = makePr({ threads: [{ resolved: false, author: { login: 'robin', kind: 'human' }, snippet: 'Why?', url: 'https://example.test/t/2' }] });
+    store.saveRefresh(refresh({ upserted: [named, bare] }));
+    const state = store.load(selection)!;
+    const expected = { login: 'robin', name: 'Robin Park', kind: 'human', avatarUrl: 'https://avatars.example.test/robin' };
+    expect(state.prs.find((pr) => pr.id === named.id)!.reviews[0]!.author).toEqual(expected);
+    expect(state.prs.find((pr) => pr.id === bare.id)!.threads[0]!.author).toEqual(expected);
+    store.close();
+  });
+
+  it('saves a view list that repeats an id', () => {
+    const store = Store.open(':memory:');
+    const pr = makePr();
+    store.saveRefresh(refresh({ upserted: [pr], overviewIds: [pr.id, pr.id], mine: { authored: [pr.id, pr.id], requested: [], team: [] } }));
+    const state = store.load(selection)!;
+    expect(state.overviewIds).toEqual([pr.id]);
+    expect(state.mine.authored).toEqual([pr.id]);
+    store.close();
+  });
 });

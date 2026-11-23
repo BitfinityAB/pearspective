@@ -194,12 +194,18 @@ export class Store {
     const wanted = [...new Set(Object.values(lists).flat())];
     // Only rows that exist can be listed; foreign keys would otherwise fail the whole write.
     const existing = new Set(wanted.length ? tx.select({ id: s.changeRequests.id }).from(s.changeRequests).where(inArray(s.changeRequests.id, wanted)).all().map((row) => row.id) : []);
-    const rows = VIEWS.flatMap((view) => lists[view].filter((id) => existing.has(id)).map((id, position) => ({ changeRequestId: id, view, position })));
+    const rows = VIEWS.flatMap((view) => [...new Set(lists[view])].filter((id) => existing.has(id)).map((id, position) => ({ changeRequestId: id, view, position })));
     if (rows.length) tx.insert(s.views).values(rows).run();
   }
 
   private upsertPeople(tx: Tx, people: Person[]): void {
-    const unique = [...new Map(people.map((person) => [person.login, person])).values()];
+    // Merge per field so a bare reference cannot drop a name or avatar given elsewhere in the batch.
+    const merged = new Map<string, Person>();
+    for (const person of people) {
+      const earlier = merged.get(person.login);
+      merged.set(person.login, { ...person, name: person.name ?? earlier?.name, avatarUrl: person.avatarUrl ?? earlier?.avatarUrl });
+    }
+    const unique = [...merged.values()];
     if (!unique.length) return;
     tx.insert(s.people)
       .values(unique.map((person) => ({ login: person.login, name: person.name ?? null, kind: person.kind, avatarUrl: person.avatarUrl ?? null })))
