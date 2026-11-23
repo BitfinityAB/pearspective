@@ -12,7 +12,8 @@
     "start": "tsx server/index.ts",
     "setup": "tsx scripts/setup.ts",
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +25,9 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.8.0",
+    "better-sqlite3": "^13.2.0",
     "d3": "^7.9.2",
+    "drizzle-orm": "^0.45.4",
     "express": "^5.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -34,6 +37,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.13",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/d3": "^7.4.3",
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.5",
@@ -42,6 +46,7 @@
     "@types/supertest": "^7.2.1",
     "@vitejs/plugin-react": "^5.2.0",
     "concurrently": "^10.0.7",
+    "drizzle-kit": "^0.31.11",
     "jsdom": "^31.0.1",
     "supertest": "^7.3.2",
     "tsx": "^4.23.15",

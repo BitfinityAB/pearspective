@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ConfigError, ConfigSchema, ConfigStore, hiddenPollInterval, notificationSettings, refreshToSeconds, secondsToRefresh } from '../config';
+import { ConfigError, ConfigSchema, ConfigStore, hiddenPollInterval, notificationSettings, refreshToSeconds, resolveDatabasePath, secondsToRefresh } from '../config';
 
 async function tempConfig(contents?: unknown) {
   const dir = await mkdtemp(join(tmpdir(), 'prdash-'));
@@ -100,5 +100,20 @@ describe('notifications config', () => {
     const autoRefreshOff = ConfigSchema.parse({ ...base, refreshIntervalSec: 0, notifications: { enabled: true } });
     expect(hiddenPollInterval(autoRefreshOff)).toBeNull();
     expect(hiddenPollInterval(ConfigSchema.parse({ ...base, refreshIntervalSec: 180 }))).toBeNull();
+  });
+});
+
+describe('databasePath', () => {
+  const base = { codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'] } };
+
+  it('defaults to pearspective.db next to config.json', () => {
+    const config = ConfigSchema.parse(base);
+    expect(config.databasePath).toBe('pearspective.db');
+    expect(resolveDatabasePath(config, '/home/alex/pearspective/config.json')).toBe('/home/alex/pearspective/pearspective.db');
+  });
+
+  it('resolves a relative path from the config folder and keeps an absolute one', () => {
+    expect(resolveDatabasePath(ConfigSchema.parse({ ...base, databasePath: 'data/state.db' }), '/home/alex/pearspective/config.json')).toBe('/home/alex/pearspective/data/state.db');
+    expect(resolveDatabasePath(ConfigSchema.parse({ ...base, databasePath: '/var/lib/pearspective.db' }), '/home/alex/pearspective/config.json')).toBe('/var/lib/pearspective.db');
   });
 });

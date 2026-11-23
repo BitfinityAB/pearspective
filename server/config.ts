@@ -1,4 +1,5 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { z } from 'zod';
 import { MAX_PINNED, MAX_REPOS, NOTIFICATION_DEFAULTS, type NotificationSettings, type RefreshSetting } from '../shared/types';
 import { HIDDEN_POLL_MS } from './presence';
@@ -55,6 +56,8 @@ export const ConfigSchema = z.object({
     }).strict().default({}),
   }).optional(),
   notifications: NotificationsSchema.optional(),
+  // Relative to config.json; pointing it outside the checkout keeps PR and ticket data out of the repo folder.
+  databasePath: z.string().min(1).default('pearspective.db'),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 export type IssueTrackerConfig = NonNullable<Config['issueTracker']>;
@@ -69,6 +72,10 @@ export function notificationSettings(config: Config): NotificationSettings {
 /** Auto-refresh off means no background API use, so hidden tabs do not poll either. */
 export function hiddenPollInterval(config: Config): number | null {
   return notificationSettings(config).enabled && config.refreshIntervalSec !== 0 ? HIDDEN_POLL_MS : null;
+}
+
+export function resolveDatabasePath(config: Config, configPath: string): string {
+  return resolve(dirname(configPath), config.databasePath);
 }
 
 export class ConfigError extends Error {}

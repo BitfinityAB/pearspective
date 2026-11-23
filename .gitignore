@@ -7,3 +7,8 @@ HANDOFF.md
 
 # Working documents (plans and design specs) stay local.
 docs/superpowers/
+
+# Local database (see databasePath in config.json).
+*.db
+*.db-wal
+*.db-shm

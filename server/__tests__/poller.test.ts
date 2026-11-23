@@ -9,6 +9,7 @@ const config: Config = {
   reviewerClasses: { 'ai-review': [], 'code-analysis': [] },
   refreshIntervalSec: 180,
   pinned: [],
+  databasePath: 'pearspective.db',
 };
 
 function setup(prs = [makePr(), makePr()]) {
