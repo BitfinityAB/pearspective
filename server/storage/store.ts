@@ -140,7 +140,7 @@ export class Store {
     const teams = this.db.select().from(s.viewerTeams).all().map((team) => ({ slug: team.slug, ...(team.avatarUrl ? { avatarUrl: team.avatarUrl } : {}) }));
     const viewerName = this.meta(this.db, 'viewer_name');
     const viewerAvatarUrl = this.meta(this.db, 'viewer_avatar_url');
-    const statusCategories = Object.fromEntries(this.db.select().from(s.statusCategories).all().map((row) => [row.statusName, row.category as StatusCategory]));
+    const statusCategories = this.loadStatusCategories();
     const tickets = Object.fromEntries(this.db.select().from(s.tickets).all().map((row): [string, Ticket] => [row.key, {
       key: row.key,
       summary: row.summary,
@@ -166,10 +166,14 @@ export class Store {
       mine: { authored: listed('authored'), requested: listed('requested'), team: listed('team') },
       closed,
       tickets,
-      ticketsSyncedAt: this.meta(this.db, 'tickets_synced_at'),
+      ticketsSyncedAt: this.meta(this.db, `tickets_synced_at:${org}`),
       statusCategories,
       notTickets: this.db.select().from(s.notTickets).all().map((row) => row.key),
     };
+  }
+
+  loadStatusCategories(): Record<string, StatusCategory> {
+    return Object.fromEntries(this.db.select().from(s.statusCategories).all().map((row) => [row.statusName, row.category as StatusCategory]));
   }
 
   saveRefresh(write: RefreshWrite): void {
@@ -199,10 +203,9 @@ export class Store {
 
   saveTickets(write: TicketsWrite): void {
     this.db.transaction((tx) => {
-      this.upsertPeople(tx, [
-        ...write.upserted.flatMap((ticket) => (ticket.assignee ? [ticket.assignee] : [])),
-        ...(write.closed ?? []).map((pr) => pr.author),
-      ]);
+      // A tracker username can equal a code-host login; the code host's person row must win.
+      this.upsertPeople(tx, write.upserted.flatMap((ticket) => (ticket.assignee ? [ticket.assignee] : [])), true);
+      this.upsertPeople(tx, (write.closed ?? []).map((pr) => pr.author));
       for (const ticket of write.upserted) {
         const row = {
           key: ticket.key, summary: ticket.summary, type: ticket.type, statusName: ticket.status.name,
@@ -215,7 +218,7 @@ export class Store {
       if (write.removedKeys.length) tx.delete(s.tickets).where(inArray(s.tickets.key, write.removedKeys)).run();
       if (write.notTickets.length) tx.insert(s.notTickets).values(write.notTickets.map((key) => ({ key }))).onConflictDoNothing().run();
       if (write.closed) this.replaceClosed(tx, write.org, write.provider, write.closed);
-      if (write.syncedAt) this.setMeta(tx, 'tickets_synced_at', write.syncedAt);
+      if (write.syncedAt) this.setMeta(tx, `tickets_synced_at:${write.org}`, write.syncedAt);
     });
   }
 
@@ -286,7 +289,7 @@ export class Store {
     if (rows.length) tx.insert(s.views).values(rows).run();
   }
 
-  private upsertPeople(tx: Tx, people: Person[]): void {
+  private upsertPeople(tx: Tx, people: Person[], keepExisting = false): void {
     // Merge per field so a bare reference cannot drop a name or avatar given elsewhere in the batch.
     const merged = new Map<string, Person>();
     for (const person of people) {
@@ -295,8 +298,13 @@ export class Store {
     }
     const unique = [...merged.values()];
     if (!unique.length) return;
-    tx.insert(s.people)
-      .values(unique.map((person) => ({ login: person.login, name: person.name ?? null, kind: person.kind, avatarUrl: person.avatarUrl ?? null })))
+    const insert = tx.insert(s.people)
+      .values(unique.map((person) => ({ login: person.login, name: person.name ?? null, kind: person.kind, avatarUrl: person.avatarUrl ?? null })));
+    if (keepExisting) {
+      insert.onConflictDoNothing().run();
+      return;
+    }
+    insert
       // A reference without a name or avatar must not erase what an earlier one stored.
       .onConflictDoUpdate({ target: s.people.login, set: { name: sql`coalesce(excluded.name, ${s.people.name})`, kind: sql`excluded.kind`, avatarUrl: sql`coalesce(excluded.avatar_url, ${s.people.avatarUrl})` } })
       .run();

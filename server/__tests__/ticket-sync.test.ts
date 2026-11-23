@@ -165,4 +165,25 @@ describe('TicketSync with a store', () => {
     expect(saved.statusCategories).toEqual({ 'In Progress': 'inProgress' });
     expect(store.error).toBeNull();
   });
+
+  it('leaves the stored closed list and sync time alone when fetching closed PRs fails', async () => {
+    const earlier = Date.parse('2026-11-20T12:00:00Z');
+    const store = SafeStore.open(':memory:');
+    store.saveRefresh(emptyRefresh);
+    const oldClosed = makeClosed({ headRefName: 'XX-2-done', closedAt: '2026-11-19T10:00:00Z' });
+    const code = createFakeProvider([]);
+    code.state.closed = [oldClosed];
+    const fake = createFakeTracker([makeTicket('XX-1', 'In Progress', 'inProgress'), makeTicket('XX-2', 'Done', 'done')]);
+    const clock = { now: earlier };
+    const sync = new TicketSync({ tracker: fake.tracker, codeHost: code.provider, now: () => clock.now, store });
+    await sync.sync({ org, open: [makePr({ headRefName: 'XX-1-a' })], repos: ['orders-api'], config });
+    code.provider.fetchClosed = async () => { throw new ProviderError('auth', 'gh is not logged in'); };
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    clock.now += (config.refreshIntervalSec + 1) * 1000;
+    await sync.sync({ org, open: [makePr({ headRefName: 'XX-1-a' })], repos: ['orders-api'], config });
+    const saved = store.load({ org, repos: ['orders-api'] })!;
+    expect(saved.closed.map((pr) => pr.id)).toEqual([oldClosed.id]);
+    expect(saved.ticketsSyncedAt).toBe(new Date(earlier).toISOString());
+    vi.restoreAllMocks();
+  });
 });

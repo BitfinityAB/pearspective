@@ -26,6 +26,18 @@ describe('openStorage', () => {
     second.store.close();
   });
 
+  it('returns saved status categories even when the org has no stored state', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'pearspective-start-'));
+    const config = ConfigSchema.parse(base);
+    const first = openStorage(config, join(folder, 'config.json'));
+    first.store.saveStatusCategories({ Done: 'done' });
+    first.store.close();
+    const second = openStorage(config, join(folder, 'config.json'));
+    expect(second.stored).toBeNull();
+    expect(second.statusCategories).toEqual({ Done: 'done' });
+    second.store.close();
+  });
+
   it('carries on without a database when the path cannot be opened', () => {
     const folder = mkdtempSync(join(tmpdir(), 'pearspective-start-'));
     mkdirSync(join(folder, 'taken'));

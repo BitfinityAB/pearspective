@@ -86,6 +86,7 @@ describe('Poller with a local database', () => {
     let failing = true;
     const inner: StoreLike = {
       load: () => null,
+      loadStatusCategories: () => ({}),
       saveRefresh: () => { if (failing) throw new Error('disk full'); },
       saveTickets: () => undefined,
       saveStatusCategories: () => undefined,

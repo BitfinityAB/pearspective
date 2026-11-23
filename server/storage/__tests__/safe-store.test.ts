@@ -19,6 +19,7 @@ describe('SafeStore', () => {
     let failing = true;
     const inner: StoreLike = {
       load: () => null,
+      loadStatusCategories: () => ({}),
       saveRefresh: () => { if (failing) throw new Error('disk full'); },
       saveTickets: () => undefined,
       saveStatusCategories: () => undefined,
@@ -30,6 +31,30 @@ describe('SafeStore', () => {
     failing = false;
     store.saveRefresh(write);
     expect(store.error).toBeNull();
+  });
+
+  it('keeps a failed tickets write visible when a later categories write succeeds', () => {
+    let failing = true;
+    const inner: StoreLike = {
+      load: () => null,
+      loadStatusCategories: () => ({}),
+      saveRefresh: () => undefined,
+      saveTickets: () => { if (failing) throw new Error('disk full'); },
+      saveStatusCategories: () => undefined,
+      close: () => undefined,
+    };
+    const store = new SafeStore(inner);
+    const ticketsWrite = { org: 'acme', provider: 'github', at: '2026-11-23T08:00:00.000Z', upserted: [], removedKeys: [], notTickets: [] };
+    store.saveTickets(ticketsWrite);
+    store.saveStatusCategories({ Done: 'done' });
+    expect(store.error).toBe('Saving to the local database failed: disk full. The dashboard keeps working.');
+    failing = false;
+    store.saveTickets(ticketsWrite);
+    expect(store.error).toBeNull();
+  });
+
+  it('returns no status categories without a store', () => {
+    expect(new SafeStore(null).loadStatusCategories()).toEqual({});
   });
 
   it('works end to end with a real database', () => {

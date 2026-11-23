@@ -103,7 +103,9 @@ export class PollLoop {
     const hidden = !visible && this.deps.presence.anyConnected() ? this.deps.hiddenIntervalMs?.() ?? null : null;
     if (!visible && hidden === null) return;
     const interval = visible ? this.deps.intervalMs() : hidden;
-    const fetchedAt = this.deps.poller.snapshot().fetchedAt;
+    const snapshot = this.deps.poller.snapshot();
+    // Stored data is not a fetch, so the first load runs as soon as a tab is connected.
+    const fetchedAt = snapshot.fromStore ? null : snapshot.fetchedAt;
     const now = this.now();
     if (interval === null) {
       // With auto-refresh off the dashboard still needs one load to show anything.

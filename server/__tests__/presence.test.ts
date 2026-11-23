@@ -234,3 +234,35 @@ describe('PollLoop while hidden', () => {
     expect(ticks()).toBe(1);
   });
 });
+
+describe('PollLoop after a warm start', () => {
+  beforeEach(() => vi.useFakeTimers({ now: Date.parse('2026-11-18T12:00:00Z') }));
+  afterEach(() => vi.useRealTimers());
+
+  function setupWarm(intervalMs: number | null) {
+    const presence = new Presence();
+    let ticks = 0;
+    const storedAt = new Date(Date.now() - 60_000).toISOString();
+    const poller = {
+      tick: async () => { ticks += 1; },
+      snapshot: () => ({ ...emptySnapshot('acme'), fetchedAt: storedAt, fromStore: true }),
+      backoffFactor: () => 1,
+    };
+    new PollLoop({ poller, presence, intervalMs: () => intervalMs }).start();
+    return { presence, ticks: () => ticks };
+  }
+
+  it('loads once for a visible tab when auto-refresh is off', async () => {
+    const { presence, ticks } = setupWarm(null);
+    presence.connect('tab-1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ticks()).toBe(1);
+  });
+
+  it('runs the first tick straight away instead of waiting out the stored time', async () => {
+    const { presence, ticks } = setupWarm(1_800_000);
+    presence.connect('tab-1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ticks()).toBe(1);
+  });
+});

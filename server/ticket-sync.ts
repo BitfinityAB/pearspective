@@ -48,10 +48,12 @@ export class TicketSync {
     if (!due && this.banner) return this.state();
     if (due) this.unanswered.clear();
     try {
+      let closedFetched = false;
       if (due) {
         const since = new Date(now - input.config.closedLookbackDays * 86_400_000).toISOString();
         try {
           this.closed = await this.deps.codeHost.fetchClosed(input.repos, since);
+          closedFetched = true;
         } catch (error) {
           // Code host problems already surface through its own banners; tickets carry on with the last closed PRs.
           console.error('Fetching closed PRs failed:', error);
@@ -65,7 +67,7 @@ export class TicketSync {
         if (due) {
           this.lastFullSuccess = now;
           this.banner = null;
-          this.persist({ org: input.org, now, due, upserted: [], removedKeys: [], notTickets: [] });
+          this.persist({ org: input.org, now, due, closedFetched, upserted: [], removedKeys: [], notTickets: [] });
         }
         return this.state();
       }
@@ -90,7 +92,7 @@ export class TicketSync {
         }
       }
       result.tickets.forEach((ticket) => this.tickets.set(ticket.key, ticket));
-      this.persist({ org: input.org, now, due, upserted: result.tickets, removedKeys, notTickets: result.notFound });
+      this.persist({ org: input.org, now, due, closedFetched, upserted: result.tickets, removedKeys, notTickets: result.notFound });
       if (due) this.lastFullSuccess = now;
       this.banner = null;
     } catch (error) {
@@ -105,14 +107,15 @@ export class TicketSync {
     return this.state();
   }
 
-  private persist(input: { org: string; now: number; due: boolean; upserted: Ticket[]; removedKeys: string[]; notTickets: string[] }): void {
+  private persist(input: { org: string; now: number; due: boolean; closedFetched: boolean; upserted: Ticket[]; removedKeys: string[]; notTickets: string[] }): void {
     const store = this.deps.store;
     if (!store) return;
     const at = new Date(input.now).toISOString();
     store.saveTickets({
       org: input.org, provider: this.deps.codeHost.id, at,
       upserted: input.upserted, removedKeys: input.removedKeys, notTickets: input.notTickets,
-      ...(input.due ? { closed: this.closed, syncedAt: at } : {}),
+      // Without a fresh closed list the stored one and the sync time stay, so the next start syncs again.
+      ...(input.due && input.closedFetched ? { closed: this.closed, syncedAt: at } : {}),
     });
     const categories = this.deps.tracker.statusCategories?.();
     if (categories) store.saveStatusCategories(categories);

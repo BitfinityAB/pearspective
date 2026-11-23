@@ -153,6 +153,34 @@ describe('Store tickets', () => {
     store.close();
   });
 
+  it('keeps a code-host person when a ticket assignee has the same login', () => {
+    const store = Store.open(':memory:');
+    const author = { ...makePerson('kim'), name: 'Kim Code-Host' };
+    store.saveRefresh(refresh({ upserted: [makePr({ author })] }));
+    store.saveTickets({ org: 'acme', provider: 'github', at: '2026-11-23T08:00:00.000Z', upserted: [makeTicket('XX-1', 'Done', 'done', { assignee: { login: 'kim', name: 'Kim Tracker', kind: 'bot' } })], removedKeys: [], notTickets: [] });
+    const loaded = store.load(selection)!.prs[0]!.author;
+    expect(loaded.name).toBe('Kim Code-Host');
+    expect(loaded.kind).toBe('human');
+    store.close();
+  });
+
+  it('keeps the ticket sync time per org', () => {
+    const store = Store.open(':memory:');
+    store.saveRefresh(refresh());
+    store.saveRefresh(refresh({ org: 'other' }));
+    store.saveTickets({ org: 'acme', provider: 'github', at: '2026-11-23T08:00:00.000Z', upserted: [], removedKeys: [], notTickets: [], closed: [], syncedAt: '2026-11-23T08:00:00.000Z' });
+    expect(store.load(selection)!.ticketsSyncedAt).toBe('2026-11-23T08:00:00.000Z');
+    expect(store.load({ org: 'other', repos: [] })!.ticketsSyncedAt).toBeNull();
+    store.close();
+  });
+
+  it('loads status categories without an org', () => {
+    const store = Store.open(':memory:');
+    store.saveStatusCategories({ Done: 'done' });
+    expect(store.loadStatusCategories()).toEqual({ Done: 'done' });
+    store.close();
+  });
+
   it('deletes removed tickets and replaces closed PRs only when a closed list is given', () => {
     const store = saved();
     const first = makeClosed({ repo: 'orders-api' });

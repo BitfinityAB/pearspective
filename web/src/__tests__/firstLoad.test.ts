@@ -3,7 +3,7 @@ import { emptySnapshot } from '../../../shared/types';
 
 describe('isFirstLoad', () => {
   it('stays true when only the database banner is showing', () => {
-    expect(isFirstLoad({ ...emptySnapshot(), banners: [{ kind: 'database', message: 'Local database unavailable: x. Data will load from GitHub on each start.' }] })).toBe(true);
+    expect(isFirstLoad({ ...emptySnapshot(), banners: [{ kind: 'database', message: 'Local database unavailable: x.' }] })).toBe(true);
   });
 
   it('is false once data exists or another problem is shown', () => {

@@ -20,8 +20,9 @@ async function main() {
   const provider = createCodeHost(store.get(), createGhClient());
   // Changing issueTracker in config.json takes effect after a server restart.
   const tracker = createIssueTracker(store.get());
-  const { store: database, stored } = openStorage(store.get(), configPath);
-  if (stored) tracker?.seedStatusCategories?.(stored.statusCategories);
+  const { store: database, stored, statusCategories } = openStorage(store.get(), configPath);
+  // Status categories are global, so they are worth seeding even when this org has no stored state.
+  tracker?.seedStatusCategories?.(statusCategories);
   const tickets = tracker ? new TicketSync({ tracker, codeHost: provider, now: Date.now, store: database, stored }) : undefined;
   const hub = new SnapshotHub();
   const poller = new Poller({
