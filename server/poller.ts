@@ -62,6 +62,8 @@ export class Poller {
   private authChecked = false;
   /** With stored data the first refresh only fetches what changed; the next one sweeps. */
   private warm = false;
+  /** PRs fetched by a partial refresh, which saved nothing; the next complete refresh must write them. */
+  private unsaved = new Set<string>();
 
   constructor(private readonly deps: PollerDeps) {
     this.current = emptySnapshot(deps.config().codeHost.org, deps.provider.host);
@@ -197,7 +199,8 @@ export class Poller {
         if (pr) next.set(id, pr);
       }
       const removedIds = [...this.cache.keys()].filter((id) => !next.has(id));
-      const upserted = fetched.filter((pr) => next.has(pr.id));
+      const upserted = [...next.values()].filter((pr) => fresh.has(pr.id) || this.unsaved.has(pr.id));
+      if (fetchFailure) for (const pr of fetched) this.unsaved.add(pr.id);
       this.cache = next;
       if (sweep && !fetchFailure) this.lastFullSweep = now;
 
@@ -220,6 +223,7 @@ export class Poller {
       if (!fetchFailure) {
         this.deps.store?.saveRefresh({ org: config.codeHost.org, host: provider.host, fetchedAt: new Date(now).toISOString(), viewer: this.viewer, upserted, removedIds, overviewIds, mine });
         this.warm = false;
+        this.unsaved.clear();
       }
       const patch: Partial<Snapshot> = {
         viewer: this.viewer,

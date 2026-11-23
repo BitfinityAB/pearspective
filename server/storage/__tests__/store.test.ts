@@ -178,4 +178,20 @@ describe('Store tickets', () => {
     expect(state.closed).toEqual([closed]);
     store.close();
   });
+
+  it('deletes open PRs of the org that are in no view, and leaves closed rows and other orgs alone', () => {
+    const store = Store.open(':memory:');
+    const kept = makePr();
+    const ghost = makePr();
+    const other = makePr();
+    store.saveRefresh(refresh({ upserted: [kept, ghost] }));
+    store.saveRefresh(refresh({ org: 'other-org', upserted: [other] }));
+    const closed = makeClosed();
+    store.saveTickets({ org: 'acme', provider: 'fake', upserted: [], removedKeys: [], notTickets: [], closed: [closed], at: '2026-11-23T08:00:00.000Z' });
+    store.saveRefresh(refresh({ upserted: [], overviewIds: [kept.id] }));
+    const state = store.load(selection)!;
+    expect(state.prs.map((pr) => pr.id)).toEqual([kept.id]);
+    expect(state.closed.map((pr) => pr.id)).toEqual([closed.id]);
+    expect(store.load({ org: 'other-org', repos: ['orders-api'] })!.prs.map((pr) => pr.id)).toEqual([other.id]);
+  });
 });

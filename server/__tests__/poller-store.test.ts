@@ -103,4 +103,56 @@ describe('Poller with a local database', () => {
     await poller.tick();
     expect(poller.snapshot().banners.some((banner) => banner.kind === 'database')).toBe(false);
   });
+
+  it('writes PRs fetched in a partial refresh and drops ghosts once a complete refresh follows', async () => {
+    const a = makePr();
+    const c = makePr();
+    const { poller, code, store, advance } = setup([a, c], [a, c]);
+    const renamed = { ...a, title: 'Renamed', updatedAt: '2026-11-22T09:00:00Z' };
+    code.state.prs = [renamed];
+    code.state.mine.authored = [a.id];
+    const realFetch = code.provider.fetchFull;
+    code.provider.fetchFull = async (stubs) => {
+      const loaded = await realFetch(stubs);
+      throw new ProviderError('failed', 'partial', loaded);
+    };
+    await poller.tick();
+    code.provider.fetchFull = realFetch;
+    advance(60_000);
+    await poller.tick();
+    const saved = store.load(selection)!;
+    expect(saved.prs.map((pr) => pr.id)).toEqual([a.id]);
+    expect(saved.prs[0]!.title).toBe('Renamed');
+  });
+
+  it('sweeps at once on a warm start when a full refresh is requested', async () => {
+    const first = makePr();
+    const second = makePr();
+    const { poller, code } = setup([first, second], [first, second]);
+    await poller.tick({ full: true });
+    expect(code.state.fetched.at(-1)?.sort()).toEqual([first.id, second.id].sort());
+  });
+
+  it('keeps showing stored data when the login fails, and checks again on the next tick', async () => {
+    const pr = makePr();
+    const { poller, code, advance } = setup([pr], [pr]);
+    let checks = 0;
+    code.provider.checkAuth = async () => { checks += 1; return { ok: false, reason: 'unauthenticated', message: 'not signed in' } as never; };
+    await poller.tick();
+    expect(poller.snapshot()).toMatchObject({ stale: true, fromStore: true });
+    expect(poller.snapshot().prs).toHaveLength(1);
+    advance(60_000);
+    await poller.tick();
+    expect(checks).toBe(2);
+  });
+
+  it('saves nothing when a refresh throws a non-partial error', async () => {
+    const pr = makePr();
+    const { poller, code, store } = setup([pr], [pr]);
+    code.provider.fetchFull = async () => { throw new Error('boom'); };
+    code.state.prs = [{ ...pr, updatedAt: '2026-11-22T09:00:00Z' }];
+    const save = vi.spyOn(store, 'saveRefresh');
+    await poller.tick();
+    expect(save).not.toHaveBeenCalled();
+  });
 });

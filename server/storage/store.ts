@@ -186,6 +186,13 @@ export class Store {
       // A PR the ticket sync already stored as closed must survive its removal from the open lists.
       if (write.removedIds.length) tx.delete(s.changeRequests).where(and(inArray(s.changeRequests.id, write.removedIds), eq(s.changeRequests.state, 'open'))).run();
       for (const pr of write.upserted) this.upsertPr(tx, write.org, pr);
+      // After a complete refresh the open PRs are exactly the union of the views, which also drops
+      // PRs left over from partial refreshes and from repos that are no longer selected.
+      const inViews = new Set([...write.overviewIds, ...write.mine.authored, ...write.mine.requested, ...write.mine.team]);
+      const stale = tx.select({ id: s.changeRequests.id }).from(s.changeRequests)
+        .where(and(eq(s.changeRequests.org, write.org), eq(s.changeRequests.state, 'open'))).all()
+        .map((row) => row.id).filter((id) => !inViews.has(id));
+      if (stale.length) tx.delete(s.changeRequests).where(inArray(s.changeRequests.id, stale)).run();
       this.replaceViews(tx, write);
     });
   }
