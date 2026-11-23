@@ -54,7 +54,7 @@ describe('App', () => {
   it('opens the settings panel from the header', async () => {
     render(<App api={fakeApi()} />);
     await userEvent.click(await screen.findByRole('button', { name: 'Settings' }));
-    expect(screen.getByRole('dialog', { name: 'Repositories in Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
   });
 
   it('shows a loading message instead of empty lanes until the first load finishes', async () => {
@@ -113,7 +113,8 @@ describe('App', () => {
       const api = withNotifications(fakeApi({ updateSettings: async () => { throw new Error('Save failed'); } }));
       render(<App api={api} />);
       await userEvent.click(await screen.findByRole('button', { name: /^Settings/ }));
-      const dialog = screen.getByRole('dialog', { name: 'Repositories in Overview' });
+      const dialog = screen.getByRole('dialog', { name: 'Settings' });
+      await userEvent.click(within(dialog).getByRole('tab', { name: 'Notifications' }));
       await userEvent.click(within(dialog).getByRole('checkbox', { name: 'CI failed' }));
       expect(await within(dialog).findByRole('alert')).toHaveTextContent('Save failed');
     });
@@ -124,7 +125,8 @@ describe('App', () => {
       expect(screen.getByRole('group', { name: 'Desktop notifications' })).toHaveFocus();
       await userEvent.click(screen.getByRole('button', { name: 'Close' }));
       await userEvent.click(screen.getByRole('button', { name: 'Choose repositories' }));
-      expect(screen.getByRole('group', { name: 'Desktop notifications' })).not.toHaveFocus();
+      expect(screen.getByRole('tab', { name: 'Repositories' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.queryByRole('group', { name: 'Desktop notifications' })).toBeNull();
     });
   });
 });

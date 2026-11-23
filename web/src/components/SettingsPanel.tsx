@@ -12,7 +12,12 @@ interface SettingsPanelProps {
   notifications?: { settings: NotificationSettings; onSave: (next: NotificationSettings) => Promise<void> };
 }
 
+type SettingsTab = 'repositories' | 'notifications';
+const TABS: { value: SettingsTab; label: string }[] = [{ value: 'repositories', label: 'Repositories' }, { value: 'notifications', label: 'Notifications' }];
+
 export function SettingsPanel({ api, repos, onSave, onClose, notifications, focusPermission }: SettingsPanelProps) {
+  // The permission hint links straight to the notifications tab.
+  const [tab, setTab] = useState<SettingsTab>(notifications && focusPermission ? 'notifications' : 'repositories');
   const [selected, setSelected] = useState<string[]>(repos);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<RepoRef[]>([]);
@@ -42,30 +47,62 @@ export function SettingsPanel({ api, repos, onSave, onClose, notifications, focu
     >
       <div className="modal" style={{ height: 'min(640px, 90vh)', width: 'min(560px, 94vw)' }} role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={(event) => event.stopPropagation()}>
         <div className="modal-head">
-          <h3 id="settings-title">Repositories in Overview</h3>
-          <span className="muted small">{selected.length} of {MAX_REPOS} selected</span>
+          <h3 id="settings-title">Settings</h3>
           <span className="grow" />
           <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>✕</button>
         </div>
-        <div style={{ padding: '12px 18px 0' }}>
-          <label className="search" style={{ flex: 'none' }}>
-            <span className="sr-only">Search repositories</span>
-            <input type="search" aria-label="Search repositories" placeholder="Search the organisation" value={query} onChange={(event) => setQuery(event.target.value)} />
-          </label>
-        </div>
-        <div className="settings-list">
-          {candidates.map((repo) => {
-            const checked = selected.includes(repo.name);
-            return (
-              <label key={repo.name}>
-                <input type="checkbox" checked={checked} disabled={!checked && full} onChange={() => toggle(repo.name)} />
-                <span>{repo.name}</span>
-                {'cloned' in repo && repo.cloned === false && <span className="muted small">not cloned</span>}
+        {notifications && (
+          <div className="settings-tabs">
+            <div className="segs" role="tablist" aria-label="Settings sections">
+              {TABS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  role="tab"
+                  id={`settings-tab-${item.value}`}
+                  aria-selected={tab === item.value}
+                  aria-controls={`settings-panel-${item.value}`}
+                  className={`seg${tab === item.value ? ' on' : ''}`}
+                  onClick={() => setTab(item.value)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {tab === 'repositories' && (
+          <div className="settings-panel" {...(notifications ? { role: 'tabpanel', id: 'settings-panel-repositories', 'aria-labelledby': 'settings-tab-repositories' } : {})}>
+            <div className="settings-intro">
+              <span>Repositories in Overview</span>
+              <span className="muted small">{selected.length} of {MAX_REPOS} selected</span>
+            </div>
+            <div style={{ padding: '0 18px' }}>
+              <label className="search" style={{ flex: 'none' }}>
+                <span className="sr-only">Search repositories</span>
+                <input type="search" aria-label="Search repositories" placeholder="Search the organisation" value={query} onChange={(event) => setQuery(event.target.value)} />
               </label>
-            );
-          })}
-        </div>
-        {notifications && <NotificationSettingsSection settings={notifications.settings} onSave={notifications.onSave} focusPermission={focusPermission} />}
+            </div>
+            <div className="settings-list">
+              {candidates.map((repo) => {
+                const checked = selected.includes(repo.name);
+                return (
+                  <label key={repo.name}>
+                    <input type="checkbox" checked={checked} disabled={!checked && full} onChange={() => toggle(repo.name)} />
+                    <span>{repo.name}</span>
+                    {'cloned' in repo && repo.cloned === false && <span className="muted small">not cloned</span>}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {notifications && tab === 'notifications' && (
+          <div className="settings-panel" role="tabpanel" id="settings-panel-notifications" aria-labelledby="settings-tab-notifications">
+            <p className="settings-note muted small">Notification changes are saved as you make them.</p>
+            <NotificationSettingsSection settings={notifications.settings} onSave={notifications.onSave} focusPermission={focusPermission} />
+          </div>
+        )}
         {error && <p role="alert" className="banner sev-red">{error}</p>}
         <div className="modal-head" style={{ borderTop: '1px solid var(--hair)', borderBottom: 0, justifyContent: 'flex-end' }}>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>

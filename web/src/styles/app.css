@@ -20,7 +20,12 @@ button, input, select { font: inherit; color: inherit }
 .tab-count { display: inline-block; min-width: 18px; margin-left: 2px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; background: var(--a-bg); color: var(--a-fg) }
 select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; background: var(--surface) }
 .icon-btn { border: 1px solid var(--border); background: var(--surface); cursor: pointer; width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center }
-.icon-btn:hover { background: var(--hair) } .icon-btn.ghost { border: 0; background: transparent; width: 28px; height: 28px }
+.icon-btn:hover { background: var(--hair) }
+/* Spins the refresh icon while a manual refresh runs, so the click visibly did something. */
+.icon-btn.spinning svg { animation: spin 0.9s linear infinite }
+@keyframes spin { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .icon-btn.spinning svg { animation-duration: 2.4s } }
+.icon-btn.ghost { border: 0; background: transparent; width: 28px; height: 28px }
 .who { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 4px; border-radius: 999px; background: var(--subtle); border: 1px solid var(--border); color: var(--text) }
 
 .avatar { position: relative; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; flex: 0 0 auto; overflow: hidden }
@@ -118,6 +123,10 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
 .stacks { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 16px; padding: 0 24px }
 .scard { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column }
 .scard-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--hair); flex-wrap: wrap }
+.settings-tabs { padding: 12px 18px 0 } .settings-tabs .segs { display: inline-flex }
+.settings-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: auto }
+.settings-intro { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 14px 18px 10px; font-weight: 600 }
+.settings-note { margin: 0; padding: 14px 18px 10px }
 .settings-list { display: flex; flex-direction: column; gap: 4px; padding: 12px 18px; overflow: auto }
 .settings-list label { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px }
 .settings-list label:hover { background: var(--subtle) }
@@ -146,10 +155,11 @@ a.mini { color: var(--text); text-decoration: none }
 .toast-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; border: 0; background: transparent; cursor: pointer; text-align: left; padding: 0; font-size: 13px }
 .toast-body span { color: var(--text2) }
 .toast-more { font-size: 12px; color: var(--muted) }
-.notify-settings { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--hair) }
+.notify-settings { display: flex; flex-direction: column; gap: 8px; padding: 0 18px 12px }
 .notify-master { display: flex; align-items: center; gap: 8px; font-weight: 600 }
 .notify-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; font-size: 13px }
-.notify-permission { display: flex; flex-wrap: wrap; align-items: center; gap: 8px }
+/* Browser permission is a separate concern from which events notify, so it gets its own band. */
+.notify-permission { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--hair) }
 .has-dot { position: relative }
 .has-dot::after { content: ''; position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--a-fg) }
 .notify-event { display: flex; flex-direction: column; gap: 2px }

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsPanel } from '../components/SettingsPanel';
 
 const ten = Array.from({ length: 10 }, (_, index) => `repo-${index}`);
+const notifications = { settings: { enabled: true, events: { ciFailed: true, ciPassed: true, approved: true, changesRequested: true, readyToMerge: true, conflict: true, newComment: true, newThread: true, reviewRequested: false } }, onSave: async () => undefined };
 const api = { searchRepos: async (q: string) => (q ? [{ name: 'report-service', cloned: false }] : [{ name: 'orders-api', cloned: true }]) };
 
 describe('SettingsPanel', () => {
@@ -47,5 +48,35 @@ describe('SettingsPanel', () => {
     fireEvent.mouseDown(backdrop);
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('splits repositories and notifications into tabs, keeping unsaved repository changes', async () => {
+    const onSave = vi.fn(async () => undefined);
+    render(<SettingsPanel api={api} repos={['orders-api']} onSave={onSave} onClose={() => undefined} notifications={notifications} />);
+    const dialog = screen.getByRole('dialog', { name: 'Settings' });
+    const repositoriesTab = within(dialog).getByRole('tab', { name: 'Repositories' });
+    const notificationsTab = within(dialog).getByRole('tab', { name: 'Notifications' });
+    expect(repositoriesTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('checkbox', { name: 'Notify me about my pull requests' })).toBeNull();
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: /orders-api/ }));
+    await userEvent.click(notificationsTab);
+    expect(notificationsTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel', { name: 'Notifications' })).toContainElement(screen.getByRole('checkbox', { name: 'Notify me about my pull requests' }));
+    expect(screen.queryByRole('searchbox', { name: 'Search repositories' })).toBeNull();
+
+    await userEvent.click(repositoriesTab);
+    expect(screen.getByRole('checkbox', { name: /orders-api/ })).not.toBeChecked();
+  });
+
+  it('opens on the notifications tab when asked to focus the permission row', () => {
+    render(<SettingsPanel api={api} repos={['orders-api']} onSave={async () => undefined} onClose={() => undefined} notifications={notifications} focusPermission />);
+    expect(screen.getByRole('tab', { name: 'Notifications' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('shows no tabs without notification settings', () => {
+    render(<SettingsPanel api={api} repos={['orders-api']} onSave={async () => undefined} onClose={() => undefined} />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.getByRole('searchbox', { name: 'Search repositories' })).toBeInTheDocument();
   });
 });

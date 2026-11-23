@@ -88,7 +88,7 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
               {REFRESH_OPTIONS.map((option) => <option key={option} value={String(option)}>{option === 'off' ? 'Off' : `Every ${option}m`}</option>)}
             </select>
           </label>
-          <button type="button" className="icon-btn" aria-label="Refresh now" disabled={refreshing} onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}>{REFRESH_ICON}</button>
+          <button type="button" className={`icon-btn${refreshing ? ' spinning' : ''}`} aria-label="Refresh now" aria-busy={refreshing || undefined} disabled={refreshing} onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}>{REFRESH_ICON}</button>
         </span>
         <span className="hdr-secondary">
           <ThemeToggle />

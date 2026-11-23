@@ -36,6 +36,19 @@ describe('Header', () => {
     expect(onRefresh).toHaveBeenCalledOnce();
   });
 
+  it('spins the refresh button until the refresh finishes', async () => {
+    let finish = () => undefined as void;
+    const onRefresh = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    render(<Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={onRefresh} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
+    const button = screen.getByRole('button', { name: 'Refresh now' });
+    await userEvent.click(button);
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveClass('spinning');
+    await act(async () => finish());
+    expect(button).not.toHaveAttribute('aria-busy', 'true');
+    expect(button).not.toHaveClass('spinning');
+  });
+
   it('opens a menu with the organisation, status, theme and settings, and closes it on Escape', async () => {
     const onOpenSettings = vi.fn();
     render(<Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={onOpenSettings} />);
