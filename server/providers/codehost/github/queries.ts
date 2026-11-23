@@ -36,7 +36,7 @@ function fullFields(number: number): string {
     stack { number size baseRefName } stackEntry { position }
     comments { totalCount } lastComment: comments(last: 1) { nodes { bodyText url author { ${PERSON} } } }
     commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 50) { pageInfo { hasNextPage } nodes { __typename
-      ... on CheckRun { name status conclusion detailsUrl isRequired(pullRequestNumber: ${number}) }
+      ... on CheckRun { name status conclusion startedAt detailsUrl isRequired(pullRequestNumber: ${number}) }
       ... on StatusContext { context state targetUrl isRequired(pullRequestNumber: ${number}) } } } } } } }
     reviews(last: 10) { nodes { state submittedAt author { ${PERSON} } } }
     reviewThreads(last: 20) { pageInfo { hasPreviousPage } nodes { isResolved comments(first: 1) { nodes { bodyText url author { ${PERSON} } } } } }

@@ -40,6 +40,25 @@ describe('toChangeRequest', () => {
     ]);
   });
 
+  it('keeps only the newest run of a check, so attempts cancelled by a newer run do not count as failures', () => {
+    const run = (conclusion: string | null, startedAt: string | null, url: string) => ({
+      __typename: 'CheckRun', name: 'PR Test / Lint', status: conclusion ? 'COMPLETED' : 'QUEUED', conclusion, startedAt, detailsUrl: url, isRequired: false,
+    });
+    const withRuns = (runs: unknown[]) => toChangeRequest({ ...fullPr, commits: { nodes: [{ commit: { statusCheckRollup: { contexts: { pageInfo: { hasNextPage: false }, nodes: runs } } } }] } }, classes).checks;
+
+    expect(withRuns([
+      run('CANCELLED', '2026-11-23T10:32:24Z', 'https://example.test/runs/1876'),
+      run('SUCCESS', '2026-11-23T10:41:22Z', 'https://example.test/runs/1878'),
+      run('CANCELLED', '2026-11-23T10:32:22Z', 'https://example.test/runs/1877'),
+    ])).toEqual([{ name: 'PR Test / Lint', state: 'success', required: false, url: 'https://example.test/runs/1878' }]);
+
+    // A re-run that has not started yet is the newest attempt.
+    expect(withRuns([
+      run('FAILURE', '2026-11-23T10:32:24Z', 'https://example.test/runs/1'),
+      run(null, null, 'https://example.test/runs/2'),
+    ])).toEqual([{ name: 'PR Test / Lint', state: 'pending', required: false, url: 'https://example.test/runs/2' }]);
+  });
+
   it('drops pending reviews and classifies reviewers', () => {
     expect(pr.reviews.map((review) => [review.author.login, review.author.kind, review.state])).toEqual([
       ['copilot-pull-request-reviewer', 'ai-review', 'commented'],

@@ -53,6 +53,19 @@ function toCheck(raw: any): Check {
   return { name: raw.name, state, required: !!raw.isRequired, url: raw.detailsUrl ?? undefined };
 }
 
+// GitHub lists every attempt of a workflow; runs cancelled by a newer one (re-runs, concurrency groups) would otherwise read as failures.
+function newestRuns(contexts: any[]): any[] {
+  // A run that has not started yet is the newest attempt.
+  const startedAt = (raw: any) => (raw.startedAt ? Date.parse(raw.startedAt) : Number.POSITIVE_INFINITY);
+  const newest = new Map<string, any>();
+  for (const raw of contexts) {
+    if (raw.__typename !== 'CheckRun') continue;
+    const current = newest.get(raw.name);
+    if (!current || startedAt(raw) >= startedAt(current)) newest.set(raw.name, raw);
+  }
+  return contexts.filter((raw) => raw.__typename !== 'CheckRun' || newest.get(raw.name) === raw);
+}
+
 export function toClosed(raw: any, classes: ReviewerClasses): ClosedChangeRequest {
   return {
     id: raw.id,
@@ -126,7 +139,7 @@ export function toChangeRequest(raw: any, classes: ReviewerClasses): ChangeReque
     createdAt: raw.createdAt,
     mergeState: toMergeState(raw.mergeable, raw.mergeStateStatus),
     reviewDecision: toReviewDecision(raw.reviewDecision),
-    checks: [...contexts.map(toCheck), ...truncationMarker],
+    checks: [...newestRuns(contexts).map(toCheck), ...truncationMarker],
     reviews,
     threads,
     reviewRequests,
