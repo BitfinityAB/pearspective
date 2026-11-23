@@ -63,6 +63,7 @@ describe('App', () => {
     expect(await screen.findByText('Loading pull requests… the first load can take a minute.')).toBeInTheDocument();
     expect(screen.getByText('Loading…')).toBeInTheDocument();
     expect(screen.queryByText(/Updated never/)).toBeNull();
+    expect(screen.queryByText('Select a pull request to see its details.')).toBeNull();
 
     await userEvent.click(screen.getByRole('button', { name: 'Mine' }));
     expect(screen.getByText('Loading pull requests… the first load can take a minute.')).toBeInTheDocument();

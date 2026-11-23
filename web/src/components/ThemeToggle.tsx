@@ -14,7 +14,7 @@ const OPTIONS: { value: ThemeChoice; label: string; icon: ReactNode }[] = [
 export function ThemeToggle() {
   const [choice, setChoice] = useState<ThemeChoice>(readTheme);
   return (
-    <div className="segs" role="group" aria-label="Theme">
+    <div className="segs compact" role="group" aria-label="Theme">
       {OPTIONS.map((option) => (
         <button
           key={option.value}

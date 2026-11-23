@@ -1,15 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildTicketLanes, type TicketLaneModel, type TicketRowModel } from '../../../shared/ticketLanes';
 import type { Snapshot } from '../../../shared/types';
 import { PrStateBadge } from '../components/PrStateBadge';
 import { FirstLoadMessage, isFirstLoad } from '../lib/firstLoad';
 
-interface TicketsViewProps { snapshot: Snapshot; selectedId: string | null; onSelect: (id: string) => void; mineOnly?: boolean }
+/** focusKey is a ticket opened from elsewhere (e.g. the PR panel): its row is highlighted and scrolled into view. */
+interface TicketsViewProps { snapshot: Snapshot; selectedId: string | null; onSelect: (id: string) => void; mineOnly?: boolean; focusKey?: string | null }
 
-function TicketRow({ row, selectedId, onSelect }: { row: TicketRowModel; selectedId: string | null; onSelect: (id: string) => void }) {
+function TicketRow({ row, selectedId, onSelect, focused }: { row: TicketRowModel; selectedId: string | null; onSelect: (id: string) => void; focused: boolean }) {
   const { ticket, check } = row;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focused) ref.current?.scrollIntoView?.({ block: 'center' });
+  }, [focused]);
   return (
-    <div className="ticket-row">
+    <div ref={ref} className={`ticket-row${focused ? ' focus' : ''}`} aria-current={focused ? 'true' : undefined}>
       <div className="ticket-main">
         <span className="rn">{row.key}{ticket?.type ? ` · ${ticket.type}` : ''}</span>
         {ticket ? <a className="title" href={ticket.url} target="_blank" rel="noopener noreferrer">{ticket.summary}</a> : <span className="title">{row.key}</span>}
@@ -37,8 +42,13 @@ function TicketRow({ row, selectedId, onSelect }: { row: TicketRowModel; selecte
   );
 }
 
-function TicketLane({ lane, selectedId, onSelect }: { lane: TicketLaneModel; selectedId: string | null; onSelect: (id: string) => void }) {
-  const [collapsed, setCollapsed] = useState(lane.defaultCollapsed);
+function TicketLane({ lane, selectedId, onSelect, focusKey }: { lane: TicketLaneModel; selectedId: string | null; onSelect: (id: string) => void; focusKey: string | null }) {
+  const holdsFocus = lane.rows.some((row) => row.key === focusKey);
+  const [collapsed, setCollapsed] = useState(lane.defaultCollapsed && !holdsFocus);
+  // A ticket opened from the PR panel must be visible even in a lane that starts folded.
+  useEffect(() => {
+    if (holdsFocus) setCollapsed(false);
+  }, [holdsFocus, focusKey]);
   return (
     <section className="lane" aria-label={lane.title}>
       <div className="lane-head">
@@ -48,17 +58,17 @@ function TicketLane({ lane, selectedId, onSelect }: { lane: TicketLaneModel; sel
         <span className="lane-title">{lane.title}</span>
         <span className="muted" style={{ fontSize: 13 }}>{lane.rows.length}</span>
       </div>
-      {!collapsed && lane.rows.map((row) => <TicketRow key={row.key} row={row} selectedId={selectedId} onSelect={onSelect} />)}
+      {!collapsed && lane.rows.map((row) => <TicketRow key={row.key} row={row} selectedId={selectedId} onSelect={onSelect} focused={row.key === focusKey} />)}
     </section>
   );
 }
 
-export function TicketsView({ snapshot, selectedId, onSelect, mineOnly = false }: TicketsViewProps) {
+export function TicketsView({ snapshot, selectedId, onSelect, mineOnly = false, focusKey = null }: TicketsViewProps) {
   const lanes = useMemo(() => buildTicketLanes(snapshot, { mineOnly }), [snapshot, mineOnly]);
   if (isFirstLoad(snapshot)) return <FirstLoadMessage />;
   const visible = lanes.filter((lane) => lane.rows.length > 0 || lane.key === 'mismatch' || lane.key === 'review');
   if (lanes.every((lane) => lane.rows.length === 0)) {
     return <p className="empty-state">{mineOnly ? 'None of these tickets were created by you or assigned to you.' : 'No tickets are referenced by open or recently closed pull requests.'}</p>;
   }
-  return <div className="board">{visible.map((lane) => <TicketLane key={lane.key} lane={lane} selectedId={selectedId} onSelect={onSelect} />)}</div>;
+  return <div className="board">{visible.map((lane) => <TicketLane key={lane.key} lane={lane} selectedId={selectedId} onSelect={onSelect} focusKey={focusKey} />)}</div>;
 }

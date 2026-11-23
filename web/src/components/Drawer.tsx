@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ageLabel } from '../../../shared/age';
 import type { PrView } from '../../../shared/grouping';
 import { detectStacks, membersBottomUp, stackIndex } from '../../../shared/stacks';
-import type { ChangeRequest, Snapshot } from '../../../shared/types';
+import { SIGNAL_LABELS } from '../../../shared/status';
+import type { ActorKind, ChangeRequest, Snapshot, Thread } from '../../../shared/types';
 import { prTicketKey } from '../../../shared/tickets';
 import { isNarrow } from '../lib/layout';
 import { Avatar } from './Avatar';
@@ -17,6 +18,8 @@ interface DrawerProps {
   onVisualize: (prId: string) => void;
   onTogglePin: (prId: string) => void;
   onClose: () => void;
+  /** Opens the Tickets tab at this ticket, listing every PR that references it. */
+  onOpenTicket?: (key: string) => void;
 }
 
 const REVIEW_LABEL = { approved: 'Approved', changes_requested: 'Changes requested', commented: 'Commented', dismissed: 'Dismissed' } as const;
@@ -43,6 +46,38 @@ function reviewerRows(pr: ChangeRequest): ReviewerRow[] {
   return rows;
 }
 
+// People first, matching the Threads signal; automated reviewers have their own signals, so their threads start folded.
+const THREAD_GROUPS: { kind: ActorKind; label: string }[] = [
+  { kind: 'human', label: 'From people' },
+  { kind: 'ai-review', label: `From ${SIGNAL_LABELS.aiReview}` },
+  { kind: 'code-analysis', label: `From ${SIGNAL_LABELS.codeAnalysis}` },
+  { kind: 'bot', label: 'From bots' },
+];
+
+function ThreadLink({ thread }: { thread: Thread }) {
+  return (
+    <a className="snip" href={thread.url} target="_blank" rel="noopener noreferrer">
+      <b>{thread.author.name ?? thread.author.login}:</b> {thread.snippet}
+    </a>
+  );
+}
+
+function UnresolvedThreads({ threads }: { threads: Thread[] }) {
+  return (
+    <>
+      {THREAD_GROUPS.map(({ kind, label }) => {
+        const group = threads.filter((thread) => thread.author.kind === kind);
+        if (group.length === 0) return null;
+        const title = `${label} (${group.length})`;
+        const links = group.map((thread) => <ThreadLink key={thread.url} thread={thread} />);
+        return kind === 'human'
+          ? <div key={kind} className="thread-group"><span className="muted small">{title}</span>{links}</div>
+          : <details key={kind} className="thread-group"><summary className="muted small">{title}</summary>{links}</details>;
+      })}
+    </>
+  );
+}
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section aria-label={title} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -52,7 +87,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onTogglePin, onClose }: DrawerProps) {
+export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onTogglePin, onClose, onOpenTicket }: DrawerProps) {
   const index = useMemo(() => stackIndex(detectStacks(snapshot.prs)), [snapshot.prs]);
   const view = selectedId ? views.get(selectedId) : undefined;
   const open = !!view;
@@ -148,11 +183,7 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
 
       {unresolved.length > 0 && (
         <Section title="Unresolved threads">
-          {unresolved.map((thread) => (
-            <a key={thread.url} className="snip" href={thread.url} target="_blank" rel="noopener noreferrer">
-              <b>{thread.author.name ?? thread.author.login}:</b> {thread.snippet}
-            </a>
-          ))}
+          <UnresolvedThreads threads={unresolved} />
         </Section>
       )}
 
@@ -173,6 +204,9 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
               <span className="mini-text"><PrStateBadge state={closedPr.merged ? 'merged' : 'closed'} />{' '}<span className="rn">{closedPr.repo} #{closedPr.number}</span>{' '}<span className="mini-title">{closedPr.title} ↗</span></span>
             </a>
           ))}
+          {onOpenTicket && view.ticket && (
+            <button type="button" className="btn" style={{ alignSelf: 'flex-start' }} onClick={() => onOpenTicket(view.ticket!)}>Show all pull requests for {view.ticket}</button>
+          )}
         </Section>
       ) : related.length > 0 && <Section title={`Related PRs · ${view.ticket}`}>{related.map(mini)}</Section>}
 

@@ -11,6 +11,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { StackDialog } from './components/StackDialog';
 import { Toasts } from './components/Toasts';
 import { Toolbar } from './components/Toolbar';
+import { isFirstLoad } from './lib/firstLoad';
 import { stacksZoomHint } from './lib/zoomHint';
 import { useNotifications } from './notifications/useNotifications';
 import { useUrlState } from './state/urlState';
@@ -76,7 +77,7 @@ export function App({ api }: { api: DashboardApi }) {
         snapshot={snapshot}
         tab={tab}
         now={now}
-        onTab={(tab) => setUrl({ tab })}
+        onTab={(tab) => setUrl({ tab, ticket: null })}
         onRefresh={() => refreshNow().then(() => setClientError(null), reportError)}
         onRefreshSetting={(refresh) => void updateSettings({ refresh }).catch(reportError)}
         onOpenSettings={openSettings}
@@ -112,9 +113,10 @@ export function App({ api }: { api: DashboardApi }) {
               <main className="board-wrap">
                 {tab === 'overview' && <OverviewView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} onOpenSettings={() => openSettings()} />}
                 {tab === 'mine' && <MineView snapshot={snapshot} url={url} now={now} onSelect={select} onVisualize={setStackPrId} />}
-                {tab === 'tickets' && <TicketsView snapshot={snapshot} selectedId={url.selected} onSelect={select} mineOnly={url.ticketsMine} />}
+                {tab === 'tickets' && <TicketsView snapshot={snapshot} selectedId={url.selected} onSelect={select} mineOnly={url.ticketsMine} focusKey={url.ticket} />}
               </main>
-              <Drawer snapshot={snapshot} views={views} selectedId={url.selected} onSelect={select} onVisualize={setStackPrId} onTogglePin={togglePin} onClose={closeDrawer} />
+              {/* No PR can be picked before the first load, so the empty panel would only distract. Mine is cleared so an opened ticket cannot be filtered out. */}
+              {!isFirstLoad(snapshot) && <Drawer snapshot={snapshot} views={views} selectedId={url.selected} onSelect={select} onVisualize={setStackPrId} onTogglePin={togglePin} onClose={closeDrawer} onOpenTicket={(key) => setUrl({ tab: 'tickets', ticket: key, ticketsMine: false })} />}
             </div>
           </>
         )}

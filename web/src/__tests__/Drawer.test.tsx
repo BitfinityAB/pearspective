@@ -46,6 +46,28 @@ describe('Drawer', () => {
     expect(screen.getByRole('link', { name: /Can this run twice\?/ })).toHaveAttribute('href', 'https://github.example.test/t/2');
   });
 
+  it('lists people\'s unresolved threads first and folds automated ones into their own groups', async () => {
+    const pr = makePr({
+      threads: [
+        { resolved: false, author: copilot, snippet: 'Both files are passed unconditionally', url: 'https://github.example.test/t/10' },
+        { resolved: false, author: makePerson('robin'), snippet: 'Can this run twice?', url: 'https://github.example.test/t/11' },
+        { resolved: false, author: copilot, snippet: 'This minimum ignores review time', url: 'https://github.example.test/t/12' },
+        { resolved: true, author: makePerson('kim'), snippet: 'Already fixed', url: 'https://github.example.test/t/13' },
+      ],
+    });
+    setup([pr], pr.id);
+
+    const threads = within(screen.getByRole('region', { name: 'Unresolved threads' }));
+    expect(threads.getByText('From people (1)')).toBeInTheDocument();
+    expect(threads.getByRole('link', { name: /Can this run twice\?/ })).toBeInTheDocument();
+    const automated = threads.getByText('From Copilot (2)').closest('details')!;
+    expect(automated).not.toHaveAttribute('open');
+    await userEvent.click(threads.getByText('From Copilot (2)'));
+    expect(automated).toHaveAttribute('open');
+    expect(within(automated).getAllByRole('link')).toHaveLength(2);
+    expect(threads.queryByText(/Already fixed/)).toBeNull();
+  });
+
   it('shows people by display name, falling back to the login', () => {
     const robin = { ...makePerson('robin'), name: 'Robin Park' };
     const pr = makePr({
@@ -185,7 +207,7 @@ describe('Drawer', () => {
     expect(onVisualize).toHaveBeenCalledWith(top.id);
   });
 
-  it('shows the ticket, its verdict and all of its PRs when tickets are enabled', () => {
+  it('shows the ticket, its verdict and all of its PRs when tickets are enabled', async () => {
     const pr = makePr({ headRefName: 'XX-1-work', title: 'Add the lock' });
     const sibling = makePr({ headRefName: 'XX-1-ui', title: 'Lock settings UI' });
     const base = emptySnapshot('acme');
@@ -198,8 +220,11 @@ describe('Drawer', () => {
       ticketChecks: { 'XX-1': { key: 'XX-1', prState: 'open' as const, verdict: 'mismatch' as const, reason: 'PR opened 2d ago; ticket is To Do (expected In Progress).', expected: 'In Progress', since: pr.createdAt } },
     };
     const views = buildPrViews(snapshot, Date.parse('2026-11-20T12:00:00Z'));
-    render(<Drawer snapshot={snapshot} views={views} selectedId={pr.id} onSelect={vi.fn()} onVisualize={vi.fn()} onTogglePin={vi.fn()} onClose={vi.fn()} />);
+    const onOpenTicket = vi.fn();
+    render(<Drawer snapshot={snapshot} views={views} selectedId={pr.id} onSelect={vi.fn()} onVisualize={vi.fn()} onTogglePin={vi.fn()} onClose={vi.fn()} onOpenTicket={onOpenTicket} />);
     const section = within(screen.getByRole('region', { name: 'Ticket · XX-1' }));
+    await userEvent.click(section.getByRole('button', { name: 'Show all pull requests for XX-1' }));
+    expect(onOpenTicket).toHaveBeenCalledWith('XX-1');
     expect(section.getByRole('link', { name: 'Scheduler lock ↗' })).toHaveAttribute('href', 'https://tracker.example.test/browse/XX-1');
     expect(section.getByText('Story · Alex Rivera')).toBeInTheDocument();
     expect(section.getByText('To Do')).toHaveClass('ticket-chip', 'v-mismatch');

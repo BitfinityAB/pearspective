@@ -9,7 +9,7 @@ import { makeTicket } from '../../../test/fake-tracker';
 const check = (key: string, verdict: TicketCheck['verdict']): TicketCheck =>
   ({ key, prState: 'merged', verdict, reason: `PR merged 3h ago; ticket is In Review (expected Done).`, expected: 'Done', since: '2026-11-20T09:00:00Z' });
 
-function setup(mineOnly = false) {
+function setup(mineOnly = false, focusKey: string | null = null) {
   const open = makePr({ headRefName: 'XX-1-work', title: 'Add the lock' });
   const snapshot = {
     ...emptySnapshot('acme'),
@@ -20,7 +20,7 @@ function setup(mineOnly = false) {
     ticketChecks: { 'XX-1': check('XX-1', 'mismatch'), 'XX-9': check('XX-9', 'ok') },
   };
   const onSelect = vi.fn();
-  render(<TicketsView snapshot={snapshot} selectedId={null} onSelect={onSelect} mineOnly={mineOnly} />);
+  render(<TicketsView snapshot={snapshot} selectedId={null} onSelect={onSelect} mineOnly={mineOnly} focusKey={focusKey} />);
   return { onSelect, open };
 }
 
@@ -57,5 +57,13 @@ describe('TicketsView', () => {
     expect(within(okLane).queryByText('XX-9')).toBeNull();
     await userEvent.click(within(okLane).getByRole('button', { name: 'Expand OK' }));
     expect(within(okLane).getAllByText(/XX-9/).length).toBeGreaterThan(0);
+  });
+
+  it('opens a folded lane and highlights the ticket opened from the PR panel', () => {
+    setup(false, 'XX-9');
+    const okLane = screen.getByRole('region', { name: 'OK' });
+    const row = within(okLane).getAllByText(/XX-9/)[0]!.closest('.ticket-row')!;
+    expect(row).toHaveAttribute('aria-current', 'true');
+    expect(row).toHaveClass('focus');
   });
 });

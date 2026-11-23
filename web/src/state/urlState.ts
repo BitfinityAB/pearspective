@@ -3,8 +3,8 @@ import { DEFAULT_FILTERS, type GroupBy, type ViewFilters } from '../../../shared
 import type { Bucket } from '../../../shared/status';
 
 export type Tab = 'overview' | 'mine' | 'stacks' | 'tickets';
-/** ticketsMine limits the Tickets tab to tickets the viewer created or is or was assignee on. */
-export interface UrlState { tab: Tab; groupBy: GroupBy; filters: ViewFilters; selected: string | null; ticketsMine: boolean }
+/** ticketsMine limits the Tickets tab to tickets the viewer created or is or was assignee on; ticket is the row the Tickets tab scrolls to. */
+export interface UrlState { tab: Tab; groupBy: GroupBy; filters: ViewFilters; selected: string | null; ticketsMine: boolean; ticket: string | null }
 
 const TABS: Tab[] = ['overview', 'mine', 'stacks', 'tickets'];
 const GROUPS: GroupBy[] = ['author', 'repo', 'ticket'];
@@ -22,6 +22,7 @@ export function parseUrlState(search: string): UrlState {
     filters: { show, q: params.get('q') ?? '', newestFirst: params.get('sort') === 'newest' },
     selected: params.get('pr'),
     ticketsMine: params.get('mine') === '1',
+    ticket: params.get('ticket'),
   };
 }
 
@@ -35,6 +36,7 @@ export function serializeUrlState(state: UrlState): string {
   if (state.filters.newestFirst) params.set('sort', 'newest');
   if (state.selected) params.set('pr', state.selected);
   if (state.ticketsMine) params.set('mine', '1');
+  if (state.ticket) params.set('ticket', state.ticket);
   const text = params.toString();
   return text ? `?${text}` : '';
 }

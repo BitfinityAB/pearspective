@@ -3,7 +3,7 @@ import { parseUrlState, serializeUrlState } from '../state/urlState';
 describe('URL state', () => {
   it('defaults to Overview grouped by author, oldest first, drafts hidden', () => {
     expect(parseUrlState('')).toEqual({
-      tab: 'overview', groupBy: 'author', selected: null, ticketsMine: false,
+      tab: 'overview', groupBy: 'author', selected: null, ticketsMine: false, ticket: null,
       filters: { show: { blocked: true, waiting: true, ready: true, draft: false }, q: '', newestFirst: false },
     });
   });
@@ -14,11 +14,11 @@ describe('URL state', () => {
 
   it('round-trips every setting', () => {
     const state = {
-      tab: 'mine' as const, groupBy: 'ticket' as const, selected: 'PR_4988', ticketsMine: true,
+      tab: 'mine' as const, groupBy: 'ticket' as const, selected: 'PR_4988', ticketsMine: true, ticket: 'XX-412',
       filters: { show: { blocked: true, waiting: false, ready: false, draft: true }, q: 'offline mode', newestFirst: true },
     };
     const search = serializeUrlState(state);
-    expect(search).toBe('?tab=mine&group=ticket&show=blocked%2Cdraft&q=offline+mode&sort=newest&pr=PR_4988&mine=1');
+    expect(search).toBe('?tab=mine&group=ticket&show=blocked%2Cdraft&q=offline+mode&sort=newest&pr=PR_4988&mine=1&ticket=XX-412');
     expect(parseUrlState(search)).toEqual(state);
   });
 
