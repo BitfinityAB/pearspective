@@ -75,6 +75,13 @@ describe('HTTP API', () => {
     await api(app).put('/api/settings').send({ pinned: 'PR_1' }).expect(400);
   });
 
+  it('does not refresh when the saved repositories are unchanged', async () => {
+    const pollLean = vi.fn(async () => []);
+    const { app } = await setup({ pollLean });
+    await api(app).put('/api/settings').send({ repos: ['orders-api'] }).expect(200);
+    expect(pollLean).not.toHaveBeenCalled();
+  });
+
   it('rejects more than ten repositories', async () => {
     const { app } = await setup();
     const repos = Array.from({ length: 11 }, (_, index) => `repo-${index}`);

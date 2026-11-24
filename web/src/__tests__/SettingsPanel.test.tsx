@@ -31,7 +31,8 @@ describe('SettingsPanel', () => {
 
   it('shows the error when saving fails and stays open', async () => {
     const onClose = vi.fn();
-    render(<SettingsPanel api={api} repos={['orders-api']} onSave={async () => { throw new Error('repos must be a list of at most 10 names'); }} onClose={onClose} />);
+    render(<SettingsPanel api={api} repos={['orders-api', 'billing']} onSave={async () => { throw new Error('repos must be a list of at most 10 names'); }} onClose={onClose} />);
+    await userEvent.click(await screen.findByRole('checkbox', { name: /billing/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('repos must be a list of at most 10 names');
     expect(onClose).not.toHaveBeenCalled();
@@ -85,5 +86,14 @@ describe('SettingsPanel', () => {
     render(<SettingsPanel api={api} repos={['orders-api']} onSave={async () => undefined} onClose={() => undefined} notifications={notifications} appearance={appearance} />);
     await userEvent.click(screen.getByRole('tab', { name: 'Appearance' }));
     expect(screen.getByRole('tabpanel', { name: 'Appearance' })).toContainElement(screen.getByRole('radiogroup', { name: 'Theme' }));
+  });
+
+  it('closes on Save without saving when the repositories did not change', async () => {
+    const onSave = vi.fn(async () => undefined);
+    const onClose = vi.fn();
+    render(<SettingsPanel api={api} repos={['orders-api']} onSave={onSave} onClose={onClose} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

@@ -125,6 +125,11 @@ export function SettingsPanel({ api, repos, onSave, onClose, notifications, appe
             className="btn"
             disabled={saving || selected.length === 0}
             onClick={async () => {
+              // Only a new repository selection needs saving (and waits for the refresh it triggers); other tabs save as you go.
+              if (selected.join('\n') === repos.join('\n')) {
+                onClose();
+                return;
+              }
               setSaving(true);
               setError(null);
               try {

@@ -125,6 +125,8 @@ export function createApp({ poller, presence, loop, provider, store, hub, themes
       return;
     }
     const current = store.get();
+    // Re-sending the same selection (Save after changing only other settings) must not cost a full refresh.
+    const reposChanged = repos !== undefined && (repos as string[]).join('\n') !== current.codeHost.repos.join('\n');
     await store.save({
       ...current,
       refreshIntervalSec: refresh !== undefined ? refreshToSeconds(refresh) : current.refreshIntervalSec,
@@ -134,7 +136,7 @@ export function createApp({ poller, presence, loop, provider, store, hub, themes
       theme: (theme as string | undefined) ?? current.theme,
     });
     poller.refreshSettings();
-    if (repos !== undefined) await poller.tick();
+    if (reposChanged) await poller.tick();
     loop.reschedule();
     res.json(poller.snapshot().settings);
   });
