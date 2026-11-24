@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync, cpSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ThemeRegistry } from '../themes/registry';
@@ -103,11 +103,79 @@ describe('ThemeRegistry', () => {
       registry.watch();
       const before = registry.version();
       write(userDir, 'calm.json', { name: 'Calm', modes: ['dark'], dark: {} });
+      await vi.waitFor(() => expect(registry.list().some((theme) => theme.id === 'calm')).toBe(true), { timeout: 3000 });
       await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 3000 });
       expect(registry.version()).toBeGreaterThan(before);
-      expect(registry.list().some((theme) => theme.id === 'calm')).toBe(true);
     } finally {
       registry.close();
     }
+  });
+
+  it('skips a dangling symlink in the user folder and lists the other themes', async () => {
+    const userDir = tempUserDir();
+    write(userDir, 'calm.json', { name: 'Calm', modes: ['dark'], dark: {} });
+    symlinkSync(join(userDir, 'missing-target'), join(userDir, '.#calm.json'));
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    await expect(registry.load()).resolves.toBeUndefined();
+    expect(registry.list().map((theme) => theme.id)).toEqual(['default', 'calm']);
+  });
+
+  it('treats a user folder that is a regular file as empty', async () => {
+    const userDir = join(tempUserDir(), 'themes');
+    writeFileSync(userDir, 'not a folder');
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await expect(registry.load()).resolves.toBeUndefined();
+    } finally {
+      logged.mockRestore();
+    }
+    expect(registry.list().map((theme) => theme.id)).toEqual(['default']);
+  });
+
+  it('refuses a font that is a symlink to a file outside the theme folder', async () => {
+    const userDir = tempUserDir();
+    const outside = join(tempUserDir(), 'outside.woff2');
+    writeFileSync(outside, 'font');
+    mkdirSync(join(userDir, 'calm', 'fonts'), { recursive: true });
+    write(join(userDir, 'calm'), 'theme.json', { name: 'Calm', modes: ['dark'], dark: {}, fontFiles: [{ family: 'Calm Sans', file: 'fonts/x.woff2' }] });
+    symlinkSync(outside, join(userDir, 'calm', 'fonts', 'x.woff2'));
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    await registry.load();
+    expect(registry.fontPath('calm', 'fonts/x.woff2')).toBeNull();
+  });
+
+  it('survives a watcher error by logging and closing', async () => {
+    const registry = new ThemeRegistry({ builtinDir, userDir: tempUserDir() });
+    await registry.load();
+    registry.watch();
+    const watcher = (registry as unknown as { watcher: { emit: (event: string, error: Error) => boolean } | null }).watcher!;
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      expect(() => watcher.emit('error', new Error('boom'))).not.toThrow();
+      expect(logged).toHaveBeenCalled();
+    } finally {
+      logged.mockRestore();
+      registry.close();
+    }
+  });
+
+  it('says a theme file could not be read instead of calling it invalid JSON', async () => {
+    const userDir = tempUserDir();
+    mkdirSync(join(userDir, 'calm'));
+    mkdirSync(join(userDir, 'calm', 'theme.json'));
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    await registry.load();
+    const calm = registry.list().find((theme) => theme.id === 'calm')!;
+    expect(calm.valid).toBe(false);
+    expect(calm.error).toMatch(/could not be read \(EISDIR\)/);
+  });
+
+  it('leaves a theme.schema.json that is not a regular file alone', async () => {
+    const userDir = tempUserDir();
+    symlinkSync(join(userDir, 'missing-target'), join(userDir, 'theme.schema.json'));
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    await expect(registry.load()).resolves.toBeUndefined();
+    expect(registry.list().map((theme) => theme.id)).toEqual(['default']);
   });
 });

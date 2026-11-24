@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { contrastIssues } from '../../shared/contrast';
 import { resolveTheme } from '../../shared/themeResolve';
@@ -55,15 +55,27 @@ export class ThemeRegistry {
     const entry = this.entries.get(id);
     if (!entry?.file || !entry.file.fontFiles?.some((font) => font.file === file)) return null;
     const absolute = resolve(entry.dir, file);
-    // Belt and braces on top of the schema: never serve outside the theme's folder.
-    return absolute.startsWith(resolve(entry.dir) + sep) && existsSync(absolute) ? absolute : null;
+    try {
+      // Real paths, so a symlinked font cannot lead outside the theme's folder.
+      return realpathSync(absolute).startsWith(realpathSync(entry.dir) + sep) && absolute.startsWith(resolve(entry.dir) + sep) ? absolute : null;
+    } catch {
+      return null;
+    }
   }
 
   watch(): void {
     try {
       this.watcher = watch(this.opts.userDir, { recursive: true }, () => {
         if (this.timer) clearTimeout(this.timer);
-        this.timer = setTimeout(() => { void this.load().then(() => this.opts.onChange?.()); }, DEBOUNCE_MS);
+        this.timer = setTimeout(() => {
+          this.load()
+            .then(() => this.opts.onChange?.())
+            .catch((error) => console.error('Reloading themes failed:', error));
+        }, DEBOUNCE_MS);
+      });
+      this.watcher.on('error', (error) => {
+        console.error('Watching the themes folder failed:', error);
+        this.close();
       });
     } catch (error) {
       // Without file watching, theme edits apply after a restart.
@@ -79,20 +91,37 @@ export class ThemeRegistry {
   }
 
   private candidates(dir: string): { id: string; path: string; dir: string }[] {
-    if (!existsSync(dir)) return [];
-    return readdirSync(dir).flatMap((name) => {
+    let names: string[];
+    try {
+      names = readdirSync(dir);
+    } catch (error) {
+      // A missing or unreadable themes folder means no themes from there, not a failed start.
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') console.error(`Reading the themes folder ${dir} failed:`, error);
+      return [];
+    }
+    return names.flatMap((name) => {
       const path = join(dir, name);
-      if (name.endsWith('.json') && name !== 'theme.schema.json' && statSync(path).isFile()) return [{ id: name.slice(0, -5).toLowerCase(), path, dir }];
-      if (statSync(path).isDirectory() && existsSync(join(path, 'theme.json'))) return [{ id: name.toLowerCase(), path: join(path, 'theme.json'), dir: path }];
+      try {
+        if (name.endsWith('.json') && name !== 'theme.schema.json' && statSync(path).isFile()) return [{ id: name.slice(0, -5).toLowerCase(), path, dir }];
+        if (statSync(path).isDirectory() && existsSync(join(path, 'theme.json'))) return [{ id: name.toLowerCase(), path: join(path, 'theme.json'), dir: path }];
+      } catch {
+        // Dangling symlinks and files removed mid-scan (editor lock files) are skipped.
+      }
       return [];
     }).filter((candidate) => ID.test(candidate.id));
   }
 
   private read(candidate: { id: string; path: string; dir: string }, source: 'builtin' | 'user'): Entry {
     const base: ThemeInfo = { id: candidate.id, name: candidate.id, modes: [], source, valid: false, warnings: [] };
+    let text: string;
+    try {
+      text = readFileSync(candidate.path, 'utf8');
+    } catch (error) {
+      return { dir: candidate.dir, info: { ...base, error: `${candidate.path}: could not be read (${(error as NodeJS.ErrnoException).code ?? (error as Error).message})` } };
+    }
     let raw: unknown;
     try {
-      raw = JSON.parse(readFileSync(candidate.path, 'utf8'));
+      raw = JSON.parse(text);
     } catch (error) {
       return { dir: candidate.dir, info: { ...base, error: `${candidate.path}: not valid JSON (${(error as Error).message})` } };
     }
@@ -117,7 +146,9 @@ export class ThemeRegistry {
       // Written only when it differs: an unconditional write would trigger the watcher and reload in a loop.
       const target = join(this.opts.userDir, 'theme.schema.json');
       const schema = readFileSync(join(this.opts.builtinDir, 'theme.schema.json'));
-      if (!existsSync(target) || !readFileSync(target).equals(schema)) writeFileSync(target, schema);
+      let regular = true;
+      try { regular = lstatSync(target).isFile(); } catch { /* absent: write it */ }
+      if (regular && (!existsSync(target) || !readFileSync(target).equals(schema))) writeFileSync(target, schema);
     } catch (error) {
       console.error('Preparing the themes folder failed:', error);
     }
