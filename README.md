@@ -142,7 +142,7 @@ Pearspective keeps its latest state (pull requests, checks, reviews, threads, ti
 
 ## Themes
 
-Pick a theme in the settings panel's **Appearance** tab. **Default** follows your light/dark setting; **Terminal** is dark only, with a monospace font and tighter corners.
+Pick a theme in the settings panel's **Appearance** tab. **Default** follows your light/dark setting; **Terminal** is dark only, with a monospace font, tighter corners and a soft green glow on the active tab and filters.
 
 ![Terminal theme](docs/assets/screenshot-terminal.png)
 
@@ -159,7 +159,7 @@ Make your own by putting a JSON file in the `custom-themes/` folder next to `con
 
 - Anything you leave out comes from Default, so a theme can be a few lines.
 - [`theme.schema.json`](themes/theme.schema.json) (copied into the folder) lets your editor autocomplete colour names and check the file. A broken file is listed in the picker with the problem and never breaks the page.
-- Themes set colours, fonts, the base font size (body text only; smaller sizes stay fixed), corner radii, border width, shadows and label casing; they cannot change the layout.
+- Themes set colours, fonts, the base font size (body text only; smaller sizes stay fixed), corner radii, border width, shadows, label casing and an optional accent glow (`"effects": { "glow": true }`); they cannot change the layout.
 - To use your own font, put the theme in a folder (`custom-themes/calm/theme.json`) with its `.woff2` files beside it and list them under `fontFiles`. Theme font files are served by Pearspective itself.
 - A file with the same name as a built-in theme (for example `default.json`) replaces it, unless the file is invalid; then the built-in stays and shows a warning. The file name (lower-cased) is the theme's id, so it may contain only letters, digits and dashes.
 

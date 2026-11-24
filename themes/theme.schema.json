@@ -526,6 +526,16 @@
       },
       "additionalProperties": false
     },
+    "effects": {
+      "type": "object",
+      "properties": {
+        "glow": {
+          "type": "boolean",
+          "description": "Accent glow on the active tab and active filter chips."
+        }
+      },
+      "additionalProperties": false
+    },
     "fontFiles": {
       "maxItems": 8,
       "type": "array",

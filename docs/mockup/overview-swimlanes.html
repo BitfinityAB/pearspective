@@ -166,7 +166,9 @@ if (new URLSearchParams(location.search).get('theme') === 'terminal') {
 body{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px}
 .lane,aside,.scard,dialog,.snip,.toast,.segs{border-radius:3px}
 .seg,select,.icon,.search,.btn,.dot,.mini,.pips i,.mini i,.legend i{border-radius:2px}
-dialog,.toast,.seg.on{box-shadow:none}
+dialog,.toast{box-shadow:none}
+.seg.on{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 55%,transparent),0 0 12px color-mix(in srgb,var(--accent) 30%,transparent);text-shadow:0 0 8px color-mix(in srgb,var(--accent) 60%,transparent)}
+.chip:not(.off){border-color:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 25%,transparent);text-shadow:0 0 8px color-mix(in srgb,var(--accent) 60%,transparent)}
 .sec,.cols,.segs .lbl,.chip,.badge,.ticket-chip,.seg,.tab-count{text-transform:uppercase;letter-spacing:.06em}
 </style>`);
 }

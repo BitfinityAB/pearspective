@@ -82,6 +82,23 @@ describe('themeCss', () => {
     expect(themeCss(resolveTheme('default', defaults, defaults), url)).not.toContain('@layer');
   });
 
+  it('writes no glow for Default, so it looks as it does today', () => {
+    const css = themeCss(resolveTheme('default', defaults, defaults), url);
+    expect(css).toContain('--seg-on-shadow: var(--shadow-raised);');
+    expect(css).toContain('--chip-glow: none;');
+    expect(css).toContain('--text-glow: none;');
+    expect(css).toContain('--chip-border: var(--text);');
+  });
+
+  it('writes accent glows on the active tab and chips when a theme turns glow on', () => {
+    const theme = resolveTheme('neon', ThemeFileSchema.parse({ name: 'Neon', modes: ['dark'], dark: {}, effects: { glow: true } }), defaults);
+    const css = themeCss(theme, url);
+    expect(css).toMatch(/--seg-on-shadow: 0 0 0 1px color-mix\(in srgb, var\(--accent\) \d+%, transparent\), 0 0 \d+px color-mix/);
+    expect(css).toMatch(/--chip-glow: 0 0 \d+px color-mix\(in srgb, var\(--accent\)/);
+    expect(css).toMatch(/--text-glow: 0 0 \d+px color-mix\(in srgb, var\(--accent\)/);
+    expect(css).toContain('--chip-border: var(--accent);');
+  });
+
   it('writes the default float shadow when shadows are on', () => {
     const css = themeCss(resolveTheme('default', defaults, defaults), url);
     expect(css).toContain('--shadow-float: 0 8px 24px var(--shadow);');

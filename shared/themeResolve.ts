@@ -10,6 +10,7 @@ export interface ResolvedTheme {
   dark?: ResolvedMode;
   shape: { radius: number; radiusSmall: number; borderWidth: number; shadows: boolean };
   text: { labelCase: 'upper' | 'none'; labelSpacing: number; baseSize: number; chipCase: 'upper' | 'none' };
+  effects: { glow: boolean };
   fontFiles: NonNullable<ThemeFile['fontFiles']>;
 }
 
@@ -45,6 +46,8 @@ export function resolveTheme(id: string, file: ThemeFile, defaults: ThemeFile): 
     dark: mode('dark'),
     shape: { ...FALLBACK_SHAPE, ...defaults.shape, ...file.shape },
     text: { ...FALLBACK_TEXT, ...defaults.text, ...file.text, chipCase: chipCaseOf(file) },
+    // Effects are a theme's own choice, never inherited from Default.
+    effects: { glow: file.effects?.glow ?? false },
     fontFiles: file.fontFiles ?? [],
   };
 }

@@ -14,6 +14,11 @@ function tokensCss(mode: 'light' | 'dark'): Record<string, string> {
 }
 
 describe('theme schema', () => {
+  it('accepts the glow effect and rejects unknown effects', () => {
+    expect(ThemeFileSchema.safeParse({ name: 'Neon', modes: ['dark'], dark: {}, effects: { glow: true } }).success).toBe(true);
+    expect(ThemeFileSchema.safeParse({ name: 'Neon', modes: ['dark'], dark: {}, effects: { blur: 4 } }).success).toBe(false);
+  });
+
   it('accepts a minimal theme', () => {
     expect(ThemeFileSchema.safeParse({ name: 'Calm', modes: ['dark'], dark: { colors: { accent: '#88ccff' } } }).success).toBe(true);
   });
@@ -80,7 +85,7 @@ describe('resolveTheme', () => {
     const theme = resolveTheme('default', defaults, defaults);
     for (const mode of ['light', 'dark'] as const) {
       const today = tokensCss(mode);
-      expect(Object.keys(today).filter((variable) => !/^--(font-|fs-|radius|border-width|shadow-|label-|chip-|mono)/.test(variable)).sort()).toEqual(Object.values(COLOR_TOKENS).sort());
+      expect(Object.keys(today).filter((variable) => !/^--(font-|fs-|radius|border-width|shadow-|label-|chip-|mono|seg-on-shadow|text-glow)/.test(variable)).sort()).toEqual(Object.values(COLOR_TOKENS).sort());
       for (const name of COLOR_TOKEN_NAMES) expect([name, theme[mode]!.colors[name]]).toEqual([name, today[COLOR_TOKENS[name]]]);
     }
   });

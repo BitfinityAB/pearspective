@@ -14,7 +14,7 @@ button, input, select { font: inherit; color: inherit }
 .segs { display: flex; gap: 4px; background: var(--subtle); border: var(--border-width) solid var(--border); border-radius: calc(var(--radius-small) + 2px); padding: 3px; align-items: center }
 .segs .lbl { font-size: 12px; color: var(--muted); padding: 0 8px }
 .seg { border: 0; background: transparent; cursor: pointer; height: 30px; padding: 0 12px; border-radius: var(--radius-small); font-size: 13px; font-weight: 500; color: var(--muted); text-transform: var(--chip-case) }
-.seg.on { background: var(--surface); box-shadow: var(--shadow-raised); color: var(--text) }
+.seg.on { background: var(--surface); box-shadow: var(--seg-on-shadow); color: var(--text); text-shadow: var(--text-glow) }
 /* 26px buttons + 2px padding + 1px borders match the 32px header controls. */
 .segs.compact { padding: 2px } .segs.compact .seg { height: 26px; display: inline-flex; align-items: center; justify-content: center }
 .tab-count { display: inline-block; min-width: 18px; margin-left: 2px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; background: var(--a-bg); color: var(--a-fg); text-transform: var(--chip-case) }
@@ -35,8 +35,8 @@ select { height: 32px; border: var(--border-width) solid var(--border); border-r
 
 .banner { margin: 12px 24px 0; padding: 10px 14px; border-radius: calc(var(--radius-small) + 2px); font-size: 13px }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 24px }
-.chip { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500; border: var(--border-width) solid var(--text); background: var(--surface); text-transform: var(--chip-case) }
-.chip.off { border-style: dashed; border-color: var(--border); background: transparent; color: var(--muted) }
+.chip { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500; border: var(--border-width) solid var(--chip-border); background: var(--surface); text-transform: var(--chip-case); box-shadow: var(--chip-glow); text-shadow: var(--text-glow) }
+.chip.off { border-style: dashed; border-color: var(--border); background: transparent; color: var(--muted); box-shadow: none; text-shadow: none }
 .chip .n { color: var(--muted); font-weight: 600 } .chip .d { width: 8px; height: 8px; border-radius: 50% }
 .status-chips { display: flex; flex-wrap: wrap; gap: 8px }
 .search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-small); flex: 0 1 280px }

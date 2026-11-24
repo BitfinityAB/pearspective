@@ -16,6 +16,7 @@
   },
   "shape": { "radius": 3, "radiusSmall": 2, "borderWidth": 1, "shadows": false },
   "text": { "labelCase": "upper", "labelSpacing": 0.06, "baseSize": 13 },
+  "effects": { "glow": true },
   "fontFiles": [
     { "family": "JetBrains Mono", "file": "fonts/JetBrainsMono-Regular.woff2", "weight": 400 },
     { "family": "JetBrains Mono", "file": "fonts/JetBrainsMono-Bold.woff2", "weight": 700 }

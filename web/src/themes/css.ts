@@ -4,6 +4,9 @@ import { COLOR_TOKENS, COLOR_TOKEN_NAMES, type ThemeMode } from '../../../shared
 const UI_FALLBACK = 'system-ui, sans-serif';
 const MONO_FALLBACK = 'ui-monospace, monospace';
 
+// Mixed from the accent variable so the glow follows each mode's accent colour.
+const accentMix = (percent: number) => `color-mix(in srgb, var(--accent) ${percent}%, transparent)`;
+
 const modeVars = (mode: ThemeMode, block: ResolvedMode) => [
   `color-scheme: ${mode};`,
   ...COLOR_TOKEN_NAMES.map((token) => `${COLOR_TOKENS[token]}: ${block.colors[token]};`),
@@ -25,6 +28,14 @@ export function themeCss(theme: ResolvedTheme, fontUrl: (file: string) => string
     `--shadow-panel: ${shape.shadows ? '0 24px 64px var(--shadow)' : 'none'};`,
     `--label-case: ${labelCase};`, `--chip-case: ${chipCase};`,
     `--label-spacing: ${text.labelSpacing}em;`,
+    ...(theme.effects.glow ? [
+      `--seg-on-shadow: 0 0 0 1px ${accentMix(55)}, 0 0 12px ${accentMix(30)};`,
+      `--chip-glow: 0 0 10px ${accentMix(25)};`,
+      `--text-glow: 0 0 8px ${accentMix(60)};`,
+      '--chip-border: var(--accent);',
+    ] : [
+      '--seg-on-shadow: var(--shadow-raised);', '--chip-glow: none;', '--text-glow: none;', '--chip-border: var(--text);',
+    ]),
   ].join(' ');
   const fonts = theme.fontFiles.map((font) =>
     `@font-face { font-family: "${font.family}"; src: url("${fontUrl(font.file)}") format("woff2"); font-weight: ${font.weight ?? 400}; font-style: ${font.style ?? 'normal'}; font-display: swap; }`);

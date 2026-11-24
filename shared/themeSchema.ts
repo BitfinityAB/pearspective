@@ -29,6 +29,9 @@ export const ThemeFileSchema = z.object({
     baseSize: z.number().min(11).max(18).describe('Body text size in px; other sizes stay fixed.').optional(),
     chipCase: z.enum(['upper', 'none']).optional(),
   }).strict().optional(),
+  effects: z.object({
+    glow: z.boolean().describe('Accent glow on the active tab and active filter chips.').optional(),
+  }).strict().optional(),
   fontFiles: z.array(z.object({
     family: fontName,
     // Inside the theme's own folder, never absolute or escaping it.
