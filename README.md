@@ -95,6 +95,8 @@ Pearspective reads tickets through [jira-cli](https://github.com/ankitpokhrel/ji
      password <your token>
    ```
 
+   On Windows, jira-cli reads `%USERPROFILE%\_netrc` (with an underscore) instead of `~/.netrc`, so name the file `_netrc`, or set the `NETRC` environment variable to the file's path.
+
    `machine` must be the bare host (no `https://`, no path). `login` must equal the `login:` that `jira init` writes to `~/.config/.jira/.config.yml`. With a personal access token, `jira init` replaces the login you type (say, your email) with your Jira username, so check that file afterwards and add a second `.netrc` entry with the same token if they differ.
 2. Run `jira init` (installation type **Local** and auth type **bearer** for a personal access token) and check that `jira me` prints your username.
 3. Add an `issueTracker` block to `config.json` and restart the server:
