@@ -1,5 +1,5 @@
 * { box-sizing: border-box }
-body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 Inter, system-ui, sans-serif }
+body { margin: 0; background: var(--bg); color: var(--text); font: var(--fs-base)/1.4 var(--font-ui) }
 a { color: var(--accent) } a:hover { color: var(--b-fg) }
 button, input, select { font: inherit; color: inherit }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
@@ -8,58 +8,58 @@ button, input, select { font: inherit; color: inherit }
 .app { max-width: 1440px; margin: 0 auto; padding-bottom: 48px }
 .loading, .empty-state { padding: 48px 24px; color: var(--muted) }
 
-.top { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border) }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 14px 24px; background: var(--surface); border-bottom: var(--border-width) solid var(--border) }
 .brand { display: flex; align-items: center; gap: 10px } .brand b { font-size: 16px }
 .hdr-right { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap }
-.segs { display: flex; gap: 4px; background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 3px; align-items: center }
+.segs { display: flex; gap: 4px; background: var(--subtle); border: var(--border-width) solid var(--border); border-radius: calc(var(--radius-small) + 2px); padding: 3px; align-items: center }
 .segs .lbl { font-size: 12px; color: var(--muted); padding: 0 8px }
-.seg { border: 0; background: transparent; cursor: pointer; height: 30px; padding: 0 12px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--muted) }
-.seg.on { background: var(--surface); box-shadow: 0 1px 2px var(--shadow); color: var(--text) }
+.seg { border: 0; background: transparent; cursor: pointer; height: 30px; padding: 0 12px; border-radius: var(--radius-small); font-size: 13px; font-weight: 500; color: var(--muted); text-transform: var(--chip-case) }
+.seg.on { background: var(--surface); box-shadow: var(--shadow-raised); color: var(--text) }
 /* 26px buttons + 2px padding + 1px borders match the 32px header controls. */
 .segs.compact { padding: 2px } .segs.compact .seg { height: 26px; display: inline-flex; align-items: center; justify-content: center }
-.tab-count { display: inline-block; min-width: 18px; margin-left: 2px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; background: var(--a-bg); color: var(--a-fg) }
-select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; background: var(--surface) }
-.icon-btn { border: 1px solid var(--border); background: var(--surface); cursor: pointer; width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center }
+.tab-count { display: inline-block; min-width: 18px; margin-left: 2px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; background: var(--a-bg); color: var(--a-fg); text-transform: var(--chip-case) }
+select { height: 32px; border: var(--border-width) solid var(--border); border-radius: var(--radius-small); padding: 0 8px; background: var(--surface) }
+.icon-btn { border: var(--border-width) solid var(--border); background: var(--surface); cursor: pointer; width: 32px; height: 32px; border-radius: var(--radius-small); display: inline-flex; align-items: center; justify-content: center }
 .icon-btn:hover { background: var(--hair) }
 /* Spins the refresh icon while a manual refresh runs, so the click visibly did something. */
 .icon-btn.spinning svg { animation: spin 0.9s linear infinite }
 @keyframes spin { to { transform: rotate(360deg) } }
 @media (prefers-reduced-motion: reduce) { .icon-btn.spinning svg { animation-duration: 2.4s } }
 .icon-btn.ghost { border: 0; background: transparent; width: 28px; height: 28px }
-.who { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 4px; border-radius: 999px; background: var(--subtle); border: 1px solid var(--border); color: var(--text) }
+.who { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 4px; border-radius: 999px; background: var(--subtle); border: var(--border-width) solid var(--border); color: var(--text) }
 
 .avatar { position: relative; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; flex: 0 0 auto; overflow: hidden }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .15s }
 .av-0 { background: var(--av0-bg); color: var(--av0-fg) } .av-1 { background: var(--av1-bg); color: var(--av1-fg) } .av-2 { background: var(--av2-bg); color: var(--av2-fg) }
 .av-3 { background: var(--av3-bg); color: var(--av3-fg) } .av-4 { background: var(--av4-bg); color: var(--av4-fg) }
 
-.banner { margin: 12px 24px 0; padding: 10px 14px; border-radius: 8px; font-size: 13px }
+.banner { margin: 12px 24px 0; padding: 10px 14px; border-radius: calc(var(--radius-small) + 2px); font-size: 13px }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 24px }
-.chip { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 1px solid var(--text); background: var(--surface) }
+.chip { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500; border: var(--border-width) solid var(--text); background: var(--surface); text-transform: var(--chip-case) }
 .chip.off { border-style: dashed; border-color: var(--border); background: transparent; color: var(--muted) }
 .chip .n { color: var(--muted); font-weight: 600 } .chip .d { width: 8px; height: 8px; border-radius: 50% }
 .status-chips { display: flex; flex-wrap: wrap; gap: 8px }
-.search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; flex: 0 1 280px }
+.search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-small); flex: 0 1 280px }
 .search input { border: 0; outline: none; font-size: 13px; width: 100%; background: transparent }
 
 .layout { display: flex; flex-wrap: nowrap; gap: 20px; padding: 0 24px; align-items: flex-start }
 .board-wrap { flex: 999 1 760px; min-width: 0; overflow-x: auto }
 .board { min-width: 820px; display: flex; flex-direction: column; gap: 14px }
 .cols, .row { display: grid; grid-template-columns: minmax(0, 1fr) 216px 300px; gap: 16px; align-items: center }
-.cols { padding: 0 16px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; align-items: end }
+.cols { padding: 0 16px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: var(--label-case); letter-spacing: var(--label-spacing); align-items: end }
 .sig-heads { display: flex; gap: 8px } .sig-heads span { width: 28px; text-align: center }
 .ruler { position: relative; height: 16px }
 .ruler span { position: absolute; bottom: 0; transform: translateX(-50%); text-transform: none; letter-spacing: 0; font-weight: 500 }
 .note { margin: 4px 0 0; font-size: 12px; color: var(--muted) }
 
-.lane { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden }
+.lane { background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius); overflow: hidden }
 .lane-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; background: var(--subtle) }
 .lane-title { font-weight: 600; font-size: 15px }
 .lane-icon { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--n-bg); color: var(--n-fg) }
 .stackbar { display: flex; width: 180px; height: 10px; border-radius: 999px; overflow: hidden; background: var(--hair) }
-.empty { padding: 14px 16px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--hair) }
+.empty { padding: 14px 16px; font-size: 13px; color: var(--muted); border-top: var(--border-width) solid var(--hair) }
 
-.row { padding: 10px 16px; border: 0; border-top: 1px solid var(--hair); background: transparent; cursor: pointer; width: 100%; text-align: left }
+.row { padding: 10px 16px; border: 0; border-top: var(--border-width) solid var(--hair); background: transparent; cursor: pointer; width: 100%; text-align: left }
 .row:hover { background: var(--subtle) }
 .row.sel { background: var(--sel); box-shadow: inset 3px 0 0 var(--accent) }
 .row.stack { background: var(--stackrow); cursor: default }
@@ -69,78 +69,78 @@ select { height: 32px; border: 1px solid var(--border); border-radius: 6px; padd
 .stack-links .link { fill: none; stroke: var(--edge); stroke-width: 1.5; stroke-linejoin: miter }
 .stack-links .link.hot { stroke: var(--accent); stroke-width: 2 }
 .stack-links .arrow { fill: var(--edge) } .stack-links .arrow.hot { fill: var(--accent) }
-.stack-base { display: flex; align-items: center; gap: 10px; padding: 8px 16px 12px; border-top: 1px solid var(--hair); background: var(--stackrow) }
+.stack-base { display: flex; align-items: center; gap: 10px; padding: 8px 16px 12px; border-top: var(--border-width) solid var(--hair); background: var(--stackrow) }
 .base-pill { font: 600 12px var(--mono); padding: 3px 10px; border-radius: 999px; background: var(--pill); color: var(--pill-fg) }
 .prtext { display: flex; flex-direction: column; gap: 4px; min-width: 0 }
 .rn { font-size: 12px; color: var(--muted); font-family: var(--mono) }
 .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .badges { display: flex; flex-wrap: wrap; gap: 4px }
-.badge { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.badge { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; text-transform: var(--chip-case) }
 .k-green, .sev-green { background: var(--g-bg); color: var(--g-fg) }
 .k-amber, .sev-amber { background: var(--a-bg); color: var(--a-fg) }
 .k-red, .sev-red { background: var(--r-bg); color: var(--r-fg) }
 .k-grey, .sev-grey { background: var(--n-bg); color: var(--n-fg) }
 .sev-info { background: var(--b-bg); color: var(--b-fg) }
 .sigs { display: flex; gap: 8px }
-.dot { width: 28px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: var(--mono) }
+.dot { width: 28px; height: 24px; border-radius: var(--radius-small); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: var(--mono) }
 .age { display: flex; align-items: center; gap: 8px }
-.track { position: relative; flex: 1 1 auto; height: 12px; border-radius: 3px; background: var(--track) }
-.track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px }
+.track { position: relative; flex: 1 1 auto; height: 12px; border-radius: calc(var(--radius-small) - 3px); background: var(--track) }
+.track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: calc(var(--radius-small) - 3px) }
 .age-label { width: 34px; text-align: right; font-size: 12px; color: var(--muted); font-family: var(--mono) }
 .fill-blocked { background: var(--c-blocked) } .fill-waiting { background: var(--c-waiting) } .fill-ready { background: var(--c-ready) }
 .fill-draft { background: repeating-linear-gradient(45deg, var(--hatch-a) 0 4px, var(--hatch-b) 4px 8px) }
 .toggle { border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; padding: 0; min-width: 0 }
 .stack-mid { display: flex; flex-direction: column; gap: 6px }
-.pips { display: flex; gap: 3px; flex-wrap: wrap } .pips i { width: 14px; height: 14px; border-radius: 4px }
-.btn { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; font-weight: 600 }
+.pips { display: flex; gap: 3px; flex-wrap: wrap } .pips i { width: 14px; height: 14px; border-radius: calc(var(--radius-small) - 2px) }
+.btn { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--radius-small); border: var(--border-width) solid var(--border); background: var(--surface); font-size: 12px; font-weight: 600 }
 .btn:hover { background: var(--hair) } .btn:disabled { opacity: .5; cursor: not-allowed }
 
-.drawer { flex: 1 1 340px; min-width: 0; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 16px }
+.drawer { flex: 1 1 340px; min-width: 0; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 16px }
 .pin-mark { display: inline-flex; vertical-align: -1px; margin-right: 4px; color: var(--accent) }
 .pin-btn { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto } .pin-btn.on { color: var(--accent); border-color: var(--accent) }
 /* Lines the panel up with the first lane instead of the column labels above it: 16px labels + the board's 14px gap. */
 @media (min-width: 1101px) { .layout:has(.board > .cols) > .drawer { margin-top: 30px } }
 .drawer h2 { margin: 0; font-size: 18px; line-height: 1.3 }
-.sec { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
+.sec { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: var(--label-case); letter-spacing: var(--label-spacing) }
 .sline { display: flex; align-items: center; gap: 10px; font-size: 13px } .sline b { width: 92px }
 /* Long details wrap; the badge, label, avatar and status keep their size. */
 .sline > .dot, .sline > b, .sline > .avatar, .sline > img, .sline > .badge { flex-shrink: 0 }
 .sline > :last-child, .sline > .grow { min-width: 0 }
-.snip { font-size: 13px; background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px }
+.snip { font-size: 13px; background: var(--subtle); border: var(--border-width) solid var(--border); border-radius: calc(var(--radius-small) + 2px); padding: 10px 12px }
 .thread-group { display: flex; flex-direction: column; gap: 6px }
 .thread-group summary { cursor: pointer; width: fit-content }
 /* Inside a <details> the links are not flex items, so they need to be blocks to stack instead of running into each other. */
 .thread-group > .snip { display: block; overflow-wrap: anywhere }
 details.thread-group > .snip { margin-top: 6px }
 .thread-group[open] summary { margin-bottom: 0 }
-.mini { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: center; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; font-size: 13px; text-align: left; width: 100% }
+.mini { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: center; padding: 6px 8px; border: 0; border-radius: var(--radius-small); background: transparent; cursor: pointer; font-size: 13px; text-align: left; width: 100% }
 .mini:hover { background: var(--subtle) } .mini.cur { background: var(--sel) }
-.mini i { width: 14px; height: 14px; border-radius: 4px } .mini span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.mini i { width: 14px; height: 14px; border-radius: calc(var(--radius-small) - 2px) } .mini span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 
 .modal-backdrop { position: fixed; inset: 0; background: var(--backdrop); display: flex; align-items: center; justify-content: center; z-index: 10 }
-.modal { background: var(--surface); color: var(--text); border-radius: 14px; width: min(1000px, 94vw); height: min(820px, 90vh); display: flex; flex-direction: column; box-shadow: 0 24px 64px var(--shadow) }
-.modal-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--hair); flex-wrap: wrap }
+.modal { background: var(--surface); color: var(--text); border-radius: var(--radius-dialog); width: min(1000px, 94vw); height: min(820px, 90vh); display: flex; flex-direction: column; box-shadow: var(--shadow-panel) }
+.modal-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: var(--border-width) solid var(--hair); flex-wrap: wrap }
 .modal-head h3 { margin: 0; font-size: 16px }
 .modal-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 0 }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 10px 18px; border-top: 1px solid var(--hair) }
-.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 10px 18px; border-top: var(--border-width) solid var(--hair) }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: calc(var(--radius-small) - 3px); margin-right: 6px; vertical-align: -1px }
 .stack-svg { display: block; width: 100%; flex: 1 1 auto; min-height: 420px; background: var(--canvas); cursor: grab }
 .stacks { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 16px; padding: 0 24px }
-.scard { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column }
-.scard-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--hair); flex-wrap: wrap }
+.scard { background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column }
+.scard-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: var(--border-width) solid var(--hair); flex-wrap: wrap }
 .settings-tabs { padding: 12px 18px 0 } .settings-tabs .segs { display: inline-flex }
 .settings-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: auto }
 .settings-intro { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 14px 18px 10px; font-weight: 600 }
 .settings-note { margin: 0; padding: 14px 18px 10px }
 .settings-list { display: flex; flex-direction: column; gap: 4px; padding: 12px 18px; overflow: auto }
-.settings-list label { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px }
+.settings-list label { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--radius-small) }
 .settings-list label:hover { background: var(--subtle) }
 
 .drawer-close { display: none; flex: 0 0 auto; font-size: 20px; line-height: 1 }
-.ticket-chip { display: inline-flex; align-items: center; margin-left: 8px; padding: 0 6px; height: 18px; border-radius: 999px; font-size: 11px; font-family: var(--mono); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; vertical-align: 1px }
+.ticket-chip { display: inline-flex; align-items: center; margin-left: 8px; padding: 0 6px; height: 18px; border-radius: 999px; font-size: 11px; font-family: var(--mono); color: var(--muted); border: var(--border-width) solid var(--border); white-space: nowrap; vertical-align: 1px; text-transform: var(--chip-case) }
 .ticket-chip.v-mismatch, .ticket-chip.v-review { color: var(--a-fg); background: var(--a-bg); border-color: transparent }
 .ticket-chip.v-grace { border-style: dashed }
-.pr-state { display: inline-block; padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 700; line-height: 16px; text-transform: uppercase; letter-spacing: .03em; background: var(--n-bg); color: var(--n-fg) }
+.pr-state { display: inline-block; padding: 0 5px; border-radius: calc(var(--radius-small) - 2px); font-size: 10px; font-weight: 700; line-height: 16px; text-transform: var(--label-case); letter-spacing: calc(var(--label-spacing) * .75); background: var(--n-bg); color: var(--n-fg) }
 /* Flex keeps the badge, repo and title on one centred line; only the title is truncated. */
 .mini .mini-text { display: flex; align-items: center; gap: 6px; min-width: 0 }
 .mini .mini-text > * { flex: none }
@@ -150,13 +150,13 @@ details.thread-group > .snip { margin-top: 6px }
 .lane-head .ticket-chip { margin-left: 0 }
 /* Same look as a selected PR row, for a ticket opened from the PR panel. */
 .ticket-row.focus { background: var(--sel); box-shadow: inset 3px 0 0 var(--accent) }
-.ticket-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 12px 16px; border-top: 1px solid var(--hair) }
+.ticket-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 12px 16px; border-top: var(--border-width) solid var(--hair) }
 .ticket-main { display: flex; flex-direction: column; gap: 4px; min-width: 0 }
 .ticket-main a.title { color: var(--text); text-decoration: none } .ticket-main a.title:hover { text-decoration: underline }
 .ticket-prs { display: flex; flex-direction: column; gap: 2px; min-width: 0 }
 a.mini { color: var(--text); text-decoration: none }
 .toasts { position: fixed; right: 16px; bottom: 16px; z-index: 11; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; width: min(380px, calc(100vw - 32px)) }
-.toast { display: flex; align-items: flex-start; gap: 4px; width: 100%; padding: 10px 8px 10px 12px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 24px var(--shadow) }
+.toast { display: flex; align-items: flex-start; gap: 4px; width: 100%; padding: 10px 8px 10px 12px; background: var(--surface); border: var(--border-width) solid var(--border); border-left: 3px solid var(--accent); border-radius: calc(var(--radius-small) + 2px); box-shadow: var(--shadow-float) }
 .toast-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; border: 0; background: transparent; cursor: pointer; text-align: left; padding: 0; font-size: 13px }
 .toast-body span { color: var(--text2) }
 .toast-more { font-size: 12px; color: var(--muted) }
@@ -164,7 +164,7 @@ a.mini { color: var(--text); text-decoration: none }
 .notify-master { display: flex; align-items: center; gap: 8px; font-weight: 600 }
 .notify-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; font-size: 13px }
 /* Browser permission is a separate concern from which events notify, so it gets its own band. */
-.notify-permission { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--hair) }
+.notify-permission { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: var(--border-width) solid var(--hair) }
 .has-dot { position: relative }
 .has-dot::after { content: ''; position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--a-fg) }
 .notify-event { display: flex; flex-direction: column; gap: 2px }
@@ -183,7 +183,7 @@ a.mini { color: var(--text); text-decoration: none }
 .hdr-secondary { display: contents }
 .hdr-refresh { display: flex; align-items: center; gap: 8px }
 .hdr-menu { position: relative; display: none }
-.menu-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 8; min-width: 240px; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px var(--shadow); color: var(--text) }
+.menu-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 8; min-width: 240px; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-float); color: var(--text) }
 .menu-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px }
 .menu-item { height: 32px; justify-content: center; gap: 8px }
 /* Keep in sync with NARROW_QUERY in lib/layout.ts. */

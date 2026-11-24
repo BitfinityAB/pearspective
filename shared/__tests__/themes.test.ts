@@ -67,7 +67,7 @@ describe('resolveTheme', () => {
     const theme = resolveTheme('default', defaults, defaults);
     for (const mode of ['light', 'dark'] as const) {
       const today = tokensCss(mode);
-      expect(Object.keys(today).filter((variable) => variable !== '--mono').sort()).toEqual(Object.values(COLOR_TOKENS).sort());
+      expect(Object.keys(today).filter((variable) => !/^--(font-|fs-|radius|border-width|shadow-|label-|chip-|mono)/.test(variable)).sort()).toEqual(Object.values(COLOR_TOKENS).sort());
       for (const name of COLOR_TOKEN_NAMES) expect([name, theme[mode]!.colors[name]]).toEqual([name, today[COLOR_TOKENS[name]]]);
     }
   });

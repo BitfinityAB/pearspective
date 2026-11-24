@@ -46,6 +46,12 @@ export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, 
     const { placed, links } = layoutStack(nodes);
     const svg = select(svgElement);
     svg.selectAll('*').remove();
+    // Themes change fonts and corner radii through CSS variables; SVG attributes need concrete values.
+    const style = getComputedStyle(document.documentElement);
+    const radiusSmall = parseFloat(style.getPropertyValue('--radius-small')) || 6;
+    const radius = parseFloat(style.getPropertyValue('--radius')) || 10;
+    const fontUi = style.getPropertyValue('--font-ui').trim() || 'system-ui, sans-serif';
+    const fontMono = style.getPropertyValue('--font-mono').trim() || 'monospace';
     const canvas = svg.append('g');
 
     const width = svgElement.clientWidth || 900;
@@ -82,7 +88,7 @@ export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, 
       .transition().delay((_, index) => 150 + index * step).duration(duration / 1.3).style('opacity', 1);
     edges.filter((link) => (link.target.node.behindParent ?? 0) > 0).append('text')
       .attr('x', (link) => link.target.x + 8).attr('y', (link) => link.target.y + NODE_HEIGHT / 2 + 16)
-      .attr('font-size', 11).attr('font-weight', 600).style('fill', 'var(--behind)')
+      .attr('font-size', 11).attr('font-weight', 600).attr('font-family', fontUi).style('fill', 'var(--behind)')
       .text((link) => `${link.target.node.behindParent} behind`);
 
     const group = canvas.append('g').selectAll('g').data(placed).join('g')
@@ -93,11 +99,11 @@ export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, 
 
     const base = group.filter((entry) => entry.node.kind === 'base');
     base.append('rect').attr('x', -50).attr('y', -16).attr('width', 100).attr('height', 32).attr('rx', 16).style('fill', 'var(--pill)');
-    base.append('text').attr('text-anchor', 'middle').attr('y', 5).attr('font-size', 13).attr('font-weight', 600).attr('font-family', 'var(--mono)')
+    base.append('text').attr('text-anchor', 'middle').attr('y', 5).attr('font-size', 13).attr('font-weight', 600).attr('font-family', fontMono)
       .style('fill', 'var(--pill-fg)').text(detail.baseRefName);
 
     const card = group.filter((entry) => entry.node.kind !== 'base');
-    card.append('rect').attr('x', -NODE_WIDTH / 2).attr('y', -NODE_HEIGHT / 2).attr('width', NODE_WIDTH).attr('height', NODE_HEIGHT).attr('rx', 10)
+    card.append('rect').attr('x', -NODE_WIDTH / 2).attr('y', -NODE_HEIGHT / 2).attr('width', NODE_WIDTH).attr('height', NODE_HEIGHT).attr('rx', radius)
       .attr('stroke-dasharray', (entry) => (entry.node.kind === 'merged' ? '5 4' : null))
       .attr('stroke-width', (entry) => (entry.node.number === selectedNumber ? 2 : 1))
       .style('fill', (entry) => (entry.node.kind === 'merged' ? 'var(--merged-card)' : 'var(--surface)'))
@@ -107,12 +113,12 @@ export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, 
         const view = entry.node.number ? viewsByNumber.get(entry.node.number) : undefined;
         return entry.node.kind === 'merged' || !view ? 'var(--c-merged)' : BUCKET_COLOR[view.bucket];
       });
-    card.append('text').attr('x', -NODE_WIDTH / 2 + 30).attr('y', -NODE_HEIGHT / 2 + 22).attr('font-size', 12).attr('font-family', 'var(--mono)').style('fill', 'var(--muted)')
+    card.append('text').attr('x', -NODE_WIDTH / 2 + 30).attr('y', -NODE_HEIGHT / 2 + 22).attr('font-size', 12).attr('font-family', fontMono).style('fill', 'var(--muted)')
       .text((entry) => {
         const view = entry.node.number ? viewsByNumber.get(entry.node.number) : undefined;
         return `#${entry.node.number} · ${entry.node.kind === 'merged' ? entry.node.state : view ? ageLabel(view.ageHours) : 'open'}`;
       });
-    card.append('text').attr('x', -NODE_WIDTH / 2 + 14).attr('y', -NODE_HEIGHT / 2 + 42).attr('font-size', 13).attr('font-weight', 600).style('fill', 'var(--text)')
+    card.append('text').attr('x', -NODE_WIDTH / 2 + 14).attr('y', -NODE_HEIGHT / 2 + 42).attr('font-size', 13).attr('font-weight', 600).attr('font-family', fontUi).style('fill', 'var(--text)')
       .text((entry) => truncate(entry.node.title ?? '', 30));
 
     const open = card.filter((entry) => entry.node.kind === 'open').style('cursor', 'pointer')
@@ -122,15 +128,15 @@ export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, 
       if (!view) return;
       const squares = select(this).append('g').attr('transform', `translate(${NODE_WIDTH / 2 - 6 * 19 - 8},${-NODE_HEIGHT / 2 + 10})`);
       view.signals.forEach((signal, index) => {
-        squares.append('rect').attr('x', index * 19).attr('width', 16).attr('height', 16).attr('rx', 4).style('fill', SIGNAL_COLORS[signal.color][0])
+        squares.append('rect').attr('x', index * 19).attr('width', 16).attr('height', 16).attr('rx', Math.max(0, radiusSmall - 2)).style('fill', SIGNAL_COLORS[signal.color][0])
           .append('title').text(`${signal.label}: ${signal.detail}`);
-        squares.append('text').attr('x', index * 19 + 8).attr('y', 12).attr('text-anchor', 'middle').attr('font-size', 10).attr('font-weight', 700)
+        squares.append('text').attr('x', index * 19 + 8).attr('y', 12).attr('text-anchor', 'middle').attr('font-size', 10).attr('font-weight', 700).attr('font-family', fontUi)
           .style('fill', SIGNAL_COLORS[signal.color][1]).text(signal.glyph);
       });
     });
     const next = open.filter((entry) => nextKeys.has(entry.node.key));
     next.append('rect').attr('x', NODE_WIDTH / 2 - 104).attr('y', NODE_HEIGHT / 2 - 12).attr('width', 98).attr('height', 22).attr('rx', 11).style('fill', 'var(--accent)');
-    next.append('text').attr('x', NODE_WIDTH / 2 - 55).attr('y', NODE_HEIGHT / 2 + 3).attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 700)
+    next.append('text').attr('x', NODE_WIDTH / 2 - 55).attr('y', NODE_HEIGHT / 2 + 3).attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 700).attr('font-family', fontUi)
       .style('fill', 'var(--accent-fg)').text('Next to merge');
 
     return () => {
