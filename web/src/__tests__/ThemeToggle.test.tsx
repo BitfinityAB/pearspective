@@ -40,3 +40,15 @@ describe('ThemeToggle with a forced mode', () => {
     expect(localStorage.getItem('theme')).toBeNull();
   });
 });
+
+describe('ThemeToggle forced mode round trip', () => {
+  it('keeps the saved choice while the mode is forced', async () => {
+    localStorage.clear();
+    const { rerender } = render(<ThemeToggle />);
+    await userEvent.click(screen.getByRole('button', { name: 'Light theme' }));
+    rerender(<ThemeToggle forcedMode="dark" themeName="Terminal" />);
+    rerender(<ThemeToggle forcedMode={null} />);
+    expect(screen.getByRole('button', { name: 'Light theme' })).toHaveAttribute('aria-pressed', 'true');
+    expect(localStorage.getItem('theme')).toBe('light');
+  });
+});

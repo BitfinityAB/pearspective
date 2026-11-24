@@ -77,4 +77,24 @@ describe('useThemes', () => {
     rerender({ snapshot: snapshotWith('calm', 2) });
     await waitFor(() => expect(getThemes).toHaveBeenCalledTimes(2));
   });
+
+  it('does nothing until the first snapshot, then applies the chosen theme once', async () => {
+    const getThemes = vi.fn(async () => [defaultInfo, calmInfo]);
+    const api = { getThemes };
+    document.head.appendChild(Object.assign(document.createElement('style'), { id: 'theme', textContent: 'cached' }));
+    localStorage.setItem(THEME_CSS_KEY, 'cached');
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const { result, rerender } = renderHook(({ snapshot }) => useThemes(api, snapshot), { initialProps: { snapshot: null as Snapshot | null } });
+    await Promise.resolve();
+    expect(getThemes).not.toHaveBeenCalled();
+    expect(result.current).toMatchObject({ active: null, problem: null, forcedMode: null });
+    expect(document.getElementById('theme')!.textContent).toBe('cached');
+    expect(setItem).not.toHaveBeenCalled();
+
+    rerender({ snapshot: snapshotWith('calm') });
+    await waitFor(() => expect(result.current.active?.id).toBe('calm'));
+    expect(getThemes).toHaveBeenCalledTimes(1);
+    expect(setItem).toHaveBeenCalledTimes(1);
+    expect(document.getElementById('theme')!.textContent).toContain('#88ccff');
+  });
 });
