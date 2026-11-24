@@ -10,14 +10,16 @@ function parse(color: string): Rgba {
     const [r, g, b, a = 255] = full.match(/../g)!.map((pair) => parseInt(pair, 16));
     return [r!, g!, b!, a / 255];
   }
-  const numbers = color.match(/[-\d.]+%?/g)?.map((part) => (part.endsWith('%') ? parseFloat(part) / 100 : parseFloat(part))) ?? [];
+  const tokens = color.match(/[-\d.]+%?/g) ?? [];
+  const numbers = tokens.map((part) => (part.endsWith('%') ? parseFloat(part) / 100 : parseFloat(part)));
   if (color.startsWith('hsl')) {
-    const [h = 0, s = 0, l = 0, a = 1] = numbers;
+    const [rawHue = 0, s = 0, l = 0, a = 1] = numbers;
+    const h = ((rawHue % 360) + 360) % 360;
     const k = (n: number) => (n + h / 30) % 12;
     const f = (n: number) => l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
     return [f(0) * 255, f(8) * 255, f(4) * 255, a];
   }
-  const [r = 0, g = 0, b = 0, a = 1] = numbers;
+  const [r = 0, g = 0, b = 0, a = 1] = numbers.map((value, index) => (index < 3 && tokens[index]!.endsWith('%') ? value * 255 : value));
   return [r, g, b, a];
 }
 
@@ -40,7 +42,7 @@ export interface ContrastIssue { mode: ThemeMode; pair: string; ratio: number }
 
 // Text that people read, on the surfaces it appears on; badge text on its own badge background.
 const PAIRS: [ColorToken, ColorToken][] = [
-  ['text', 'bg'], ['text', 'surface'], ['text2', 'surface'], ['muted', 'bg'], ['muted', 'surface'], ['accent', 'surface'],
+  ['text', 'bg'], ['text', 'surface'], ['text2', 'bg'], ['text2', 'surface'], ['muted', 'bg'], ['muted', 'surface'], ['accent', 'surface'],
   ['greenText', 'greenBg'], ['amberText', 'amberBg'], ['redText', 'redBg'], ['neutralText', 'neutralBg'], ['blueText', 'blueBg'],
 ];
 

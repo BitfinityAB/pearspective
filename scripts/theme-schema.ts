@@ -9,5 +9,5 @@ export function themeJsonSchema(): object {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  writeFileSync('themes/theme.schema.json', `${JSON.stringify(themeJsonSchema(), null, 2)}\n`);
+  writeFileSync(fileURLToPath(new URL('../themes/theme.schema.json', import.meta.url)), `${JSON.stringify(themeJsonSchema(), null, 2)}\n`);
 }

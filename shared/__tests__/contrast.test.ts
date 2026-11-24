@@ -20,6 +20,28 @@ describe('contrastRatio', () => {
   });
 });
 
+describe('contrastRatio colour parsing', () => {
+  it('reads hsl and normalises negative hues', () => {
+    expect(contrastRatio('hsl(0,0%,0%)', 'hsl(0,0%,100%)')).toBeCloseTo(21, 1);
+    expect(contrastRatio('hsl(-120,100%,50%)', '#ffffff')).toBeCloseTo(contrastRatio('hsl(240,100%,50%)', '#ffffff'), 5);
+  });
+
+  it('reads percentage rgb channels', () => {
+    expect(contrastRatio('rgb(100%,0%,0%)', '#ffffff')).toBeCloseTo(contrastRatio('#ff0000', '#ffffff'), 5);
+  });
+});
+
+describe('contrastIssues', () => {
+  it('reports a pair that falls below the minimum', () => {
+    const file = ThemeFileSchema.parse({ name: 'Pale', modes: ['light'], light: { colors: { muted: '#cccccc' } } });
+    const issues = contrastIssues(resolveTheme('pale', file, defaults));
+    const issue = issues.find((candidate) => candidate.pair === 'muted on bg');
+    expect(issue).toMatchObject({ mode: 'light', pair: 'muted on bg' });
+    expect(issue!.ratio).toBeLessThan(4.5);
+    expect(issue!.ratio).toBe(Math.round(issue!.ratio * 100) / 100);
+  });
+});
+
 describe('built-in themes', () => {
   it('meet 4.5:1 for text, links and badges', () => {
     expect(contrastIssues(resolveTheme('default', defaults, defaults))).toEqual([]);
