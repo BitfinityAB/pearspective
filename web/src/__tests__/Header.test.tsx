@@ -17,6 +17,8 @@ describe('Header', () => {
     render(<Header snapshot={snapshot} tab="overview" now={now} onTab={() => undefined} onRefresh={async () => undefined} onRefreshSetting={() => undefined} onOpenSettings={() => undefined} />);
     expect(screen.getByText('alex')).toBeInTheDocument();
     expect(screen.getByText('Updated 42s ago')).toBeInTheDocument();
+    // The status can be cut short in the header, so the full text stays available as a tooltip.
+    expect(screen.getAllByText('Updated 42s ago')[0]).toHaveAttribute('title', 'Updated 42s ago');
     expect(screen.getByRole('combobox', { name: 'Auto-refresh interval' })).toHaveValue('3');
   });
 

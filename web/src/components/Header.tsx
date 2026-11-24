@@ -84,7 +84,7 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
       </nav>
       <span className="grow" />
       <div className="hdr-right">
-        <span className="hdr-status">{status}</span>
+        <span className="hdr-status" title={status}>{status}</span>
         <span className="hdr-refresh">
           <label className="hdr-interval">
             <span className="sr-only">Auto-refresh interval</span>
