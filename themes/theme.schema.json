@@ -1,0 +1,562 @@
+{
+  "title": "Pearspective theme",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "modes": {
+      "minItems": 1,
+      "maxItems": 2,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "light",
+          "dark"
+        ]
+      }
+    },
+    "light": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "properties": {
+            "bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "subtle": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "hair": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "canvas": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "track": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "selection": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "stackRow": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "mergedCard": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "backdrop": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "shadow": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "text2": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "accentText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "pill": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "pillText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "blocked": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "waiting": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "ready": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "draft": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "merged": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "behind": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "greenBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "greenText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "amberBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "amberText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "redBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "redText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "neutralBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "neutralText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "blueBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "blueText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "edge": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "edgeMerged": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "hatchA": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "hatchB": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar0Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar0Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar1Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar1Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar2Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar2Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar3Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar3Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar4Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar4Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "ui": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^[\\w.-]+(?: [\\w.-]+)*$"
+            },
+            "mono": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^[\\w.-]+(?: [\\w.-]+)*$"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "dark": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "properties": {
+            "bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "subtle": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "hair": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "canvas": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "track": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "selection": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "stackRow": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "mergedCard": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "backdrop": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "shadow": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "text2": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "accentText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "pill": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "pillText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "blocked": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "waiting": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "ready": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "draft": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "merged": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "behind": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "greenBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "greenText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "amberBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "amberText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "redBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "redText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "neutralBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "neutralText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "blueBg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "blueText": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "edge": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "edgeMerged": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "hatchA": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "hatchB": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar0Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar0Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar1Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar1Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar2Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar2Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar3Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar3Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar4Bg": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            },
+            "avatar4Text": {
+              "type": "string",
+              "pattern": "^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\\(\\s*[-0-9.%,\\s/]+\\))$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "ui": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^[\\w.-]+(?: [\\w.-]+)*$"
+            },
+            "mono": {
+              "type": "string",
+              "maxLength": 60,
+              "pattern": "^[\\w.-]+(?: [\\w.-]+)*$"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "shape": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 24
+        },
+        "radiusSmall": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16
+        },
+        "borderWidth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "shadows": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "text": {
+      "type": "object",
+      "properties": {
+        "labelCase": {
+          "type": "string",
+          "enum": [
+            "upper",
+            "none"
+          ]
+        },
+        "labelSpacing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.3
+        },
+        "baseSize": {
+          "type": "number",
+          "minimum": 11,
+          "maximum": 18
+        }
+      },
+      "additionalProperties": false
+    },
+    "fontFiles": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "maxLength": 60,
+            "pattern": "^[\\w.-]+(?: [\\w.-]+)*$"
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^(?!\\/)(?!.*\\.\\.)[\\w./-]+\\.woff2$"
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 900
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "italic"
+            ]
+          }
+        },
+        "required": [
+          "family",
+          "file"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "name",
+    "modes"
+  ],
+  "additionalProperties": false
+}

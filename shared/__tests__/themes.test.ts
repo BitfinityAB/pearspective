@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { themeJsonSchema } from '../../scripts/theme-schema';
 import { ThemeFileSchema } from '../themeSchema';
 import { resolveTheme } from '../themeResolve';
 import { COLOR_TOKENS, COLOR_TOKEN_NAMES } from '../themeTokens';
@@ -69,5 +70,11 @@ describe('resolveTheme', () => {
       expect(Object.keys(today).filter((variable) => variable !== '--mono').sort()).toEqual(Object.values(COLOR_TOKENS).sort());
       for (const name of COLOR_TOKEN_NAMES) expect([name, theme[mode]!.colors[name]]).toEqual([name, today[COLOR_TOKENS[name]]]);
     }
+  });
+});
+
+describe('theme.schema.json', () => {
+  it('is up to date with the zod schema (run npm run themes:schema)', () => {
+    expect(JSON.parse(readFileSync('themes/theme.schema.json', 'utf8'))).toEqual(themeJsonSchema());
   });
 });

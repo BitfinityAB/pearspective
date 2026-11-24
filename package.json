@@ -13,7 +13,8 @@
     "setup": "tsx scripts/setup.ts",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "themes:schema": "tsx scripts/theme-schema.ts"
   },
   "keywords": [],
   "author": "",
