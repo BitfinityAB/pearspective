@@ -26,6 +26,9 @@ describe('theme schema', () => {
     ['a block for an unlisted mode', { name: 'X', modes: ['dark'], dark: {}, light: {} }],
     ['a font path outside the theme folder', { name: 'X', modes: ['dark'], dark: {}, fontFiles: [{ family: 'F', file: '../evil.woff2' }] }],
     ['a font that is not woff2', { name: 'X', modes: ['dark'], dark: {}, fontFiles: [{ family: 'F', file: 'fonts/f.ttf' }] }],
+    ['a font path with a ./ segment', { name: 'X', modes: ['dark'], dark: {}, fontFiles: [{ family: 'F', file: './fonts/f.woff2' }] }],
+    ['a font path with a nested ./ segment', { name: 'X', modes: ['dark'], dark: {}, fontFiles: [{ family: 'F', file: 'fonts/./f.woff2' }] }],
+    ['a font path with an empty segment', { name: 'X', modes: ['dark'], dark: {}, fontFiles: [{ family: 'F', file: 'fonts//f.woff2' }] }],
     ['a font name with a newline', { name: 'X', modes: ['dark'], dark: { fonts: { ui: 'A\nB' } } }],
     ['a font name with a trailing newline', { name: 'X', modes: ['dark'], dark: { fonts: { ui: 'Inter\n' } } }],
     ['a whitespace-only font name', { name: 'X', modes: ['dark'], dark: { fonts: { ui: '  ' } } }],
@@ -49,6 +52,16 @@ describe('resolveTheme', () => {
     expect(theme.shape).toEqual(resolveTheme('default', defaults, defaults).shape);
     for (const name of COLOR_TOKEN_NAMES) expect(theme.dark!.colors[name]).toMatch(/\S/);
     expect(theme.dark!.fonts).toEqual(defaults.dark!.fonts);
+  });
+
+  it('resolves chip casing from the file itself and never inherits it from Default', () => {
+    const chipCase = (text?: object) => resolveTheme('calm', ThemeFileSchema.parse({ name: 'Calm', modes: ['dark'], dark: {}, ...(text ? { text } : {}) }), defaults).text.chipCase;
+    expect(resolveTheme('default', defaults, defaults).text.chipCase).toBe('none');
+    expect(chipCase()).toBe('none');
+    expect(chipCase({ labelSpacing: 0.05 })).toBe('none');
+    expect(chipCase({ labelCase: 'upper' })).toBe('upper');
+    expect(chipCase({ labelCase: 'upper', chipCase: 'none' })).toBe('none');
+    expect(chipCase({ chipCase: 'upper' })).toBe('upper');
   });
 
   it('borrows the mode a single-mode Default has', () => {

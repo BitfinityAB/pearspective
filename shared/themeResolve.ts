@@ -9,12 +9,15 @@ export interface ResolvedTheme {
   light?: ResolvedMode;
   dark?: ResolvedMode;
   shape: { radius: number; radiusSmall: number; borderWidth: number; shadows: boolean };
-  text: { labelCase: 'upper' | 'none'; labelSpacing: number; baseSize: number };
+  text: { labelCase: 'upper' | 'none'; labelSpacing: number; baseSize: number; chipCase: 'upper' | 'none' };
   fontFiles: NonNullable<ThemeFile['fontFiles']>;
 }
 
 const FALLBACK_SHAPE = { radius: 10, radiusSmall: 6, borderWidth: 1, shadows: true };
 const FALLBACK_TEXT = { labelCase: 'upper' as const, labelSpacing: 0.04, baseSize: 14 };
+
+/** Never inherited: Default's uppercase labels would otherwise turn every theme's chips uppercase. */
+const chipCaseOf = (file: ThemeFile): 'upper' | 'none' => file.text?.chipCase ?? (file.text?.labelCase === 'upper' ? 'upper' : 'none');
 
 /** A theme only lists what it changes; every other key comes from Default, so the page is always fully styled. */
 export function resolveTheme(id: string, file: ThemeFile, defaults: ThemeFile): ResolvedTheme {
@@ -41,7 +44,7 @@ export function resolveTheme(id: string, file: ThemeFile, defaults: ThemeFile): 
     light: mode('light'),
     dark: mode('dark'),
     shape: { ...FALLBACK_SHAPE, ...defaults.shape, ...file.shape },
-    text: { ...FALLBACK_TEXT, ...defaults.text, ...file.text },
+    text: { ...FALLBACK_TEXT, ...defaults.text, ...file.text, chipCase: chipCaseOf(file) },
     fontFiles: file.fontFiles ?? [],
   };
 }

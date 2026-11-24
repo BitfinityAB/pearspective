@@ -26,12 +26,13 @@ export const ThemeFileSchema = z.object({
   text: z.object({
     labelCase: z.enum(['upper', 'none']).optional(),
     labelSpacing: z.number().min(0).max(0.3).optional(),
-    baseSize: z.number().min(11).max(18).optional(),
+    baseSize: z.number().min(11).max(18).describe('Body text size in px; other sizes stay fixed.').optional(),
+    chipCase: z.enum(['upper', 'none']).optional(),
   }).strict().optional(),
   fontFiles: z.array(z.object({
     family: fontName,
     // Inside the theme's own folder, never absolute or escaping it.
-    file: z.string().regex(/^(?!\/)(?!.*\.\.)[\w./-]+\.woff2$/, 'must be a .woff2 path inside the theme folder'),
+    file: z.string().regex(/^(?!\/)(?!.*\.\.)(?!.*\/\/)(?!(?:.*\/)?\.\/)[\w./-]+\.woff2$/, 'must be a .woff2 path inside the theme folder'),
     weight: z.number().int().min(100).max(900).optional(),
     style: z.enum(['normal', 'italic']).optional(),
   }).strict()).max(8).optional(),

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import express from 'express';
 import { createApp } from './app';
 import { ConfigError, ConfigStore, hiddenPollInterval } from './config';
@@ -8,7 +8,7 @@ import { SnapshotHub } from './hub';
 import { Poller } from './poller';
 import { PollLoop, Presence } from './presence';
 import { createCodeHost, createIssueTracker } from './providers/registry';
-import { ThemeRegistry } from './themes/registry';
+import { ThemeRegistry, themeDirs } from './themes/registry';
 import { openStorage } from './storage/startup';
 import { TicketSync } from './ticket-sync';
 
@@ -26,8 +26,7 @@ async function main() {
   tracker?.seedStatusCategories?.(statusCategories);
   const tickets = tracker ? new TicketSync({ tracker, codeHost: provider, now: Date.now, store: database, stored }) : undefined;
   const themes: ThemeRegistry = new ThemeRegistry({
-    builtinDir: resolve(process.cwd(), 'themes'),
-    userDir: resolve(dirname(configPath), 'themes'),
+    ...themeDirs(configPath),
     onChange: () => poller.setThemesVersion(themes.version()),
   });
   await themes.load();

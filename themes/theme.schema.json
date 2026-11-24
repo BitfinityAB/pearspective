@@ -513,7 +513,15 @@
         "baseSize": {
           "type": "number",
           "minimum": 11,
-          "maximum": 18
+          "maximum": 18,
+          "description": "Body text size in px; other sizes stay fixed."
+        },
+        "chipCase": {
+          "type": "string",
+          "enum": [
+            "upper",
+            "none"
+          ]
         }
       },
       "additionalProperties": false
@@ -531,7 +539,7 @@
           },
           "file": {
             "type": "string",
-            "pattern": "^(?!\\/)(?!.*\\.\\.)[\\w./-]+\\.woff2$"
+            "pattern": "^(?!\\/)(?!.*\\.\\.)(?!.*\\/\\/)(?!(?:.*\\/)?\\.\\/)[\\w./-]+\\.woff2$"
           },
           "weight": {
             "type": "integer",

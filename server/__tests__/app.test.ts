@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -17,7 +17,7 @@ import { ThemeRegistry } from '../themes/registry';
 const TEST_HOST = 'dashboard.test';
 const api = (app: Parameters<typeof request.agent>[0]) => request.agent(app).set('Host', TEST_HOST);
 
-async function setup(overrides: Partial<CodeHostProvider> = {}) {
+async function setup(overrides: Partial<CodeHostProvider> = {}, builtinDir = join(process.cwd(), 'themes')) {
   const dir = await mkdtemp(join(tmpdir(), 'prdash-app-'));
   const path = join(dir, 'config.json');
   await writeFile(path, JSON.stringify({ codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'], localRepos: ['orders-api', 'orders-web'] } }));
@@ -33,7 +33,7 @@ async function setup(overrides: Partial<CodeHostProvider> = {}) {
   await writeFile(join(userDir, 'calm', 'theme.json'), JSON.stringify({ name: 'Calm', modes: ['dark'], dark: {}, fontFiles: [{ family: 'Calm Sans', file: 'fonts/calm.woff2' }] }));
   await writeFile(join(userDir, 'calm', 'fonts', 'calm.woff2'), 'font');
   await writeFile(join(userDir, 'calm', 'secret.txt'), 'nope');
-  const themes = new ThemeRegistry({ builtinDir: join(process.cwd(), 'themes'), userDir });
+  const themes = new ThemeRegistry({ builtinDir, userDir });
   await themes.load();
   const app = createApp({ poller, presence, loop, provider: fake.provider, store, hub, themes, allowedHosts });
   return { app, store, presence, poller, allowedHosts };
@@ -172,6 +172,13 @@ describe('HTTP API', () => {
     await api(app).get('/api/themes/calm/files/fonts/other.woff2').expect(404);
     await api(app).get('/api/themes/nope/files/fonts/calm.woff2').expect(404);
     await request(app).get('/api/themes/calm/files/fonts/calm.woff2').set('Host', 'attacker.example').expect(403);
+  });
+
+  it('serves a built-in font even when the themes folder sits under a dot folder', async () => {
+    const hidden = join(await mkdtemp(join(tmpdir(), 'prdash-hidden-')), '.hidden', 'themes');
+    await cp(join(process.cwd(), 'themes'), hidden, { recursive: true });
+    const { app } = await setup({}, hidden);
+    await api(app).get('/api/themes/terminal/files/fonts/JetBrainsMono-Regular.woff2').expect(200);
   });
 
   it('saves the chosen theme and rejects a malformed id', async () => {

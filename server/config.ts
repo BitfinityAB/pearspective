@@ -57,7 +57,8 @@ export const ConfigSchema = z.object({
   }).optional(),
   notifications: NotificationsSchema.optional(),
   // Relative to config.json; pointing it outside the checkout keeps PR and ticket data out of the repo folder.
-  theme: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/).default('default'),
+  // A bad value falls back instead of stopping the server, since the Appearance tab is the only thing that needs it.
+  theme: z.string().transform((value) => value.toLowerCase()).pipe(z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/)).catch('default'),
   databasePath: z.string().min(1).default('pearspective.db'),
 });
 export type Config = z.infer<typeof ConfigSchema>;

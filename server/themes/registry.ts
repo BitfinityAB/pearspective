@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { contrastIssues } from '../../shared/contrast';
 import { resolveTheme } from '../../shared/themeResolve';
 import { ThemeFileSchema, type ThemeFile } from '../../shared/themeSchema';
@@ -8,35 +8,41 @@ import type { ThemeInfo } from '../../shared/types';
 const DEBOUNCE_MS = 200;
 const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
-interface Entry { info: ThemeInfo; dir: string; file?: ThemeFile }
+interface Entry { info: ThemeInfo; dir: string; file?: ThemeFile; shown: string }
+interface Candidate { id: string; path: string; dir: string; shown: string; problem?: string }
+
+/** Built-in themes ship in the repo's themes/ folder; the user's own live apart from it, next to config.json. */
+export function themeDirs(configPath: string, repoRoot = process.cwd()): { builtinDir: string; userDir: string } {
+  return { builtinDir: resolve(repoRoot, 'themes'), userDir: resolve(dirname(configPath), 'custom-themes') };
+}
 
 /** Reads built-in and user theme files; a broken file is reported and never stops the others. */
 export class ThemeRegistry {
   private entries = new Map<string, Entry>();
-  private versionNumber = 0;
+  // Seeded from the clock so a restart changes the version and open tabs refetch.
+  private versionNumber = Date.now();
   private watcher: FSWatcher | null = null;
   private timer: NodeJS.Timeout | null = null;
 
   constructor(private readonly opts: { builtinDir: string; userDir: string; onChange?: () => void }) {}
 
   async load(): Promise<void> {
-    this.ensureUserDir();
-    const entries = new Map<string, Entry>();
-    for (const [dir, source] of [[this.opts.builtinDir, 'builtin'], [this.opts.userDir, 'user']] as const) {
-      for (const candidate of this.candidates(dir)) entries.set(candidate.id, this.read(candidate, source));
-    }
-    // Always the built-in Default: a partial user theme named "default" must not become the base for the rest.
+    // The same folder twice would otherwise list every built-in as a user theme and write the schema over itself.
+    const separate = resolve(this.opts.userDir) !== resolve(this.opts.builtinDir);
+    if (separate) this.ensureUserDir();
     const defaults = this.builtinDefault();
-    for (const entry of entries.values()) {
-      if (!entry.file) continue;
-      try {
-        const theme = resolveTheme(entry.info.id, entry.file, defaults);
-        const missing = theme.fontFiles.filter((font) => !existsSync(join(entry.dir, font.file))).map((font) => `Font file ${font.file} is missing.`);
-        const contrast = contrastIssues(theme).map((issue) => `Low contrast (${issue.ratio}:1) for ${issue.pair} in ${issue.mode} mode.`);
-        entry.info = { ...entry.info, theme, warnings: [...missing, ...contrast] };
-      } catch (error) {
-        entry.info = { ...entry.info, valid: false, error: (error as Error).message };
-        delete entry.file;
+    const entries = new Map<string, Entry>();
+    for (const candidate of this.candidates(this.opts.builtinDir)) entries.set(candidate.id, this.prepare(this.read(candidate, 'builtin'), defaults));
+    if (separate) {
+      for (const candidate of this.candidates(this.opts.userDir)) {
+        const entry = this.prepare(this.read(candidate, 'user'), defaults);
+        const builtin = entries.get(candidate.id);
+        if (builtin && !entry.info.valid) {
+          // A broken file must not take a working built-in away, so the built-in stays and carries the warning.
+          builtin.info = { ...builtin.info, warnings: [...builtin.info.warnings, `Your custom ${entry.shown} is invalid and is ignored: ${entry.info.error}.`] };
+        } else {
+          entries.set(candidate.id, entry);
+        }
       }
     }
     this.entries = entries;
@@ -51,13 +57,14 @@ export class ThemeRegistry {
     return this.versionNumber;
   }
 
-  fontPath(id: string, file: string): string | null {
+  /** The folder and the relative file, so the caller can serve with `root` and dot-folders above the theme are not blocked. */
+  fontFile(id: string, file: string): { root: string; file: string } | null {
     const entry = this.entries.get(id);
     if (!entry?.file || !entry.file.fontFiles?.some((font) => font.file === file)) return null;
     const absolute = resolve(entry.dir, file);
     try {
       // Real paths, so a symlinked font cannot lead outside the theme's folder.
-      return realpathSync(absolute).startsWith(realpathSync(entry.dir) + sep) && absolute.startsWith(resolve(entry.dir) + sep) ? absolute : null;
+      return realpathSync(absolute).startsWith(realpathSync(entry.dir) + sep) && absolute.startsWith(resolve(entry.dir) + sep) ? { root: resolve(entry.dir), file } : null;
     } catch {
       return null;
     }
@@ -90,7 +97,7 @@ export class ThemeRegistry {
     this.timer = null;
   }
 
-  private candidates(dir: string): { id: string; path: string; dir: string }[] {
+  private candidates(dir: string): Candidate[] {
     let names: string[];
     try {
       names = readdirSync(dir);
@@ -99,40 +106,65 @@ export class ThemeRegistry {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') console.error(`Reading the themes folder ${dir} failed:`, error);
       return [];
     }
-    return names.flatMap((name) => {
+    const found = names.flatMap((name): (Candidate & { name: string })[] => {
+      // Editor and OS bookkeeping files (lock files, AppleDouble) are not themes.
+      if (name.startsWith('.')) return [];
       const path = join(dir, name);
       try {
-        if (name.endsWith('.json') && name !== 'theme.schema.json' && statSync(path).isFile()) return [{ id: name.slice(0, -5).toLowerCase(), path, dir }];
-        if (statSync(path).isDirectory() && existsSync(join(path, 'theme.json'))) return [{ id: name.toLowerCase(), path: join(path, 'theme.json'), dir: path }];
+        if (name.endsWith('.json') && name !== 'theme.schema.json' && statSync(path).isFile()) return [{ name, id: name.slice(0, -5).toLowerCase(), path, dir, shown: name }];
+        if (statSync(path).isDirectory() && existsSync(join(path, 'theme.json'))) return [{ name, id: name.toLowerCase(), path: join(path, 'theme.json'), dir: path, shown: `${name}/theme.json` }];
       } catch {
         // Dangling symlinks and files removed mid-scan (editor lock files) are skipped.
       }
       return [];
-    }).filter((candidate) => ID.test(candidate.id));
+    });
+    const perId = new Map<string, number>();
+    for (const candidate of found) perId.set(candidate.id, (perId.get(candidate.id) ?? 0) + 1);
+    return found.map(({ name, ...candidate }) => {
+      if (!ID.test(candidate.id)) return { ...candidate, id: `invalid:${name}`, problem: 'The file name may contain only letters, digits and dashes.' };
+      // Which of two files would win depends on read order, so neither is used.
+      if (perId.get(candidate.id)! > 1) return { ...candidate, id: `invalid:${name}`, problem: `Another file also maps to the id "${candidate.id}"; keep only one of them.` };
+      return candidate;
+    });
   }
 
-  private read(candidate: { id: string; path: string; dir: string }, source: 'builtin' | 'user'): Entry {
+  private read(candidate: Candidate, source: 'builtin' | 'user'): Entry {
     const base: ThemeInfo = { id: candidate.id, name: candidate.id, modes: [], source, valid: false, warnings: [] };
+    if (candidate.problem) return { dir: candidate.dir, shown: candidate.shown, info: { ...base, name: candidate.shown, error: `${candidate.shown}: ${candidate.problem}` } };
     let text: string;
     try {
       text = readFileSync(candidate.path, 'utf8');
     } catch (error) {
-      return { dir: candidate.dir, info: { ...base, error: `${candidate.path}: could not be read (${(error as NodeJS.ErrnoException).code ?? (error as Error).message})` } };
+      return { dir: candidate.dir, shown: candidate.shown, info: { ...base, error: `${candidate.path}: could not be read (${(error as NodeJS.ErrnoException).code ?? (error as Error).message})` } };
     }
     let raw: unknown;
     try {
       raw = JSON.parse(text);
     } catch (error) {
-      return { dir: candidate.dir, info: { ...base, error: `${candidate.path}: not valid JSON (${(error as Error).message})` } };
+      return { dir: candidate.dir, shown: candidate.shown, info: { ...base, error: `${candidate.path}: not valid JSON (${(error as Error).message})` } };
     }
     const parsed = ThemeFileSchema.safeParse(raw);
     if (!parsed.success) {
       const issue = parsed.error.issues[0]!;
       const where = issue.path.join('.') || 'file';
       const detail = issue.code === 'unrecognized_keys' ? `unknown key ${issue.keys.join(', ')}` : issue.message;
-      return { dir: candidate.dir, info: { ...base, error: `${candidate.path}: ${where}: ${detail}` } };
+      return { dir: candidate.dir, shown: candidate.shown, info: { ...base, error: `${candidate.path}: ${where}: ${detail}` } };
     }
-    return { dir: candidate.dir, file: parsed.data, info: { ...base, name: parsed.data.name, modes: parsed.data.modes, valid: true } };
+    return { dir: candidate.dir, shown: candidate.shown, file: parsed.data, info: { ...base, name: parsed.data.name, modes: parsed.data.modes, valid: true } };
+  }
+
+  private prepare(entry: Entry, defaults: ThemeFile): Entry {
+    if (!entry.file) return entry;
+    try {
+      // Always against the built-in Default: a partial user theme named "default" must not become the base for the rest.
+      const theme = resolveTheme(entry.info.id, entry.file, defaults);
+      const missing = theme.fontFiles.filter((font) => !existsSync(join(entry.dir, font.file))).map((font) => `Font file ${font.file} is missing.`);
+      const contrast = contrastIssues(theme).map((issue) => `Low contrast (${issue.ratio}:1) for ${issue.pair} in ${issue.mode} mode.`);
+      return { ...entry, info: { ...entry.info, theme, warnings: [...missing, ...contrast] } };
+    } catch (error) {
+      const { file: _dropped, ...rest } = entry;
+      return { ...rest, info: { ...entry.info, valid: false, error: (error as Error).message } };
+    }
   }
 
   private builtinDefault(): ThemeFile {

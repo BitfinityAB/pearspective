@@ -60,9 +60,10 @@ export function createApp({ poller, presence, loop, provider, store, hub, themes
   // Express 5 wildcard syntax: the rest of the path after files/ is the font path.
   app.get('/api/themes/:id/files/*file', (req, res) => {
     const file = ([] as string[]).concat(req.params.file as string | string[]).join('/');
-    const path = themes.fontPath(String(req.params.id), file);
-    if (!path) { res.status(404).json({ error: 'Not found' }); return; }
-    res.type('font/woff2').sendFile(path);
+    const font = themes.fontFile(String(req.params.id), file);
+    if (!font) { res.status(404).json({ error: 'Not found' }); return; }
+    // Served relative to the theme folder, so a dot-folder further up (a worktree, say) does not count as hidden.
+    res.type('font/woff2').sendFile(font.file, { root: font.root });
   });
 
   app.get('/api/snapshot', (_req, res) => res.json(poller.snapshot()));

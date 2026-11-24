@@ -1,7 +1,7 @@
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync, cpSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ThemeRegistry } from '../themes/registry';
+import { ThemeRegistry, themeDirs } from '../themes/registry';
 
 const builtinDir = join(process.cwd(), 'themes');
 const tempUserDir = () => mkdtempSync(join(tmpdir(), 'pearspective-themes-'));
@@ -21,7 +21,7 @@ describe('ThemeRegistry', () => {
     await registry.load();
     const terminal = registry.list().find((theme) => theme.id === 'terminal')!;
     expect(terminal).toMatchObject({ name: 'Terminal', source: 'builtin', valid: true, modes: ['dark'], warnings: [] });
-    expect(registry.fontPath('terminal', 'fonts/JetBrainsMono-Regular.woff2')).not.toBeNull();
+    expect(registry.fontFile('terminal', 'fonts/JetBrainsMono-Regular.woff2')).toEqual({ root: join(builtinDir, 'terminal'), file: 'fonts/JetBrainsMono-Regular.woff2' });
   });
 
   it('adds user themes, reports broken ones and lets a user theme replace a built-in', async () => {
@@ -77,10 +77,10 @@ describe('ThemeRegistry', () => {
     writeFileSync(join(userDir, 'calm', 'secret.txt'), 'nope');
     const registry = new ThemeRegistry({ builtinDir, userDir });
     await registry.load();
-    expect(registry.fontPath('calm', 'fonts/calm.woff2')).toBe(join(userDir, 'calm', 'fonts', 'calm.woff2'));
-    expect(registry.fontPath('calm', 'secret.txt')).toBeNull();
-    expect(registry.fontPath('calm', '../calm/fonts/calm.woff2')).toBeNull();
-    expect(registry.fontPath('nope', 'fonts/calm.woff2')).toBeNull();
+    expect(registry.fontFile('calm', 'fonts/calm.woff2')).toEqual({ root: join(userDir, 'calm'), file: 'fonts/calm.woff2' });
+    expect(registry.fontFile('calm', 'secret.txt')).toBeNull();
+    expect(registry.fontFile('calm', '../calm/fonts/calm.woff2')).toBeNull();
+    expect(registry.fontFile('nope', 'fonts/calm.woff2')).toBeNull();
   });
 
   it('warns about a missing font file and low contrast without rejecting the theme', async () => {
@@ -111,7 +111,12 @@ describe('ThemeRegistry', () => {
       registry.watch();
       const before = registry.version();
       write(userDir, 'calm.json', { name: 'Calm', modes: ['dark'], dark: {} });
-      await vi.waitFor(() => expect(registry.list().some((theme) => theme.id === 'calm')).toBe(true), { timeout: 3000 });
+      // The first event can be missed while the OS watcher is still starting, so the same content is written again on each attempt.
+      // The interval is longer than the 200 ms debounce, or the rewrites would keep postponing the reload.
+      await vi.waitFor(() => {
+        write(userDir, 'calm.json', { name: 'Calm', modes: ['dark'], dark: {} });
+        expect(registry.list().some((theme) => theme.id === 'calm')).toBe(true);
+      }, { timeout: 4000, interval: 400 });
       await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 3000 });
       expect(registry.version()).toBeGreaterThan(before);
     } finally {
@@ -150,7 +155,7 @@ describe('ThemeRegistry', () => {
     symlinkSync(outside, join(userDir, 'calm', 'fonts', 'x.woff2'));
     const registry = new ThemeRegistry({ builtinDir, userDir });
     await registry.load();
-    expect(registry.fontPath('calm', 'fonts/x.woff2')).toBeNull();
+    expect(registry.fontFile('calm', 'fonts/x.woff2')).toBeNull();
   });
 
   it('survives a watcher error by logging and closing', async () => {
@@ -185,5 +190,77 @@ describe('ThemeRegistry', () => {
     const registry = new ThemeRegistry({ builtinDir, userDir });
     await expect(registry.load()).resolves.toBeUndefined();
     expect(registry.list().map((theme) => theme.id)).toEqual(['default', 'terminal']);
+  });
+
+  it('seeds the version from the clock so a restart changes it', async () => {
+    const startedAt = Date.now();
+    const registry = new ThemeRegistry({ builtinDir, userDir: tempUserDir() });
+    await registry.load();
+    expect(registry.version()).toBeGreaterThan(startedAt);
+  });
+
+  it('skips the user pass and leaves the built-in folder untouched when both folders are the same', async () => {
+    const copy = join(tempUserDir(), 'themes');
+    cpSync(builtinDir, copy, { recursive: true });
+    const before = readdirSync(copy).sort();
+    const registry = new ThemeRegistry({ builtinDir: copy, userDir: copy });
+    await registry.load();
+    expect(registry.list().map((theme) => [theme.id, theme.source])).toEqual([['default', 'builtin'], ['terminal', 'builtin']]);
+    expect(readdirSync(copy).sort()).toEqual(before);
+    expect(readFileSync(join(copy, 'theme.schema.json'))).toEqual(readFileSync(join(builtinDir, 'theme.schema.json')));
+  });
+
+  it('builds the registry as the server does: built-ins stay built-in, custom-themes is created and its themes are user themes', async () => {
+    const repo = tempUserDir();
+    cpSync(builtinDir, join(repo, 'themes'), { recursive: true });
+    const dirs = themeDirs(join(repo, 'config.json'), repo);
+    const registry = new ThemeRegistry(dirs);
+    await registry.load();
+    expect(registry.list().map((theme) => [theme.id, theme.source])).toEqual([['default', 'builtin'], ['terminal', 'builtin']]);
+    expect(existsSync(join(repo, 'custom-themes', 'theme.schema.json'))).toBe(true);
+    expect(readdirSync(join(repo, 'themes')).sort()).toEqual(readdirSync(builtinDir).sort());
+    write(join(repo, 'custom-themes'), 'calm.json', { name: 'Calm', modes: ['dark'], dark: {} });
+    await registry.load();
+    expect(registry.list().find((theme) => theme.id === 'calm')).toMatchObject({ source: 'user', valid: true });
+    expect(registry.list().find((theme) => theme.id === 'terminal')).toMatchObject({ source: 'builtin' });
+  });
+
+  it('keeps a built-in theme and warns on it when the custom file of the same name is invalid', async () => {
+    const userDir = tempUserDir();
+    write(userDir, 'terminal.json', { name: 'Mine', modes: ['dark'], dark: { colors: { accnet: '#fff' } } });
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    await registry.load();
+    const terminal = registry.list().find((theme) => theme.id === 'terminal')!;
+    expect(terminal).toMatchObject({ name: 'Terminal', source: 'builtin', valid: true });
+    expect(terminal.warnings).toHaveLength(1);
+    expect(terminal.warnings[0]).toMatch(/^Your custom terminal\.json is invalid and is ignored: .*accnet.*\.$/);
+  });
+
+  it('lists a file whose name breaks the id rule as an invalid entry that cannot be picked', async () => {
+    const userDir = tempUserDir();
+    write(userDir, 'My Theme.json', { name: 'Mine', modes: ['dark'], dark: {} });
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    await registry.load();
+    const entry = registry.list().find((theme) => theme.id === 'invalid:My Theme.json')!;
+    expect(entry).toMatchObject({ valid: false, source: 'user' });
+    expect(entry.error).toContain('The file name may contain only letters, digits and dashes.');
+    expect(registry.fontFile('invalid:My Theme.json', 'fonts/x.woff2')).toBeNull();
+  });
+
+  it('reports two files that map to the same id as invalid duplicates instead of picking one', async () => {
+    const userDir = tempUserDir();
+    write(userDir, 'calm.json', { name: 'Calm', modes: ['dark'], dark: {} });
+    mkdirSync(join(userDir, 'calm'));
+    write(join(userDir, 'calm'), 'theme.json', { name: 'Calm folder', modes: ['dark'], dark: {} });
+    const registry = new ThemeRegistry({ builtinDir, userDir });
+    await registry.load();
+    const ids = registry.list().map((theme) => theme.id);
+    expect(ids).not.toContain('calm');
+    const duplicates = registry.list().filter((theme) => theme.id.startsWith('invalid:calm'));
+    expect(duplicates.map((theme) => theme.id).sort()).toEqual(['invalid:calm', 'invalid:calm.json']);
+    for (const duplicate of duplicates) {
+      expect(duplicate.valid).toBe(false);
+      expect(duplicate.error).toMatch(/also maps to the id "calm"/);
+    }
   });
 });

@@ -12,3 +12,6 @@ docs/superpowers/
 *.db
 *.db-wal
 *.db-shm
+
+# Your own themes (see the README).
+custom-themes/

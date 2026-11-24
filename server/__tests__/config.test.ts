@@ -117,3 +117,15 @@ describe('databasePath', () => {
     expect(resolveDatabasePath(ConfigSchema.parse({ ...base, databasePath: '/var/lib/pearspective.db' }), '/home/alex/pearspective/config.json')).toBe('/var/lib/pearspective.db');
   });
 });
+
+describe('ConfigSchema theme', () => {
+  it.each([
+    ['is missing', undefined, 'default'],
+    ['is upper case', 'Terminal', 'terminal'],
+    ['is not a valid id', 'bad id!', 'default'],
+    ['is not a string', 7, 'default'],
+  ])('resolves a theme that %s', (_label, theme, expected) => {
+    const parsed = ConfigSchema.safeParse({ ...minimal, ...(theme === undefined ? {} : { theme }) });
+    expect(parsed.success && parsed.data.theme).toBe(expected);
+  });
+});

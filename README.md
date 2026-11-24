@@ -146,7 +146,7 @@ Pick a theme in the settings panel's **Appearance** tab. **Default** follows you
 
 ![Terminal theme](docs/assets/screenshot-terminal.png)
 
-Make your own by putting a JSON file in the `themes/` folder next to `config.json` (it is created on the first start). Saving the file updates open tabs within a second. If your system can't watch the folder for changes, restart Pearspective to pick up edits.
+Make your own by putting a JSON file in the `custom-themes/` folder next to `config.json` (it is created on the first start and kept out of git). Saving the file updates open tabs within a second. If your system can't watch the folder for changes, restart Pearspective to pick up edits.
 
 ```json
 {
@@ -159,9 +159,9 @@ Make your own by putting a JSON file in the `themes/` folder next to `config.jso
 
 - Anything you leave out comes from Default, so a theme can be a few lines.
 - [`theme.schema.json`](themes/theme.schema.json) (copied into the folder) lets your editor autocomplete colour names and check the file. A broken file is listed in the picker with the problem and never breaks the page.
-- Themes set colours, fonts, font size, corner radii, border width, shadows and label casing; they cannot change the layout.
-- To use your own font, put the theme in a folder (`themes/calm/theme.json`) with its `.woff2` files beside it and list them under `fontFiles`. Fonts are served by Pearspective itself, never from the internet.
-- A file with the same name as a built-in theme (for example `default.json`) replaces it. The file name (lower-cased) is the theme's id.
+- Themes set colours, fonts, the base font size (body text only; smaller sizes stay fixed), corner radii, border width, shadows and label casing; they cannot change the layout.
+- To use your own font, put the theme in a folder (`custom-themes/calm/theme.json`) with its `.woff2` files beside it and list them under `fontFiles`. Theme font files are served by Pearspective itself.
+- A file with the same name as a built-in theme (for example `default.json`) replaces it, unless the file is invalid; then the built-in stays and shows a warning. The file name (lower-cased) is the theme's id, so it may contain only letters, digits and dashes.
 
 ## How it uses the GitHub API
 

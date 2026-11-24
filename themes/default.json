@@ -127,6 +127,7 @@
   },
   "text": {
     "labelCase": "upper",
+    "chipCase": "none",
     "labelSpacing": 0.04,
     "baseSize": 14
   }
