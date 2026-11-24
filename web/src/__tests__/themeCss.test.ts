@@ -88,6 +88,7 @@ describe('themeCss', () => {
     expect(css).toContain('--chip-glow: none;');
     expect(css).toContain('--text-glow: none;');
     expect(css).toContain('--chip-border: var(--text);');
+    for (const status of ['blocked', 'waiting', 'ready']) expect(css).toContain(`--glow-${status}: none;`);
   });
 
   it('writes accent glows on the active tab and chips when a theme turns glow on', () => {
@@ -97,6 +98,8 @@ describe('themeCss', () => {
     expect(css).toMatch(/--chip-glow: 0 0 \d+px color-mix\(in srgb, var\(--accent\)/);
     expect(css).toMatch(/--text-glow: 0 0 \d+px color-mix\(in srgb, var\(--accent\)/);
     expect(css).toContain('--chip-border: var(--accent);');
+    // Stack status squares glow in their own colour, not the accent.
+    for (const status of ['blocked', 'waiting', 'ready']) expect(css).toMatch(new RegExp(`--glow-${status}: 0 0 \\d+px color-mix\\(in srgb, var\\(--c-${status}\\)`));
   });
 
   it('writes the default float shadow when shadows are on', () => {

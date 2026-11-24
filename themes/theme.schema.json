@@ -531,7 +531,7 @@
       "properties": {
         "glow": {
           "type": "boolean",
-          "description": "Accent glow on the active tab and active filter chips."
+          "description": "Accent glow on the active tab and active filter chips; stack status squares glow in their own colour."
         }
       },
       "additionalProperties": false

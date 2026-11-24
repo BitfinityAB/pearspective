@@ -168,6 +168,7 @@ body{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px}
 .seg,select,.icon,.search,.btn,.dot,.mini,.pips i,.mini i,.legend i{border-radius:2px}
 dialog,.toast{box-shadow:none}
 .seg.on{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 55%,transparent),0 0 12px color-mix(in srgb,var(--accent) 30%,transparent);text-shadow:0 0 8px color-mix(in srgb,var(--accent) 60%,transparent)}
+.pips i.fill-blocked{box-shadow:0 0 8px color-mix(in srgb,var(--c-blocked) 70%,transparent)}.pips i.fill-waiting{box-shadow:0 0 8px color-mix(in srgb,var(--c-waiting) 70%,transparent)}.pips i.fill-ready{box-shadow:0 0 8px color-mix(in srgb,var(--c-ready) 70%,transparent)}
 .chip:not(.off){border-color:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 25%,transparent);text-shadow:0 0 8px color-mix(in srgb,var(--accent) 60%,transparent)}
 .sec,.cols,.segs .lbl,.chip,.badge,.ticket-chip,.seg,.tab-count{text-transform:uppercase;letter-spacing:.06em}
 </style>`);
@@ -349,7 +350,7 @@ function stackRow(id, members, lead){
       <span class="title">Stack of ${members.length} open PRs${st.merged.length ? ` · ${st.merged.length} merged` : ''}</span>
       <span class="badges">${cnt.blocked ? badgeHtml({t:cnt.blocked + ' blocked', k:'r'}) : ''}${cnt.waiting ? badgeHtml({t:cnt.waiting + ' waiting', k:'a'}) : ''}${cnt.ready ? badgeHtml({t:cnt.ready + ' ready', k:'g'}) : ''}</span></span>
     </button></span>
-    <span style="display:flex;flex-direction:column;gap:6px"><span class="pips" role="img" aria-label="${cnt.blocked} blocked, ${cnt.waiting} waiting, ${cnt.ready} ready">${members.map(m => `<i style="background:${CAT[m.cat].c}"></i>`).join('')}</span>
+    <span style="display:flex;flex-direction:column;gap:6px"><span class="pips" role="img" aria-label="${cnt.blocked} blocked, ${cnt.waiting} waiting, ${cnt.ready} ready">${members.map(m => `<i class="fill-${m.cat}" style="background:${CAT[m.cat].c}"></i>`).join('')}</span>
       <button class="btn" data-act="viz" data-id="${id}" style="align-self:flex-start">Visualize stack</button></span>
     ${ageHtml(lead.h, lead.cat)}
   </div>`;

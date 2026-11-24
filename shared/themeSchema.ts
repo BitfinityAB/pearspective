@@ -30,7 +30,7 @@ export const ThemeFileSchema = z.object({
     chipCase: z.enum(['upper', 'none']).optional(),
   }).strict().optional(),
   effects: z.object({
-    glow: z.boolean().describe('Accent glow on the active tab and active filter chips.').optional(),
+    glow: z.boolean().describe('Accent glow on the active tab and active filter chips; stack status squares glow in their own colour.').optional(),
   }).strict().optional(),
   fontFiles: z.array(z.object({
     family: fontName,

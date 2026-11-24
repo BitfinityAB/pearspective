@@ -92,6 +92,8 @@ select { height: 32px; border: var(--border-width) solid var(--border); border-r
 .toggle { border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; padding: 0; min-width: 0 }
 .stack-mid { display: flex; flex-direction: column; gap: 6px }
 .pips { display: flex; gap: 3px; flex-wrap: wrap } .pips i { width: 14px; height: 14px; border-radius: calc(var(--radius-small) - 2px) }
+/* Glowing themes light each stack square in its own status colour. */
+.pips i.fill-blocked { box-shadow: var(--glow-blocked) } .pips i.fill-waiting { box-shadow: var(--glow-waiting) } .pips i.fill-ready { box-shadow: var(--glow-ready) }
 .btn { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--radius-small); border: var(--border-width) solid var(--border); background: var(--surface); font-size: 12px; font-weight: 600 }
 .btn:hover { background: var(--hair) } .btn:disabled { opacity: .5; cursor: not-allowed }
 

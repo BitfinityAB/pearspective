@@ -7,6 +7,9 @@ const MONO_FALLBACK = 'ui-monospace, monospace';
 // Mixed from the accent variable so the glow follows each mode's accent colour.
 const accentMix = (percent: number) => `color-mix(in srgb, var(--accent) ${percent}%, transparent)`;
 
+const STATUSES = ['blocked', 'waiting', 'ready'] as const;
+const statusMix = (status: string, percent: number) => `color-mix(in srgb, var(--c-${status}) ${percent}%, transparent)`;
+
 const modeVars = (mode: ThemeMode, block: ResolvedMode) => [
   `color-scheme: ${mode};`,
   ...COLOR_TOKEN_NAMES.map((token) => `${COLOR_TOKENS[token]}: ${block.colors[token]};`),
@@ -33,8 +36,10 @@ export function themeCss(theme: ResolvedTheme, fontUrl: (file: string) => string
       `--chip-glow: 0 0 10px ${accentMix(25)};`,
       `--text-glow: 0 0 8px ${accentMix(60)};`,
       '--chip-border: var(--accent);',
+      ...STATUSES.map((status) => `--glow-${status}: 0 0 8px ${statusMix(status, 70)};`),
     ] : [
       '--seg-on-shadow: var(--shadow-raised);', '--chip-glow: none;', '--text-glow: none;', '--chip-border: var(--text);',
+      ...STATUSES.map((status) => `--glow-${status}: none;`),
     ]),
   ].join(' ');
   const fonts = theme.fontFiles.map((font) =>
