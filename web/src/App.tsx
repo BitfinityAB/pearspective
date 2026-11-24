@@ -13,6 +13,7 @@ import { Toasts } from './components/Toasts';
 import { Toolbar } from './components/Toolbar';
 import { isFirstLoad } from './lib/firstLoad';
 import { stacksZoomHint } from './lib/zoomHint';
+import { useThemes } from './themes/useThemes';
 import { useNotifications } from './notifications/useNotifications';
 import { useUrlState } from './state/urlState';
 import { MineView } from './views/MineView';
@@ -67,6 +68,8 @@ export function App({ api }: { api: DashboardApi }) {
     onOpenMine: () => setUrl({ tab: 'mine' }),
   });
 
+  const themes = useThemes(api, snapshot);
+
   if (!snapshot) return <div className="app"><p className="loading">Loading…</p></div>;
 
   const tab = url.tab === 'tickets' && !snapshot.settings.ticketsEnabled ? 'overview' : url.tab;
@@ -82,8 +85,11 @@ export function App({ api }: { api: DashboardApi }) {
         onRefreshSetting={(refresh) => void updateSettings({ refresh }).catch(reportError)}
         onOpenSettings={openSettings}
         ticketsMine={url.ticketsMine}
+        forcedMode={themes.forcedMode}
+        themeName={themes.active?.name}
       />
       <Banners banners={snapshot.banners} />
+      {themes.problem && <div className="banner sev-amber">{themes.problem}</div>}
       {clientError && (
         <div role="alert" className="banner sev-red" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="grow">{clientError}</span>
@@ -92,7 +98,7 @@ export function App({ api }: { api: DashboardApi }) {
       )}
       {tab === 'stacks'
         ? <><div className="toolbar"><span className="muted">Every stack in the selected repositories. {stacksZoomHint(navigator.platform || navigator.userAgent)}</span></div>
-            <StacksView snapshot={snapshot} views={views} onSelect={(id) => setUrl({ selected: id, tab: 'overview' })} onVisualize={setStackPrId} /></>
+            <StacksView snapshot={snapshot} views={views} onSelect={(id) => setUrl({ selected: id, tab: 'overview' })} onVisualize={setStackPrId} themeKey={themes.themeKey} /></>
         : (
           <>
             {tab !== 'tickets' && <Toolbar url={url} counts={bucketCounts(ids, views)} onChange={setUrl} />}
@@ -125,6 +131,7 @@ export function App({ api }: { api: DashboardApi }) {
         <StackDialog
           api={api}
           prId={stackPrId}
+          themeKey={themes.themeKey}
           views={views}
           onClose={closeStack}
           onSelect={(id) => {

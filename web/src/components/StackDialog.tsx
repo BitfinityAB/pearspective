@@ -10,9 +10,11 @@ interface StackDialogProps {
   views: Map<string, PrView>;
   onSelect: (id: string) => void;
   onClose: () => void;
+  /** Changes when the theme does, so the diagram re-reads CSS variables. */
+  themeKey?: string;
 }
 
-export function StackDialog({ api, prId, views, onSelect, onClose }: StackDialogProps) {
+export function StackDialog({ api, prId, views, onSelect, onClose, themeKey }: StackDialogProps) {
   const [detail, setDetail] = useState<StackDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -74,6 +76,7 @@ export function StackDialog({ api, prId, views, onSelect, onClose }: StackDialog
             <StackDiagram
               detail={detail}
               viewsByNumber={viewsByNumber}
+              themeKey={themeKey}
               selectedNumber={views.get(prId)?.pr.number}
               label={`Diagram of ${title}`}
               onSelect={(number) => {

@@ -36,9 +36,11 @@ interface HeaderProps {
   onOpenSettings: (focusPermission: boolean) => void;
   /** The Tickets tab's Mine filter, so its count matches what the tab shows. */
   ticketsMine?: boolean;
+  forcedMode?: 'light' | 'dark' | null;
+  themeName?: string;
 }
 
-export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting, onOpenSettings, ticketsMine = false }: HeaderProps) {
+export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting, onOpenSettings, ticketsMine = false, forcedMode = null, themeName }: HeaderProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -93,7 +95,7 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
           <button type="button" className={`icon-btn${refreshing ? ' spinning' : ''}`} aria-label="Refresh now" aria-busy={refreshing || undefined} disabled={refreshing} onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}>{REFRESH_ICON}</button>
         </span>
         <span className="hdr-secondary">
-          <ThemeToggle />
+          <ThemeToggle forcedMode={forcedMode} themeName={themeName} />
           <button type="button" className={`icon-btn${hint ? ' has-dot' : ''}`} aria-label={hint ? 'Settings (desktop notifications not yet allowed)' : 'Settings'} onClick={() => onOpenSettings(hint)}>{SETTINGS_ICON}</button>
         </span>
         {viewer && <span className="who"><Avatar name={viewer.name ?? viewer.login} url={viewer.avatarUrl} size={24} /><span className="who-name" title={viewer.login}>{viewer.name ?? viewer.login}</span></span>}
@@ -104,7 +106,7 @@ export function Header({ snapshot, tab, now, onTab, onRefresh, onRefreshSetting,
             <div id="header-menu" className="menu-panel" role="group" aria-label="More">
               <div className="menu-row"><span className="muted">Organisation</span><b>{settings.org}</b></div>
               <div className="menu-row"><span className="muted">{status}</span></div>
-              <div className="menu-row"><span className="muted">Theme</span><ThemeToggle /></div>
+              <div className="menu-row"><span className="muted">Theme</span><ThemeToggle forcedMode={forcedMode} themeName={themeName} /></div>
               <button type="button" className="btn menu-item" onClick={() => { setMenuOpen(false); onOpenSettings(hint); }}>{SETTINGS_ICON} Settings</button>
             </div>
           )}

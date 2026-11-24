@@ -130,4 +130,16 @@ describe('App', () => {
       expect(screen.queryByRole('group', { name: 'Desktop notifications' })).toBeNull();
     });
   });
+
+  it('shows a banner and uses Default when the chosen theme is missing', async () => {
+    const base = fakeApi();
+    const snapshot = await base.getSnapshot();
+    const defaultOnly = { id: 'default', name: 'Default', modes: ['light' as const, 'dark' as const], source: 'builtin' as const, valid: true, warnings: [] };
+    const api = fakeApi({
+      getSnapshot: async () => ({ ...snapshot, settings: { ...snapshot.settings, theme: 'gone' } }),
+      getThemes: async () => [defaultOnly],
+    });
+    render(<App api={api} />);
+    expect(await screen.findByText("Theme 'gone' is unavailable: it was not found. Using Default.")).toBeInTheDocument();
+  });
 });

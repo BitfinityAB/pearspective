@@ -25,3 +25,18 @@ describe('ThemeToggle', () => {
     expect(localStorage.getItem('theme')).toBeNull();
   });
 });
+
+describe('ThemeToggle with a forced mode', () => {
+  it('disables every button, shows the forced mode as pressed and explains why', async () => {
+    localStorage.clear();
+    render(<ThemeToggle forcedMode="dark" themeName="Terminal" />);
+    for (const name of ['System theme', 'Light theme', 'Dark theme']) {
+      expect(screen.getByRole('button', { name })).toBeDisabled();
+    }
+    expect(screen.getByRole('button', { name: 'Dark theme' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'System theme' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('group', { name: 'Theme' })).toHaveAttribute('title', 'Terminal theme is dark only');
+    await userEvent.click(screen.getByRole('button', { name: 'Light theme' }));
+    expect(localStorage.getItem('theme')).toBeNull();
+  });
+});

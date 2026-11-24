@@ -12,13 +12,15 @@ interface StackDiagramProps {
   onSelect: (number: number) => void;
   label: string;
   wheelZoom?: boolean;
+  /** Changes when the theme does; fonts and radii are read from CSS variables only when drawing. */
+  themeKey?: string;
 }
 
 const BUCKET_COLOR = { blocked: 'var(--c-blocked)', waiting: 'var(--c-waiting)', ready: 'var(--c-ready)', draft: 'var(--c-draft)' } as const;
 const SIGNAL_COLORS = { green: ['var(--g-bg)', 'var(--g-fg)'], amber: ['var(--a-bg)', 'var(--a-fg)'], red: ['var(--r-bg)', 'var(--r-fg)'], grey: ['var(--n-bg)', 'var(--n-fg)'] } as const;
 const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
-export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, label, wheelZoom = true }: StackDiagramProps) {
+export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, label, wheelZoom = true, themeKey }: StackDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   // The Stacks tab and the dialog can show diagrams at once, so arrow marker ids must be unique.
   const markerId = useId().replace(/:/g, '');
@@ -144,7 +146,7 @@ export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, 
       svg.selectAll('*').remove();
     };
     // Redraw only when the stack's content, statuses or selection really change.
-  }, [detailKey, statusKey, selectedNumber, wheelZoom]);
+  }, [detailKey, statusKey, selectedNumber, wheelZoom, themeKey]);
 
   return <svg ref={svgRef} className="stack-svg" role="img" aria-label={label} />;
 }

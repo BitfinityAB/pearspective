@@ -5,9 +5,9 @@ import type { Snapshot } from '../../../shared/types';
 import { StackDiagram } from '../components/StackDiagram';
 import { localStackDetail } from '../lib/stackLayout';
 
-interface StacksViewProps { snapshot: Snapshot; views: Map<string, PrView>; onSelect: (id: string) => void; onVisualize: (prId: string) => void }
+interface StacksViewProps { snapshot: Snapshot; views: Map<string, PrView>; onSelect: (id: string) => void; onVisualize: (prId: string) => void; themeKey?: string }
 
-export function StacksView({ snapshot, views, onSelect, onVisualize }: StacksViewProps) {
+export function StacksView({ snapshot, views, onSelect, onVisualize, themeKey }: StacksViewProps) {
   const byId = useMemo(() => new Map(snapshot.prs.map((pr) => [pr.id, pr])), [snapshot.prs]);
   const stacks = useMemo(
     () => detectStacks(snapshot.prs).filter((stack) => snapshot.settings.repos.includes(stack.repo)),
@@ -35,6 +35,7 @@ export function StacksView({ snapshot, views, onSelect, onVisualize }: StacksVie
               detail={localStackDetail(stack, byId)}
               viewsByNumber={viewsByNumber}
               wheelZoom={false}
+              themeKey={themeKey}
               label={`Diagram of the ${stack.repo} stack`}
               onSelect={(number) => {
                 const target = viewsByNumber.get(number);

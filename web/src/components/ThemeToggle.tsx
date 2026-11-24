@@ -11,27 +11,38 @@ const OPTIONS: { value: ThemeChoice; label: string; icon: ReactNode }[] = [
   { value: 'dark', label: 'Dark', icon: icon(<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />) },
 ];
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  /** A single-mode theme fixes the mode; the saved choice stays untouched for when a two-mode theme returns. */
+  forcedMode?: 'light' | 'dark' | null;
+  themeName?: string;
+}
+
+export function ThemeToggle({ forcedMode = null, themeName = 'This' }: ThemeToggleProps = {}) {
   const [choice, setChoice] = useState<ThemeChoice>(readTheme);
   return (
-    <div className="segs compact" role="group" aria-label="Theme">
-      {OPTIONS.map((option) => (
+    <div className="segs compact" role="group" aria-label="Theme" title={forcedMode ? `${themeName} theme is ${forcedMode} only` : undefined}>
+      {OPTIONS.map((option) => {
+        const pressed = (forcedMode ?? choice) === option.value;
+        return (
         <button
           key={option.value}
           type="button"
-          className={`seg${choice === option.value ? ' on' : ''}`}
+          className={`seg${pressed ? ' on' : ''}`}
           style={{ padding: '0 8px' }}
-          aria-pressed={choice === option.value}
+          aria-pressed={pressed}
+          disabled={forcedMode !== null}
           aria-label={`${option.label} theme`}
           title={option.label}
           onClick={() => {
+            if (forcedMode) return;
             applyTheme(option.value);
             setChoice(option.value);
           }}
         >
           {option.icon}
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }
