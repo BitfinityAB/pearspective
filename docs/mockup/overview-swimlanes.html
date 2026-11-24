@@ -164,8 +164,10 @@ if (new URLSearchParams(location.search).get('theme') === 'terminal') {
   --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 body{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px}
-*{border-radius:3px!important;box-shadow:none!important}
-.segs .lbl,th,h2,h3{text-transform:uppercase;letter-spacing:.06em}
+.lane,aside,.scard,dialog,.snip,.toast,.segs{border-radius:3px}
+.seg,select,.icon,.search,.btn,.dot,.mini,.pips i,.mini i,.legend i{border-radius:2px}
+dialog,.toast,.seg.on{box-shadow:none}
+.sec,.cols,.segs .lbl,.chip,.badge,.ticket-chip,.seg,.tab-count{text-transform:uppercase;letter-spacing:.06em}
 </style>`);
 }
 </script>

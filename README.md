@@ -142,11 +142,11 @@ Pearspective keeps its latest state (pull requests, checks, reviews, threads, ti
 
 ## Themes
 
-Pick a theme in the settings panel's **Appearance** tab. **Default** follows your light/dark setting; **Terminal** is dark only, with a monospace font and square corners.
+Pick a theme in the settings panel's **Appearance** tab. **Default** follows your light/dark setting; **Terminal** is dark only, with a monospace font and tighter corners.
 
 ![Terminal theme](docs/assets/screenshot-terminal.png)
 
-Make your own by putting a JSON file in the `themes/` folder next to `config.json` (it is created on the first start). Saving the file updates open tabs within a second.
+Make your own by putting a JSON file in the `themes/` folder next to `config.json` (it is created on the first start). Saving the file updates open tabs within a second. If your system can't watch the folder for changes, restart Pearspective to pick up edits.
 
 ```json
 {
@@ -158,10 +158,10 @@ Make your own by putting a JSON file in the `themes/` folder next to `config.jso
 ```
 
 - Anything you leave out comes from Default, so a theme can be a few lines.
-- `theme.schema.json` (copied into the folder) lets your editor autocomplete colour names and check the file. A broken file is listed in the picker with the problem and never breaks the page.
+- [`theme.schema.json`](themes/theme.schema.json) (copied into the folder) lets your editor autocomplete colour names and check the file. A broken file is listed in the picker with the problem and never breaks the page.
 - Themes set colours, fonts, font size, corner radii, border width, shadows and label casing; they cannot change the layout.
 - To use your own font, put the theme in a folder (`themes/calm/theme.json`) with its `.woff2` files beside it and list them under `fontFiles`. Fonts are served by Pearspective itself, never from the internet.
-- A file with the same name as a built-in theme (for example `default.json`) replaces it.
+- A file with the same name as a built-in theme (for example `default.json`) replaces it. The file name (lower-cased) is the theme's id.
 
 ## How it uses the GitHub API
 
