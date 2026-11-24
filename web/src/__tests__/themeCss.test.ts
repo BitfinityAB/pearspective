@@ -6,6 +6,13 @@ import { ThemeFileSchema } from '../../../shared/themeSchema';
 import { resolveTheme } from '../../../shared/themeResolve';
 
 const defaults = ThemeFileSchema.parse(JSON.parse(readFileSync('themes/default.json', 'utf8')));
+afterEach(() => {
+  document.getElementById('theme')?.remove();
+  document.head.querySelectorAll('link').forEach((link) => link.remove());
+  localStorage.removeItem(THEME_CSS_KEY);
+  vi.restoreAllMocks();
+});
+
 const url = (file: string) => `/api/themes/calm/files/${file}`;
 
 describe('themeCss', () => {
@@ -47,6 +54,19 @@ describe('themeCss', () => {
     expect(css).toContain('@font-face { font-family: "Calm Sans"; src: url("/api/themes/calm/files/fonts/calm.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }');
   });
 
+  it('writes every variable tokens.css defines, so a theme can never leave one at a stale value', () => {
+    const tokens = readFileSync('web/src/styles/tokens.css', 'utf8');
+    const names = [...new Set([...tokens.matchAll(/(--[\w-]+):/g)].map((match) => match[1]!))].filter((name) => name !== '--mono');
+    const css = themeCss(resolveTheme('default', defaults, defaults), url);
+    const missing = names.filter((name) => !css.includes(`${name}:`));
+    expect(missing).toEqual([]);
+  });
+
+  it('keeps tokens.css layered and the theme CSS unlayered so the theme wins at any stylesheet order', () => {
+    expect(readFileSync('web/src/styles/tokens.css', 'utf8')).toMatch(/^(\/\*.*\*\/\s*)?@layer tokens \{/);
+    expect(themeCss(resolveTheme('default', defaults, defaults), url)).not.toContain('@layer');
+  });
+
   it('writes the default float shadow when shadows are on', () => {
     const css = themeCss(resolveTheme('default', defaults, defaults), url);
     expect(css).toContain('--shadow-float: 0 8px 24px var(--shadow);');
@@ -68,5 +88,11 @@ describe('applyThemeCss', () => {
     document.head.appendChild(document.createElement('link'));
     applyThemeCss(':root { --bg: #222; }');
     expect(document.head.lastElementChild).toBe(document.getElementById('theme'));
+  });
+
+  it('does not throw when storage is blocked', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
+    expect(() => applyThemeCss(':root { --bg: #333; }')).not.toThrow();
+    expect(document.getElementById('theme')!.textContent).toBe(':root { --bg: #333; }');
   });
 });

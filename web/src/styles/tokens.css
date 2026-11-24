@@ -1,3 +1,5 @@
+/* Layered so the theme style element, which is unlayered, wins whatever the stylesheet order. */
+@layer tokens {
 :root {
   color-scheme: light;
   --font-ui: Inter, system-ui, sans-serif; --font-mono: 'JetBrains Mono', ui-monospace, monospace; --mono: var(--font-mono);
@@ -30,4 +32,5 @@
   --hatch-a:#6e7681; --hatch-b:#30363d; --sel:rgba(56,139,253,.14); --stackrow:#161d2b; --track:#21262d; --canvas:#0d1117;
   --edge:#6e7681; --edge-merged:#3d444d; --merged-card:#1c2128; --pill:#e6edf3; --pill-fg:#0d1117; --shadow:rgba(0,0,0,.5); --backdrop:rgba(1,4,9,.7);
   --av0-bg:rgba(56,139,253,.2); --av0-fg:#79c0ff; --av1-bg:rgba(163,113,247,.2); --av1-fg:#d2a8ff; --av2-bg:rgba(240,136,62,.2); --av2-fg:#ffa657; --av3-bg:rgba(46,160,67,.2); --av3-fg:#56d364; --av4-bg:rgba(219,97,162,.2); --av4-fg:#ff9bce;
+}
 }

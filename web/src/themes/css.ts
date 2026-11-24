@@ -15,7 +15,7 @@ const modeVars = (mode: ThemeMode, block: ResolvedMode) => [
 export function themeCss(theme: ResolvedTheme, fontUrl: (file: string) => string): string {
   const { shape, text } = theme;
   const labelCase = text.labelCase === 'upper' ? 'uppercase' : 'none';
-  // Default's uppercase labels must not change its chips, which are mixed-case today.
+  // The built-in Default id is pinned, so Default keeps today's mixed-case chips even though its labels are uppercase.
   const chipCase = theme.id !== 'default' && text.labelCase === 'upper' ? 'uppercase' : 'none';
   const shared = [
     `--fs-base: ${text.baseSize}px;`,
