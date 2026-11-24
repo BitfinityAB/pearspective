@@ -115,8 +115,13 @@ export class Poller {
         pinned: config.pinned,
         ticketsEnabled: Boolean(tracker?.ticketStatus),
         notifications: notificationSettings(config),
+        theme: config.theme,
       },
     }, notify);
+  }
+
+  setThemesVersion(version: number): void {
+    this.publish({ themes: { version } });
   }
 
   /** Resolves when the ticket work started by the last tick has finished; never rejects. */

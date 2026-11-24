@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import express from 'express';
 import { createApp } from './app';
 import { ConfigError, ConfigStore, hiddenPollInterval } from './config';
@@ -8,6 +8,7 @@ import { SnapshotHub } from './hub';
 import { Poller } from './poller';
 import { PollLoop, Presence } from './presence';
 import { createCodeHost, createIssueTracker } from './providers/registry';
+import { ThemeRegistry } from './themes/registry';
 import { openStorage } from './storage/startup';
 import { TicketSync } from './ticket-sync';
 
@@ -24,6 +25,12 @@ async function main() {
   // Status categories are global, so they are worth seeding even when this org has no stored state.
   tracker?.seedStatusCategories?.(statusCategories);
   const tickets = tracker ? new TicketSync({ tracker, codeHost: provider, now: Date.now, store: database, stored }) : undefined;
+  const themes: ThemeRegistry = new ThemeRegistry({
+    builtinDir: resolve(process.cwd(), 'themes'),
+    userDir: resolve(dirname(configPath), 'themes'),
+    onChange: () => poller.setThemesVersion(themes.version()),
+  });
+  await themes.load();
   const hub = new SnapshotHub();
   const poller = new Poller({
     provider,
@@ -37,6 +44,8 @@ async function main() {
       console.log(`[${new Date().toLocaleTimeString()}] ${snapshot.prs.length} PRs, ${snapshot.rateLimit?.remaining ?? '?'} API points left${snapshot.stale ? ', stale' : ''}${snapshot.fromStore ? ', from local database' : ''}`);
     },
   });
+  poller.setThemesVersion(themes.version());
+  themes.watch();
   const presence = new Presence();
   const loop = new PollLoop({
     poller,
@@ -44,7 +53,7 @@ async function main() {
     intervalMs: () => (store.get().refreshIntervalSec === 0 ? null : store.get().refreshIntervalSec * 1000),
     hiddenIntervalMs: () => hiddenPollInterval(store.get()),
   });
-  const app = createApp({ poller, presence, loop, provider, store, hub });
+  const app = createApp({ poller, presence, loop, provider, store, hub, themes });
 
   const dist = resolve(process.cwd(), 'dist');
   if (existsSync(dist)) {
@@ -57,6 +66,7 @@ async function main() {
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.on(signal, () => {
+      themes.close();
       database.close();
       process.exit(0);
     });

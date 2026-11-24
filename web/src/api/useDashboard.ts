@@ -21,7 +21,7 @@ export function useDashboard(api: DashboardApi) {
   }, [api, clientId]);
 
   const refreshNow = useCallback(async () => setSnapshot(await api.refreshNow()), [api]);
-  const updateSettings = useCallback(async (patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> } }) => {
+  const updateSettings = useCallback(async (patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> }; theme?: string }) => {
     const settings = await api.updateSettings(patch);
     setSnapshot((current) => (current ? { ...current, settings } : current));
   }, [api]);

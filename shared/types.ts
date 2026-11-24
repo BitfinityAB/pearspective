@@ -1,3 +1,5 @@
+import type { ResolvedTheme } from './themeResolve';
+import type { ThemeMode } from './themeTokens';
 export type SignalColor = 'green' | 'amber' | 'red' | 'grey';
 export type MergeState = 'clean' | 'blocked' | 'unstable' | 'conflicts' | 'behind' | 'unknown';
 export type ReviewDecision = 'approved' | 'review_required' | 'changes_requested' | null;
@@ -110,7 +112,20 @@ export interface Snapshot {
   notification: NotificationBatch | null;
   /** ticketUrl is a template with {key}, or null when no issue tracker is configured. */
   /** pinned holds change request ids that sort first in their lane. */
-  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean; notifications: NotificationSettings };
+  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean; notifications: NotificationSettings; theme: string };
+  /** Bumped when theme files change on disk, so open tabs refetch the theme list. */
+  themes: { version: number };
+}
+
+export interface ThemeInfo {
+  id: string;
+  name: string;
+  modes: ThemeMode[];
+  source: 'builtin' | 'user';
+  valid: boolean;
+  error?: string;
+  warnings: string[];
+  theme?: ResolvedTheme;
 }
 
 export interface StackEntryDetail {
@@ -216,6 +231,7 @@ export function emptySnapshot(org = '', host = 'github.com'): Snapshot {
     closed: [],
     ticketChecks: {},
     notification: null,
-    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false, notifications: { enabled: false, events: { ...NOTIFICATION_DEFAULTS } } },
+    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false, notifications: { enabled: false, events: { ...NOTIFICATION_DEFAULTS } }, theme: 'default' },
+    themes: { version: 0 },
   };
 }

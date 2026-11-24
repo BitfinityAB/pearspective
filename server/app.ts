@@ -6,6 +6,7 @@ import type { Poller } from './poller';
 import type { PollLoop, Presence } from './presence';
 import type { CodeHostProvider } from './providers/types';
 import { buildStackDetail } from './stack-detail';
+import type { ThemeRegistry } from './themes/registry';
 
 export interface AppDeps {
   poller: Poller;
@@ -14,9 +15,12 @@ export interface AppDeps {
   provider: CodeHostProvider;
   store: ConfigStore;
   hub: SnapshotHub;
+  themes: ThemeRegistry;
   /** Host headers the API answers to; defaults to the API and dev-server addresses. */
   allowedHosts?: string[];
 }
+
+const THEME_ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
 export const DEFAULT_ALLOWED_HOSTS = ['127.0.0.1:4100', 'localhost:4100', '127.0.0.1:5173', 'localhost:5173'];
 const ALLOWED_ORIGINS = new Set(DEFAULT_ALLOWED_HOSTS.map((host) => `http://${host}`));
@@ -46,10 +50,20 @@ const jsonErrors: ErrorRequestHandler = (error, _req, res, next) => {
   res.status(status).json({ error: error instanceof Error ? error.message : String(error) });
 };
 
-export function createApp({ poller, presence, loop, provider, store, hub, allowedHosts = DEFAULT_ALLOWED_HOSTS }: AppDeps) {
+export function createApp({ poller, presence, loop, provider, store, hub, themes, allowedHosts = DEFAULT_ALLOWED_HOSTS }: AppDeps) {
   const app = express();
   app.use('/api', localOnly(allowedHosts));
   app.use(express.json());
+
+  app.get('/api/themes', (_req, res) => res.json(themes.list()));
+
+  // Express 5 wildcard syntax: the rest of the path after files/ is the font path.
+  app.get('/api/themes/:id/files/*file', (req, res) => {
+    const file = ([] as string[]).concat(req.params.file as string | string[]).join('/');
+    const path = themes.fontPath(String(req.params.id), file);
+    if (!path) { res.status(404).json({ error: 'Not found' }); return; }
+    res.type('font/woff2').sendFile(path);
+  });
 
   app.get('/api/snapshot', (_req, res) => res.json(poller.snapshot()));
 
@@ -83,9 +97,9 @@ export function createApp({ poller, presence, loop, provider, store, hub, allowe
   });
 
   app.put('/api/settings', async (req, res) => {
-    const { refresh, repos, pinned, notifications } = (req.body ?? {}) as { refresh?: RefreshSetting; repos?: unknown; pinned?: unknown; notifications?: unknown };
-    if (refresh === undefined && repos === undefined && pinned === undefined && notifications === undefined) {
-      res.status(400).json({ error: 'Send refresh, repos, pinned or notifications' });
+    const { refresh, repos, pinned, notifications, theme } = (req.body ?? {}) as { refresh?: RefreshSetting; repos?: unknown; pinned?: unknown; notifications?: unknown; theme?: unknown };
+    if (refresh === undefined && repos === undefined && pinned === undefined && notifications === undefined && theme === undefined) {
+      res.status(400).json({ error: 'Send refresh, repos, pinned, notifications or theme' });
       return;
     }
     if (refresh !== undefined && !(REFRESH_OPTIONS as readonly unknown[]).includes(refresh)) {
@@ -100,6 +114,10 @@ export function createApp({ poller, presence, loop, provider, store, hub, allowe
       res.status(400).json({ error: `pinned must be a list of at most ${MAX_PINNED} ids` });
       return;
     }
+    if (theme !== undefined && (typeof theme !== 'string' || !THEME_ID.test(theme))) {
+      res.status(400).json({ error: 'theme must be a theme id' });
+      return;
+    }
     const parsedNotifications = notifications === undefined ? undefined : NotificationsSchema.safeParse(notifications);
     if (parsedNotifications && !parsedNotifications.success) {
       res.status(400).json({ error: `notifications are invalid: ${parsedNotifications.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}` });
@@ -112,6 +130,7 @@ export function createApp({ poller, presence, loop, provider, store, hub, allowe
       codeHost: { ...current.codeHost, repos: (repos as string[] | undefined) ?? current.codeHost.repos },
       pinned: (pinned as string[] | undefined) ?? current.pinned,
       notifications: parsedNotifications ? parsedNotifications.data : current.notifications,
+      theme: (theme as string | undefined) ?? current.theme,
     });
     poller.refreshSettings();
     if (repos !== undefined) await poller.tick();

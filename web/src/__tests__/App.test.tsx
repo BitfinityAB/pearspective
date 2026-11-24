@@ -30,6 +30,7 @@ function fakeApi(overrides: Partial<DashboardApi> = {}): DashboardApi {
       ...patch,
       notifications: notifications ? { ...snapshot.settings.notifications, enabled: notifications.enabled } : snapshot.settings.notifications,
     }),
+    getThemes: async () => [],
     searchRepos: async () => [],
     stackDetail: async () => null,
     ...overrides,

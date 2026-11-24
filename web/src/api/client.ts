@@ -1,11 +1,12 @@
-import type { NotificationKind, RefreshSetting, RepoRef, Snapshot, StackDetail } from '../../../shared/types';
+import type { NotificationKind, RefreshSetting, RepoRef, Snapshot, StackDetail, ThemeInfo } from '../../../shared/types';
 
 export interface DashboardApi {
   getSnapshot(): Promise<Snapshot>;
   subscribe(clientId: string, onSnapshot: (snapshot: Snapshot) => void, onOpen?: () => void): () => void;
   setVisible(clientId: string, visible: boolean): Promise<void>;
   refreshNow(): Promise<Snapshot>;
-  updateSettings(patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> } }): Promise<Snapshot['settings']>;
+  updateSettings(patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> }; theme?: string }): Promise<Snapshot['settings']>;
+  getThemes(): Promise<ThemeInfo[]>;
   searchRepos(q: string): Promise<RepoRef[]>;
   stackDetail(prId: string): Promise<StackDetail | null>;
 }
@@ -36,6 +37,7 @@ export function createHttpApi(base = ''): DashboardApi {
     refreshNow: () => fetch(`${base}/api/refresh`, { method: 'POST' }).then((response) => json<Snapshot>(response)),
     updateSettings: (patch) =>
       fetch(`${base}/api/settings`, { method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify(patch) }).then((response) => json<Snapshot['settings']>(response)),
+    getThemes: () => fetch(`${base}/api/themes`).then((response) => json<ThemeInfo[]>(response)),
     searchRepos: (q) => fetch(`${base}/api/repos?q=${encodeURIComponent(q)}`).then((response) => json<RepoRef[]>(response)),
     async stackDetail(prId) {
       const response = await fetch(`${base}/api/stack?pr=${encodeURIComponent(prId)}`);

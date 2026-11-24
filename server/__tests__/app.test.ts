@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -12,6 +12,7 @@ import { PollLoop, Presence } from '../presence';
 import { ProviderError, type CodeHostProvider } from '../providers/types';
 import { createFakeProvider } from '../../test/fake-provider';
 import { makePr } from '../../test/factories';
+import { ThemeRegistry } from '../themes/registry';
 
 const TEST_HOST = 'dashboard.test';
 const api = (app: Parameters<typeof request.agent>[0]) => request.agent(app).set('Host', TEST_HOST);
@@ -27,7 +28,14 @@ async function setup(overrides: Partial<CodeHostProvider> = {}) {
   const presence = new Presence();
   const loop = new PollLoop({ poller, presence, intervalMs: () => null });
   const allowedHosts = [TEST_HOST];
-  const app = createApp({ poller, presence, loop, provider: fake.provider, store, hub, allowedHosts });
+  const userDir = join(dir, 'themes');
+  await mkdir(join(userDir, 'calm', 'fonts'), { recursive: true });
+  await writeFile(join(userDir, 'calm', 'theme.json'), JSON.stringify({ name: 'Calm', modes: ['dark'], dark: {}, fontFiles: [{ family: 'Calm Sans', file: 'fonts/calm.woff2' }] }));
+  await writeFile(join(userDir, 'calm', 'fonts', 'calm.woff2'), 'font');
+  await writeFile(join(userDir, 'calm', 'secret.txt'), 'nope');
+  const themes = new ThemeRegistry({ builtinDir: join(process.cwd(), 'themes'), userDir });
+  await themes.load();
+  const app = createApp({ poller, presence, loop, provider: fake.provider, store, hub, themes, allowedHosts });
   return { app, store, presence, poller, allowedHosts };
 }
 
@@ -148,5 +156,30 @@ describe('HTTP API', () => {
     const { app } = await setup();
     expect((await api(app).put('/api/settings').expect(400)).body.error).toEqual(expect.any(String));
     expect((await api(app).post('/api/presence').expect(400)).body.error).toEqual(expect.any(String));
+  });
+
+  it('lists themes', async () => {
+    const { app } = await setup();
+    const response = await api(app).get('/api/themes').expect(200);
+    expect(response.body.map((theme: { id: string }) => theme.id)).toEqual(['default', 'calm']);
+  });
+
+  it('serves a listed font as woff2 and refuses anything else', async () => {
+    const { app } = await setup();
+    const response = await api(app).get('/api/themes/calm/files/fonts/calm.woff2').expect(200);
+    expect(response.headers['content-type']).toContain('font/woff2');
+    await api(app).get('/api/themes/calm/files/secret.txt').expect(404);
+    await api(app).get('/api/themes/calm/files/fonts/other.woff2').expect(404);
+    await api(app).get('/api/themes/nope/files/fonts/calm.woff2').expect(404);
+    await request(app).get('/api/themes/calm/files/fonts/calm.woff2').set('Host', 'attacker.example').expect(403);
+  });
+
+  it('saves the chosen theme and rejects a malformed id', async () => {
+    const { app, store } = await setup();
+    const saved = await api(app).put('/api/settings').send({ theme: 'terminal' }).expect(200);
+    expect(saved.body.theme).toBe('terminal');
+    expect(store.get().theme).toBe('terminal');
+    await api(app).put('/api/settings').send({ theme: 'bad id!' }).expect(400);
+    await api(app).put('/api/settings').send({ theme: 7 }).expect(400);
   });
 });
