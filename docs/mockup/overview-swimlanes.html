@@ -45,7 +45,7 @@ body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:
 a{color:var(--accent)}a:hover{color:var(--b-fg)}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.wrap{max-width:1440px;margin:0 auto;padding-bottom:48px}
+.wrap{padding-bottom:48px}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:16px;padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
 .brand{display:flex;align-items:center;gap:10px}.brand b{font-size:16px}.brand span{font-size:13px;color:var(--muted)}
 .segs{display:flex;gap:4px;background:var(--subtle);border:1px solid var(--border);border-radius:8px;padding:3px;align-items:center}
@@ -123,7 +123,10 @@ aside{flex:1 1 340px;min-width:0;position:sticky;top:16px;max-height:calc(100vh 
 aside h2{margin:0;font-size:18px;line-height:1.3}
 .sec{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .sline{display:flex;align-items:center;gap:10px;font-size:13px}.sline b{width:92px}
-.snip{font-size:13px;background:var(--subtle);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.snip{display:block;overflow-wrap:anywhere;font-size:13px;background:var(--subtle);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.thread-group{display:flex;flex-direction:column;gap:6px}.thread-group summary{cursor:pointer;width:fit-content}
+.sline>.dot,.sline>b,.sline>.badge,.sline>.av{flex-shrink:0}
+@media (min-width:1101px){aside{margin-top:30px}}
 .mini{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:center;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px}
 .mini:hover{background:var(--subtle)}.mini.cur{background:var(--sel)}
 .mini i{width:14px;height:14px;border-radius:4px}
@@ -204,7 +207,7 @@ const PRS = [
   {id:'m5', author:'Alex Rivera', repo:'orders-api', num:3421, branch:'XX-421-lock-settings', title:'Split scheduler lock settings per tenant', h:26, ci:'g', cop:'a', copOpen:1, cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s2', parent:'m3', behind:0, revs:[]},
   {id:'m6', author:'Alex Rivera', repo:'orders-api', num:3422, branch:'XX-422-lock-metrics', title:'Expose lock wait time as a metric', h:20, ci:'r', failCheck:'unit-tests', cop:'g', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s2', parent:'m3', behind:2, revs:[]},
   {id:'m4', author:'Alex Rivera', repo:'orders-deploy', num:288, branch:'raise-scheduler-memory', title:'Raise scheduler memory limits in test', h:5, draft:true, ci:'g', cop:'n', cs:'n', rev:'a', thr:0, merge:'BLOCKED', revs:[]},
-  {id:'e1', author:'Sam Chen', repo:'field-app', num:4988, branch:'XX-412-offline-mode', title:'Use offline mode when it is available', h:410, ci:'g', cop:'a', copOpen:2, cs:'g', rev:'a', thr:2, merge:'BLOCKED', stack:'s1', behind:0, revs:[['Copilot','COMMENTED'],['Kim Lee','COMMENTED']], snippet:'Copilot: syncQueue is never cleared when the user signs out.'},
+  {id:'e1', author:'Sam Chen', repo:'field-app', num:4988, branch:'XX-412-offline-mode', title:'Use offline mode when it is available', h:410, ci:'g', cop:'a', copOpen:2, cs:'g', rev:'a', thr:2, merge:'BLOCKED', stack:'s1', behind:0, revs:[['Copilot','COMMENTED'],['Kim Lee','COMMENTED']], threads:[['Kim Lee','Can the queue survive an app restart?'],['Kim Lee','Please log how many items were replayed.'],['Copilot','syncQueue is never cleared when the user signs out.'],['Copilot','The retry delay is never reset after a success.']]},
   {id:'e2', author:'Sam Chen', repo:'field-app', num:4989, branch:'XX-413-orders-offline', title:'Show orders offline', h:380, ci:'g', cop:'g', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s1', parent:'e1', behind:0, revs:[]},
   {id:'e3', author:'Sam Chen', repo:'field-app', num:4990, branch:'XX-414-history-offline', title:'Show the order history offline', h:360, ci:'r', failCheck:'e2e-android', cop:'g', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s1', parent:'e2', behind:3, revs:[]},
   {id:'e4', author:'Sam Chen', repo:'field-app', num:4991, branch:'XX-415-prefetch', title:'Prefetch orders and history', h:300, ci:'a', cop:'a', cs:'g', rev:'a', thr:0, merge:'BLOCKED', stack:'s1', parent:'e3', behind:1, revs:[]},
@@ -467,6 +470,18 @@ function lanesHtml(){
   </div>`;
 }
 
+// Mirrors the app: people's threads first, automated reviewers folded into their own group.
+function threadsHtml(p){
+  const list = p.threads || (p.snippet ? [[p.snippet.split(':')[0], p.snippet.slice(p.snippet.indexOf(':') + 1).trim()]] : []);
+  if (!list.length) return '';
+  const link = ([who, text]) => `<a class="snip" href="https://github.com" target="_blank" rel="noopener"><b>${esc(who)}:</b> ${esc(text)}</a>`;
+  const people = list.filter(([who]) => who !== 'Copilot');
+  const bots = list.filter(([who]) => who === 'Copilot');
+  return `<div style="display:flex;flex-direction:column;gap:6px"><span class="sec">Unresolved threads</span>
+    ${people.length ? `<div class="thread-group"><span class="muted small">From people (${people.length})</span>${people.map(link).join('')}</div>` : ''}
+    ${bots.length ? `<details class="thread-group"><summary class="muted small">From Copilot (${bots.length})</summary>${bots.map(link).join('')}</details>` : ''}</div>`;
+}
+
 function drawerHtml(){
   const p = BY_ID[state.selected];
   const revs = (p.revs || []).map(r => {
@@ -476,6 +491,7 @@ function drawerHtml(){
   const related = p.ticket ? ALL.filter(x => x.ticket === p.ticket && x.id !== p.id) : [];
   const mini = x => `<div class="mini${x.id === p.id ? ' cur' : ''}" role="button" tabindex="0" data-act="pick" data-id="${x.id}"><i style="background:${CAT[x.cat].c}"></i><span><span class="rn">${esc(x.repo)} #${x.num}</span> ${esc(x.title)}</span></div>`;
   const stack = p.stack ? stackMembers(p.stack, ALL).slice().reverse() : [];
+  const ticket = p.ticket && TICKETS[p.ticket];
   return `<aside aria-label="Pull request detail">
     <div style="display:flex;flex-direction:column;gap:6px">
       <div style="display:flex;align-items:flex-start;gap:8px"><span class="rn grow">${esc(p.repo)} #${p.num} · ${esc(p.branch)}</span>
@@ -486,8 +502,11 @@ function drawerHtml(){
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">${signals(p).map(s => `<div class="sline"><span class="dot k-${s.k}">${esc(s.glyph)}</span><b>${s.full}</b><span style="color:var(--text2)">${esc(s.text)}</span></div>`).join('')}</div>
     ${revs ? `<div style="display:flex;flex-direction:column;gap:6px"><span class="sec">Reviewers</span>${revs}</div>` : ''}
-    ${p.snippet ? `<div style="display:flex;flex-direction:column;gap:6px"><span class="sec">Unresolved thread</span><div class="snip">${esc(p.snippet)}</div></div>` : ''}
-    ${related.length ? `<div style="display:flex;flex-direction:column;gap:4px"><span class="sec">Related PRs · ${esc(p.ticket)}</span>${related.map(mini).join('')}</div>` : ''}
+    ${threadsHtml(p)}
+    ${ticket ? `<div style="display:flex;flex-direction:column;gap:6px"><span class="sec">Ticket · ${esc(p.ticket)}</span><a href="https://jira.example.invalid/browse/${esc(p.ticket)}" target="_blank" rel="noopener">${esc(ticket.summary)} ↗</a>
+      <span style="display:flex;align-items:baseline;gap:8px"><span class="ticket-chip v-${ticket.verdict}" style="margin-left:0">${esc(ticket.status)}</span><span class="small">${esc(ticket.reason)}</span></span>
+      ${related.map(mini).join('')}<button class="btn" style="align-self:flex-start">Show all pull requests for ${esc(p.ticket)}</button></div>`
+      : related.length ? `<div style="display:flex;flex-direction:column;gap:4px"><span class="sec">Related PRs · ${esc(p.ticket)}</span>${related.map(mini).join('')}</div>` : ''}
     ${stack.length ? `<div style="display:flex;flex-direction:column;gap:4px"><span class="sec">Stack (top → base)</span>${stack.map(mini).join('')}<span class="muted small" style="padding-left:8px">↳ ${STACKS[p.stack].merged.length ? STACKS[p.stack].merged.length + ' merged · ' : ''}${STACKS[p.stack].base}</span>
       <button class="btn" data-act="viz" data-id="${p.stack}" style="align-self:flex-start;margin-top:4px">Visualize stack</button></div>` : ''}
     <div style="display:flex;gap:16px;flex-wrap:wrap"><a href="https://github.com" target="_blank" rel="noopener" style="font-weight:600">Open on GitHub ↗</a>${p.ticket ? `<a href="https://jira.example.invalid/browse/${esc(p.ticket)}" target="_blank" rel="noopener" style="font-weight:600">${esc(p.ticket)} in Jira ↗</a>` : ''}</div>
@@ -531,7 +550,7 @@ function render(){
       <span class="who"><span class="av" style="width:24px;height:24px;font-size:10px;${avatar(ME)}">${initials(ME)}</span>${esc(ME)}</span>
     </div>
   </header>
-  ${state.tab === 'tickets' ? '<div class="toolbar"><span class="muted">Tickets referenced by open and recently closed pull requests, checked against their PRs.</span></div>' + ticketsHtml() : state.tab === 'stacks' ? '<div class="toolbar"><span class="muted">Every stack in the selected repos. Hold ' + ZOOM_KEY + ' and scroll to zoom, drag to pan, click a PR to open it.</span></div>' + stacksHtml() : `
+  ${state.tab === 'tickets' ? '<div class="toolbar"><button class="chip off">Mine</button><span class="muted">Tickets referenced by open and recently closed pull requests, checked against their PRs.</span></div>' + ticketsHtml() : state.tab === 'stacks' ? '<div class="toolbar"><span class="muted">Every stack in the selected repos. Hold ' + ZOOM_KEY + ' and scroll to zoom, drag to pan, click a PR to open it.</span></div>' + stacksHtml() : `
   <section class="toolbar">
     ${state.tab === 'overview' ? `<div class="segs" style="background:var(--surface)"><span class="lbl">Group by</span>${seg(state.groupBy === 'author','group','author','Author')}${seg(state.groupBy === 'repo','group','repo','Repository')}${seg(state.groupBy === 'ticket','group','ticket','Ticket')}</div>` : ''}
     <div style="display:flex;flex-wrap:wrap;gap:8px" role="group" aria-label="Status filter">${['blocked','waiting','ready','draft'].map(k => `<button class="chip${state.show[k] ? '' : ' off'}" aria-pressed="${state.show[k]}" data-act="chip" data-val="${k}"><span class="d${k === 'draft' ? ' hatch' : ''}" style="${k === 'draft' ? '' : 'background:' + CAT[k].c}"></span>${{blocked:'Blocked', waiting:'Waiting', ready:'Ready', draft:'Drafts'}[k]}<span class="n">${gCounts[k]}</span></button>`).join('')}</div>

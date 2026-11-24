@@ -26,11 +26,13 @@ Pearspective is a small local dashboard that answers them on one screen. It read
 - **Mine**: your PRs, reviews requested from you, and reviews requested from your team.
 - **Stacked PRs**: GitHub's native stacks and branch-chained PRs are grouped, drawn with merge-direction connectors, and shown as zoomable D3 diagrams on the Stacks tab.
 - **Pinning.** Pin a PR from its detail panel and it stays at the top of its lane, whatever the sort order. Pins are saved in `config.json`.
-- **Detail panel** that stays in view while you scroll: failing checks, reviewers, unresolved threads, related PRs for the same ticket, and the stack the PR belongs to.
+- **Detail panel** that stays in view while you scroll: failing checks, reviewers, unresolved threads (people's first, automated reviewers' folded away), the ticket with its other PRs, and the stack the PR belongs to.
 - **Ticket links.** Jira-style keys in branch names or titles (`XX-123`) become links when an issue tracker is configured.
-- **Ticket status (optional).** With [jira-cli](https://github.com/ankitpokhrel/jira-cli) set up, each PR shows its ticket's status, and a **Tickets** tab lists tickets whose status disagrees with their PRs, for example a merged PR whose ticket is still *In Review*.
+- **Ticket status (optional).** With [jira-cli](https://github.com/ankitpokhrel/jira-cli) set up, each PR shows its ticket's status, and a **Tickets** tab lists tickets whose status disagrees with their PRs, for example a merged PR whose ticket is still *In Review*. A **Mine** filter narrows it to tickets you created or are or were assigned to, and the detail panel jumps to a PR's ticket there.
 - **Notifications.** While a dashboard tab is open, you are told when CI fails or passes, a review lands, a conflict appears, or someone comments on one of your PRs: as a toast when the tab is visible, as a browser notification when it is in the background.
-- **Light and dark themes**, following the system by default.
+- **Instant start.** The last state is kept in a local SQLite file, so a restart shows the board at once while the first refresh fetches only what changed.
+- **Themes.** Default (light and dark, following the system) and Terminal, plus your own as small JSON files.
+- **Links that work.** Every view and opened PR has its own URL, and the browser's Back and Forward move between them.
 
 ## Requirements
 
@@ -60,7 +62,7 @@ To run without the dev server, build the UI once and serve everything from the A
 npm run build && npm start   # http://127.0.0.1:4100
 ```
 
-To change the repositories later, use the settings button in the header, or run `npm run setup` again.
+To change the repositories later, use the settings button in the header (**Repositories** tab), or run `npm run setup` again. Settings also has **Notifications** and **Appearance** tabs.
 
 ## Configuration
 
@@ -70,6 +72,8 @@ To change the repositories later, use the settings button in the header, or run 
 | --- | --- |
 | `codeHost.org` | The GitHub organisation. |
 | `codeHost.repos` | The Overview repositories (max 10). |
+| `codeHost.excludeRepos` | Repositories to leave out of the Overview even if listed. |
+| `codeHost.localRepos` | Repositories cloned next to Pearspective, found by setup; the settings panel marks the others "not cloned". |
 | `codeHost.teams` | Teams for the "Review requested from my team" section. Detected by setup. |
 | `reviewerClasses` | Which bot logins count as AI review and code analysis. A trailing `*` matches a prefix. |
 | `refreshIntervalSec` | `0` (off), `180`, `300`, `600`, `900` or `1800`. Also editable from the header. |
@@ -116,7 +120,7 @@ How tickets are judged:
 
 ## Notifications
 
-Turn them on in the settings panel (or add a `notifications` block to `config.json`), then click **Allow desktop notifications** once per browser.
+Turn them on in the settings panel's **Notifications** tab (or add a `notifications` block to `config.json`), then click **Allow desktop notifications** once per browser.
 
 ```json
 "notifications": {
@@ -177,12 +181,16 @@ Pearspective is careful with your GraphQL budget (5,000 points an hour):
 - **"gh is not logged in"**: run `gh auth login`, or `gh auth switch` if the wrong account is active. The header shows which login is in use.
 - **"Last refresh failed …"**: the data shown is from the last good refresh, and the banner says why it failed.
 - **The server log** prints one line per refresh with the PR count and the API points left.
+- **"Local database unavailable …"**: the database file could not be opened; Pearspective works as before but loads everything from GitHub on each start. Stop it, delete `pearspective.db` and its `-wal`/`-shm` files, and start again.
+- **"Theme '…' is unavailable …"**: the chosen theme file is missing or invalid, so Default is used. The Appearance tab shows what is wrong with the file.
 
 ## Development
 
 ```bash
 npm test                 # Vitest
 npm run typecheck
+npm run themes:schema    # regenerate themes/theme.schema.json after changing the theme schema
+npm run db:generate      # generate a database migration after changing server/storage/schema.ts
 scripts/build-icons.sh   # regenerate the favicons from the SVGs in docs/assets (macOS, needs Chrome)
 ```
 
