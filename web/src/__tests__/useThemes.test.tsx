@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { useThemes } from '../themes/useThemes';
 import { THEME_CSS_KEY } from '../themes/apply';
 import { ThemeFileSchema } from '../../../shared/themeSchema';
@@ -24,6 +24,7 @@ const snapshotWith = (theme: string, version = 0): Snapshot => {
 };
 
 afterEach(() => {
+  vi.useRealTimers();
   document.getElementById('theme')?.remove();
   localStorage.removeItem(THEME_CSS_KEY);
   vi.restoreAllMocks();
@@ -95,6 +96,46 @@ describe('useThemes', () => {
     await waitFor(() => expect(result.current.active?.id).toBe('calm'));
     expect(getThemes).toHaveBeenCalledTimes(1);
     expect(setItem).toHaveBeenCalledTimes(1);
+    expect(document.getElementById('theme')!.textContent).toContain('#88ccff');
+  });
+
+  it('removes the cached theme CSS when there is no valid theme to fall back to', async () => {
+    document.head.appendChild(Object.assign(document.createElement('style'), { id: 'theme', textContent: 'cached' }));
+    localStorage.setItem(THEME_CSS_KEY, 'cached');
+    const api = { getThemes: async () => [brokenInfo] };
+    const { result } = renderHook(() => useThemes(api, snapshotWith('broken')));
+    await waitFor(() => expect(document.getElementById('theme')).toBeNull());
+    expect(localStorage.getItem(THEME_CSS_KEY)).toBeNull();
+    expect(result.current.active).toBeNull();
+  });
+
+  it('removes the cached theme CSS when fetching the list fails twice, after one retry 5 seconds later', async () => {
+    vi.useFakeTimers();
+    document.head.appendChild(Object.assign(document.createElement('style'), { id: 'theme', textContent: 'cached' }));
+    localStorage.setItem(THEME_CSS_KEY, 'cached');
+    const getThemes = vi.fn(async (): Promise<ThemeInfo[]> => { throw new Error('offline'); });
+    const api = { getThemes };
+    renderHook(() => useThemes(api, snapshotWith('calm')));
+    await act(async () => { await vi.advanceTimersByTimeAsync(4900); });
+    expect(getThemes).toHaveBeenCalledTimes(1);
+    expect(document.getElementById('theme')!.textContent).toBe('cached');
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(getThemes).toHaveBeenCalledTimes(2);
+    expect(document.getElementById('theme')).toBeNull();
+    expect(localStorage.getItem(THEME_CSS_KEY)).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
+    expect(getThemes).toHaveBeenCalledTimes(2);
+  });
+
+  it('applies the theme when the retry after a failed fetch succeeds', async () => {
+    vi.useFakeTimers();
+    const getThemes = vi.fn<() => Promise<ThemeInfo[]>>()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue([defaultInfo, calmInfo]);
+    const api = { getThemes };
+    const { result } = renderHook(() => useThemes(api, snapshotWith('calm')));
+    await act(async () => { await vi.advanceTimersByTimeAsync(5100); });
+    expect(result.current.active?.id).toBe('calm');
     expect(document.getElementById('theme')!.textContent).toContain('#88ccff');
   });
 });

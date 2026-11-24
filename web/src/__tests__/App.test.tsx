@@ -141,5 +141,6 @@ describe('App', () => {
     });
     render(<App api={api} />);
     expect(await screen.findByText("Theme 'gone' is unavailable: it was not found. Using Default.")).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent("Theme 'gone' is unavailable");
   });
 });

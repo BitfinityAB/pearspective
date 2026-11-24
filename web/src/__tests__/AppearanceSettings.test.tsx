@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppearanceSettings } from '../components/AppearanceSettings';
 import { ThemeFileSchema } from '../../../shared/themeSchema';
@@ -15,7 +15,7 @@ const brokenInfo: ThemeInfo = { id: 'broken', name: 'broken', modes: [], source:
 const themes = [defaultInfo, terminalInfo, calmInfo, brokenInfo];
 
 const renderTab = (onChoose = vi.fn(async (_id: string) => undefined)) => {
-  render(<AppearanceSettings themes={themes} chosen="default" onChoose={onChoose} folderHint="the themes folder next to config.json" />);
+  render(<AppearanceSettings themes={themes} chosen="default" onChoose={onChoose} folderHint="the custom-themes folder next to config.json" />);
   return onChoose;
 };
 
@@ -67,6 +67,52 @@ describe('AppearanceSettings', () => {
 
   it('explains how to add a theme', () => {
     renderTab();
-    expect(screen.getByText(/the themes folder next to config\.json/)).toHaveTextContent('theme.schema.json');
+    expect(screen.getByText(/the custom-themes folder next to config\.json/)).toHaveTextContent('theme.schema.json');
+  });
+
+  it('ties each error and warning to its radio for screen readers', () => {
+    renderTab();
+    expect(screen.getByRole('radio', { name: /broken/ })).toHaveAccessibleDescription('bad.json: not valid JSON');
+    expect(screen.getByRole('radio', { name: /Calm/ })).toHaveAccessibleDescription('Low contrast (2.1:1) for text on bg in dark mode.');
+    expect(screen.getByRole('radio', { name: /Terminal/ })).not.toHaveAttribute('aria-describedby');
+  });
+
+  describe('overlapping saves', () => {
+    const deferred = () => {
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<undefined>((done, fail) => { resolve = () => done(undefined); reject = fail; });
+      return { promise, resolve, reject };
+    };
+    const setup = () => {
+      const saves = [deferred(), deferred()];
+      const onChoose = vi.fn((_id: string) => saves[onChoose.mock.calls.length - 1]!.promise);
+      const view = render(<AppearanceSettings themes={themes} chosen="default" onChoose={onChoose} folderHint="x" />);
+      const rerenderWith = (chosen: string) => view.rerender(<AppearanceSettings themes={themes} chosen={chosen} onChoose={onChoose} folderHint="x" />);
+      return { saves, onChoose, rerenderWith };
+    };
+
+    it('ends on the last pick when an older save resolves after a newer one', async () => {
+      const { saves, onChoose, rerenderWith } = setup();
+      await userEvent.click(screen.getByRole('radio', { name: /Terminal/ }));
+      await userEvent.click(screen.getByRole('radio', { name: /Calm/ }));
+      expect(onChoose.mock.calls.map(([id]) => id)).toEqual(['terminal', 'calm']);
+      expect(screen.getByRole('radio', { name: /Calm/ })).toBeChecked();
+      await act(async () => { saves[1]!.resolve(); });
+      rerenderWith('calm');
+      await act(async () => { saves[0]!.resolve(); });
+      expect(screen.getByRole('radio', { name: /Calm/ })).toBeChecked();
+      expect(screen.getByRole('radio', { name: /Terminal/ })).not.toBeChecked();
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('ignores the failure of an older save once a newer pick was made', async () => {
+      const { saves } = setup();
+      await userEvent.click(screen.getByRole('radio', { name: /Terminal/ }));
+      await userEvent.click(screen.getByRole('radio', { name: /Calm/ }));
+      await act(async () => { saves[0]!.reject(new Error('old save failed')); });
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByRole('radio', { name: /Calm/ })).toBeChecked();
+    });
   });
 });

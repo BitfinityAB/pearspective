@@ -15,8 +15,7 @@ const modeVars = (mode: ThemeMode, block: ResolvedMode) => [
 export function themeCss(theme: ResolvedTheme, fontUrl: (file: string) => string): string {
   const { shape, text } = theme;
   const labelCase = text.labelCase === 'upper' ? 'uppercase' : 'none';
-  // The built-in Default id is pinned, so Default keeps today's mixed-case chips even though its labels are uppercase.
-  const chipCase = theme.id !== 'default' && text.labelCase === 'upper' ? 'uppercase' : 'none';
+  const chipCase = text.chipCase === 'upper' ? 'uppercase' : 'none';
   const shared = [
     `--fs-base: ${text.baseSize}px;`,
     `--radius: ${shape.radius}px;`, `--radius-small: ${shape.radiusSmall}px;`, `--radius-dialog: ${Math.round(shape.radius * 1.4)}px;`,

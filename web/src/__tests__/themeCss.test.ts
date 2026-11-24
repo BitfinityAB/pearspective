@@ -31,6 +31,21 @@ describe('themeCss', () => {
     expect(css).toContain('--chip-case: none;');
   });
 
+  it('keeps chips mixed-case for the README Calm example, which sets no label casing', () => {
+    const calm = ThemeFileSchema.parse({ name: 'Calm', modes: ['dark'], dark: { colors: { accent: '#88ccff', ready: '#6fdc8c' } } });
+    expect(themeCss(resolveTheme('calm', calm, defaults), url)).toContain('--chip-case: none;');
+  });
+
+  it('uppercases chips for the built-in Terminal theme, which sets uppercase labels', () => {
+    const terminal = ThemeFileSchema.parse(JSON.parse(readFileSync('themes/terminal/theme.json', 'utf8')));
+    expect(themeCss(resolveTheme('terminal', terminal, defaults), url)).toContain('--chip-case: uppercase;');
+  });
+
+  it('follows the file and not the id: a theme named default with uppercase labels gets uppercase chips', () => {
+    const file = ThemeFileSchema.parse({ name: 'Mine', modes: ['dark'], dark: {}, text: { labelCase: 'upper' } });
+    expect(themeCss(resolveTheme('default', file, defaults), url)).toContain('--chip-case: uppercase;');
+  });
+
   it('forces the only mode of a single-mode theme whatever the browser mode is', () => {
     const theme = resolveTheme('calm', ThemeFileSchema.parse({ name: 'Calm', modes: ['dark'], dark: { colors: { accent: '#88ccff' } } }), defaults);
     const css = themeCss(theme, url);

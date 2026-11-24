@@ -89,7 +89,7 @@ export function App({ api }: { api: DashboardApi }) {
         themeName={themes.active?.name}
       />
       <Banners banners={snapshot.banners} />
-      {themes.problem && <div className="banner sev-amber">{themes.problem}</div>}
+      {themes.problem && <div className="banner sev-amber" role="alert">{themes.problem}</div>}
       {clientError && (
         <div role="alert" className="banner sev-red" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="grow">{clientError}</span>
@@ -141,7 +141,7 @@ export function App({ api }: { api: DashboardApi }) {
         />
       )}
       {settingsOpen && (
-        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={closeSettings} focusPermission={focusPermission} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }) }} appearance={{ themes: themes.themes, chosen: snapshot.settings.theme, onChoose: (id) => updateSettings({ theme: id }), folderHint: 'the themes folder next to config.json' }} />
+        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={closeSettings} focusPermission={focusPermission} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }) }} appearance={{ themes: themes.themes, chosen: snapshot.settings.theme, onChoose: (id) => updateSettings({ theme: id }), folderHint: 'the custom-themes folder next to config.json' }} />
       )}
       <Toasts toasts={notifications.toasts} onOpen={notifications.open} onDismiss={notifications.dismiss} />
     </div>
