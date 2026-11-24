@@ -146,6 +146,29 @@ dialog::backdrop{background:var(--backdrop)}
 .toast-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; border: 0; background: transparent; cursor: pointer; text-align: left; padding: 0; font-size: 13px }
 .toast-body span { color: var(--text2) }
 </style>
+<script>
+// ?theme=terminal previews the built-in Terminal theme (values mirror themes/terminal/theme.json).
+if (new URLSearchParams(location.search).get('theme') === 'terminal') {
+  document.documentElement.dataset.theme = 'dark';
+  document.write(`<style>
+@font-face{font-family:'JetBrains Mono';font-weight:400;src:url('../../themes/terminal/fonts/JetBrainsMono-Regular.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:700;src:url('../../themes/terminal/fonts/JetBrainsMono-Bold.woff2') format('woff2')}
+:root[data-theme="dark"]{
+  --bg:#070b07;--surface:#0c120c;--subtle:#101810;--border:#1f2e1f;--hair:#162216;--canvas:#070b07;--track:#162216;
+  --sel:rgba(57,255,136,.10);--stackrow:#0e170e;--merged-card:#101810;--backdrop:rgba(0,0,0,.75);--shadow:rgba(0,0,0,.6);
+  --text:#d6f5dc;--text2:#b3dcbb;--muted:#7fa889;--accent:#39ff88;--accent-fg:#041006;--pill:#d6f5dc;--pill-fg:#070b07;
+  --c-blocked:#ff4d5e;--c-waiting:#ffc53d;--c-ready:#39ff88;--c-draft:#5d7a63;--c-merged:#b48cff;--behind:#ff9d4d;
+  --g-bg:rgba(57,255,136,.14);--g-fg:#5dffa0;--a-bg:rgba(255,197,61,.16);--a-fg:#ffd166;--r-bg:rgba(255,77,94,.16);--r-fg:#ff7a87;
+  --n-bg:#142014;--n-fg:#9cc4a5;--b-bg:rgba(77,171,255,.16);--b-fg:#8cc8ff;
+  --edge:#4c6b52;--edge-merged:#263a28;--hatch-a:#4c6b52;--hatch-b:#1f2e1f;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+body{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px}
+*{border-radius:3px!important;box-shadow:none!important}
+.segs .lbl,th,h2,h3{text-transform:uppercase;letter-spacing:.06em}
+</style>`);
+}
+</script>
 </head>
 <body>
 <div class="wrap" id="app"></div>

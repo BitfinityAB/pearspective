@@ -16,6 +16,14 @@ describe('ThemeRegistry', () => {
     expect(builtin.theme?.dark?.colors.bg).toBeDefined();
   });
 
+  it('lists the built-in Terminal theme as valid, without warnings, with its font files', async () => {
+    const registry = new ThemeRegistry({ builtinDir, userDir: tempUserDir() });
+    await registry.load();
+    const terminal = registry.list().find((theme) => theme.id === 'terminal')!;
+    expect(terminal).toMatchObject({ name: 'Terminal', source: 'builtin', valid: true, modes: ['dark'], warnings: [] });
+    expect(registry.fontPath('terminal', 'fonts/JetBrainsMono-Regular.woff2')).not.toBeNull();
+  });
+
   it('adds user themes, reports broken ones and lets a user theme replace a built-in', async () => {
     const userDir = tempUserDir();
     write(userDir, 'calm.json', { name: 'Calm', modes: ['dark'], dark: { colors: { accent: '#88ccff' } } });
@@ -117,7 +125,7 @@ describe('ThemeRegistry', () => {
     symlinkSync(join(userDir, 'missing-target'), join(userDir, '.#calm.json'));
     const registry = new ThemeRegistry({ builtinDir, userDir });
     await expect(registry.load()).resolves.toBeUndefined();
-    expect(registry.list().map((theme) => theme.id)).toEqual(['default', 'calm']);
+    expect(registry.list().map((theme) => theme.id)).toEqual(['default', 'calm', 'terminal']);
   });
 
   it('treats a user folder that is a regular file as empty', async () => {
@@ -130,7 +138,7 @@ describe('ThemeRegistry', () => {
     } finally {
       logged.mockRestore();
     }
-    expect(registry.list().map((theme) => theme.id)).toEqual(['default']);
+    expect(registry.list().map((theme) => theme.id)).toEqual(['default', 'terminal']);
   });
 
   it('refuses a font that is a symlink to a file outside the theme folder', async () => {
@@ -176,6 +184,6 @@ describe('ThemeRegistry', () => {
     symlinkSync(join(userDir, 'missing-target'), join(userDir, 'theme.schema.json'));
     const registry = new ThemeRegistry({ builtinDir, userDir });
     await expect(registry.load()).resolves.toBeUndefined();
-    expect(registry.list().map((theme) => theme.id)).toEqual(['default']);
+    expect(registry.list().map((theme) => theme.id)).toEqual(['default', 'terminal']);
   });
 });

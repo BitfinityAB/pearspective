@@ -77,6 +77,7 @@ To change the repositories later, use the settings button in the header, or run 
 | `issueTracker` | Optional. Ticket links, and with jira-cli the ticket status and mismatch checks; see [Ticket status](#ticket-status-optional). |
 | `notifications` | Optional. Notifications on your PRs; see [Notifications](#notifications). |
 | `databasePath` | Optional. Where the local database lives; default `pearspective.db` next to `config.json`. See [Local database](#local-database). |
+| `theme` | Optional. The theme id (file name), default `default`. Usually set from the Appearance tab. |
 
 ## Ticket status (optional)
 
@@ -138,6 +139,29 @@ Pearspective keeps its latest state (pull requests, checks, reviews, threads, ti
 - Only the current state is stored. PRs that close, merge or leave your selection are deleted on the next full refresh.
 - The file is a cache: stop Pearspective and delete `pearspective.db` (and the `pearspective.db-wal` and `pearspective.db-shm` files next to it) whenever you like; it is rebuilt on the next start. If it cannot be opened, a banner says so and Pearspective works as before, loading everything from GitHub on each start.
 - One file holds every org you have configured; the board shows only the current org and repositories. Tickets and your team list are shared between orgs.
+
+## Themes
+
+Pick a theme in the settings panel's **Appearance** tab. **Default** follows your light/dark setting; **Terminal** is dark only, with a monospace font and square corners.
+
+![Terminal theme](docs/assets/screenshot-terminal.png)
+
+Make your own by putting a JSON file in the `themes/` folder next to `config.json` (it is created on the first start). Saving the file updates open tabs within a second.
+
+```json
+{
+  "$schema": "./theme.schema.json",
+  "name": "Calm",
+  "modes": ["dark"],
+  "dark": { "colors": { "accent": "#88ccff", "ready": "#6fdc8c" } }
+}
+```
+
+- Anything you leave out comes from Default, so a theme can be a few lines.
+- `theme.schema.json` (copied into the folder) lets your editor autocomplete colour names and check the file. A broken file is listed in the picker with the problem and never breaks the page.
+- Themes set colours, fonts, font size, corner radii, border width, shadows and label casing; they cannot change the layout.
+- To use your own font, put the theme in a folder (`themes/calm/theme.json`) with its `.woff2` files beside it and list them under `fontFiles`. Fonts are served by Pearspective itself, never from the internet.
+- A file with the same name as a built-in theme (for example `default.json`) replaces it.
 
 ## How it uses the GitHub API
 

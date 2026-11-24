@@ -46,4 +46,8 @@ describe('built-in themes', () => {
   it('meet 4.5:1 for text, links and badges', () => {
     expect(contrastIssues(resolveTheme('default', defaults, defaults))).toEqual([]);
   });
+
+  it('Terminal meets 4.5:1 too', () => {
+    expect(contrastIssues(resolveTheme('terminal', load('themes/terminal/theme.json'), defaults))).toEqual([]);
+  });
 });

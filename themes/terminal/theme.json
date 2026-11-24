@@ -1,0 +1,23 @@
+{
+  "$schema": "../theme.schema.json",
+  "name": "Terminal",
+  "modes": ["dark"],
+  "dark": {
+    "colors": {
+      "bg": "#070b07", "surface": "#0c120c", "subtle": "#101810", "border": "#1f2e1f", "hair": "#162216", "canvas": "#070b07", "track": "#162216",
+      "selection": "rgba(57,255,136,.10)", "stackRow": "#0e170e", "mergedCard": "#101810", "backdrop": "rgba(0,0,0,.75)", "shadow": "rgba(0,0,0,.6)",
+      "text": "#d6f5dc", "text2": "#b3dcbb", "muted": "#7fa889", "accent": "#39ff88", "accentText": "#041006", "pill": "#d6f5dc", "pillText": "#070b07",
+      "blocked": "#ff4d5e", "waiting": "#ffc53d", "ready": "#39ff88", "draft": "#5d7a63", "merged": "#b48cff", "behind": "#ff9d4d",
+      "greenBg": "rgba(57,255,136,.14)", "greenText": "#5dffa0", "amberBg": "rgba(255,197,61,.16)", "amberText": "#ffd166",
+      "redBg": "rgba(255,77,94,.16)", "redText": "#ff7a87", "neutralBg": "#142014", "neutralText": "#9cc4a5", "blueBg": "rgba(77,171,255,.16)", "blueText": "#8cc8ff",
+      "edge": "#4c6b52", "edgeMerged": "#263a28", "hatchA": "#4c6b52", "hatchB": "#1f2e1f"
+    },
+    "fonts": { "ui": "JetBrains Mono", "mono": "JetBrains Mono" }
+  },
+  "shape": { "radius": 3, "radiusSmall": 2, "borderWidth": 1, "shadows": false },
+  "text": { "labelCase": "upper", "labelSpacing": 0.06, "baseSize": 13 },
+  "fontFiles": [
+    { "family": "JetBrains Mono", "file": "fonts/JetBrainsMono-Regular.woff2", "weight": 400 },
+    { "family": "JetBrains Mono", "file": "fonts/JetBrainsMono-Bold.woff2", "weight": 700 }
+  ]
+}

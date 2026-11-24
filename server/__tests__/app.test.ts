@@ -161,7 +161,7 @@ describe('HTTP API', () => {
   it('lists themes', async () => {
     const { app } = await setup();
     const response = await api(app).get('/api/themes').expect(200);
-    expect(response.body.map((theme: { id: string }) => theme.id)).toEqual(['default', 'calm']);
+    expect(response.body.map((theme: { id: string }) => theme.id)).toEqual(['default', 'calm', 'terminal']);
   });
 
   it('serves a listed font as woff2 and refuses anything else', async () => {
