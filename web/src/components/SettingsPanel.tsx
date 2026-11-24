@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { MAX_REPOS, type NotificationSettings, type RepoRef } from '../../../shared/types';
 import type { DashboardApi } from '../api/client';
+import type { ThemeInfo } from '../../../shared/types';
+import { AppearanceSettings } from './AppearanceSettings';
 import { NotificationSettingsSection } from './NotificationSettings';
 
 interface SettingsPanelProps {
@@ -10,13 +12,19 @@ interface SettingsPanelProps {
   onClose: () => void;
   focusPermission?: boolean;
   notifications?: { settings: NotificationSettings; onSave: (next: NotificationSettings) => Promise<void> };
+  appearance?: { themes: ThemeInfo[]; chosen: string; onChoose: (id: string) => Promise<void>; folderHint: string };
 }
 
-type SettingsTab = 'repositories' | 'notifications';
-const TABS: { value: SettingsTab; label: string }[] = [{ value: 'repositories', label: 'Repositories' }, { value: 'notifications', label: 'Notifications' }];
+type SettingsTab = 'repositories' | 'notifications' | 'appearance';
 
-export function SettingsPanel({ api, repos, onSave, onClose, notifications, focusPermission }: SettingsPanelProps) {
+export function SettingsPanel({ api, repos, onSave, onClose, notifications, appearance, focusPermission }: SettingsPanelProps) {
   // The permission hint links straight to the notifications tab.
+  const tabs: { value: SettingsTab; label: string }[] = [
+    { value: 'repositories', label: 'Repositories' },
+    ...(notifications ? [{ value: 'notifications' as const, label: 'Notifications' }] : []),
+    ...(appearance ? [{ value: 'appearance' as const, label: 'Appearance' }] : []),
+  ];
+  const hasTabs = tabs.length > 1;
   const [tab, setTab] = useState<SettingsTab>(notifications && focusPermission ? 'notifications' : 'repositories');
   const [selected, setSelected] = useState<string[]>(repos);
   const [query, setQuery] = useState('');
@@ -51,10 +59,10 @@ export function SettingsPanel({ api, repos, onSave, onClose, notifications, focu
           <span className="grow" />
           <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>✕</button>
         </div>
-        {notifications && (
+        {hasTabs && (
           <div className="settings-tabs">
             <div className="segs" role="tablist" aria-label="Settings sections">
-              {TABS.map((item) => (
+              {tabs.map((item) => (
                 <button
                   key={item.value}
                   type="button"
@@ -72,7 +80,7 @@ export function SettingsPanel({ api, repos, onSave, onClose, notifications, focu
           </div>
         )}
         {tab === 'repositories' && (
-          <div className="settings-panel" {...(notifications ? { role: 'tabpanel', id: 'settings-panel-repositories', 'aria-labelledby': 'settings-tab-repositories' } : {})}>
+          <div className="settings-panel" {...(hasTabs ? { role: 'tabpanel', id: 'settings-panel-repositories', 'aria-labelledby': 'settings-tab-repositories' } : {})}>
             <div className="settings-intro">
               <span>Repositories in Overview</span>
               <span className="muted small">{selected.length} of {MAX_REPOS} selected</span>
@@ -101,6 +109,12 @@ export function SettingsPanel({ api, repos, onSave, onClose, notifications, focu
           <div className="settings-panel" role="tabpanel" id="settings-panel-notifications" aria-labelledby="settings-tab-notifications">
             <p className="settings-note muted small">Notification changes are saved as you make them.</p>
             <NotificationSettingsSection settings={notifications.settings} onSave={notifications.onSave} focusPermission={focusPermission} />
+          </div>
+        )}
+        {appearance && tab === 'appearance' && (
+          <div className="settings-panel" role="tabpanel" id="settings-panel-appearance" aria-labelledby="settings-tab-appearance">
+            <p className="settings-note muted small">Appearance changes are saved as you make them.</p>
+            <AppearanceSettings {...appearance} />
           </div>
         )}
         {error && <p role="alert" className="banner sev-red">{error}</p>}

@@ -141,7 +141,7 @@ export function App({ api }: { api: DashboardApi }) {
         />
       )}
       {settingsOpen && (
-        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={closeSettings} focusPermission={focusPermission} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }) }} />
+        <SettingsPanel api={api} repos={snapshot.settings.repos} onSave={(repos) => updateSettings({ repos })} onClose={closeSettings} focusPermission={focusPermission} notifications={{ settings: snapshot.settings.notifications, onSave: (next) => updateSettings({ notifications: next }) }} appearance={{ themes: themes.themes, chosen: snapshot.settings.theme, onChoose: (id) => updateSettings({ theme: id }), folderHint: 'the themes folder next to config.json' }} />
       )}
       <Toasts toasts={notifications.toasts} onOpen={notifications.open} onDismiss={notifications.dismiss} />
     </div>

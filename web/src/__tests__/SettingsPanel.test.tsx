@@ -79,4 +79,11 @@ describe('SettingsPanel', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(screen.getByRole('searchbox', { name: 'Search repositories' })).toBeInTheDocument();
   });
+
+  it('adds an Appearance tab that shows the theme list when given themes', async () => {
+    const appearance = { themes: [], chosen: 'default', onChoose: async () => undefined, folderHint: 'the themes folder' };
+    render(<SettingsPanel api={api} repos={['orders-api']} onSave={async () => undefined} onClose={() => undefined} notifications={notifications} appearance={appearance} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Appearance' }));
+    expect(screen.getByRole('tabpanel', { name: 'Appearance' })).toContainElement(screen.getByRole('radiogroup', { name: 'Theme' }));
+  });
 });
