@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { COLOR_TOKEN_NAMES, type ColorToken, type ThemeMode } from './themeTokens';
 
 // Values end up inside CSS, so only plain colour notations are allowed; anything else could inject rules.
-const COLOR = /^(#[0-9a-fA-F]{3,8}|(rgb|rgba|hsl|hsla)\(\s*[-0-9.%,\s/]+\))$/;
-const FONT_NAME = /^[\w\s.-]{1,60}$/;
+const COLOR = /^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\(\s*[-0-9.%,\s/]+\))$/;
+// Single spaces only: newlines and line separators would corrupt the generated CSS.
+const FONT_NAME = /^[\w.-]+(?: [\w.-]+)*$/;
 const color = z.string().regex(COLOR, 'must be a hex, rgb(a) or hsl(a) colour');
-const fontName = z.string().regex(FONT_NAME, 'may contain letters, digits, spaces, dots, dashes and underscores');
+const fontName = z.string().max(60).regex(FONT_NAME, 'may contain letters, digits, single spaces, dots, dashes and underscores');
 
 const colors = z.object(Object.fromEntries(COLOR_TOKEN_NAMES.map((name) => [name, color.optional()])) as Record<ColorToken, z.ZodOptional<typeof color>>).strict();
 const modeBlock = z.object({ colors: colors.optional(), fonts: z.object({ ui: fontName.optional(), mono: fontName.optional() }).strict().optional() }).strict();
@@ -35,6 +36,7 @@ export const ThemeFileSchema = z.object({
     style: z.enum(['normal', 'italic']).optional(),
   }).strict()).max(8).optional(),
 }).strict().superRefine((file, ctx) => {
+  if (new Set(file.modes).size !== file.modes.length) ctx.addIssue({ code: 'custom', path: ['modes'], message: 'modes must not repeat' });
   for (const mode of ['light', 'dark'] as const) {
     const listed = file.modes.includes(mode);
     if (listed && !file[mode]) ctx.addIssue({ code: 'custom', path: [mode], message: `"${mode}" is listed in modes but has no block` });

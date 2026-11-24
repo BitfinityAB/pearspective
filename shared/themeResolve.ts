@@ -20,11 +20,19 @@ const FALLBACK_TEXT = { labelCase: 'upper' as const, labelSpacing: 0.04, baseSiz
 export function resolveTheme(id: string, file: ThemeFile, defaults: ThemeFile): ResolvedTheme {
   const mode = (name: ThemeMode): ResolvedMode | undefined => {
     if (!file.modes.includes(name)) return undefined;
-    // A single-mode Default would leave the other mode empty; fall back to Default's dark block then.
-    const base = defaults[name] ?? defaults.dark!;
+    // A single-mode Default would leave the other mode empty; borrow the mode it has.
+    const baseName: ThemeMode = defaults[name] ? name : name === 'light' ? 'dark' : 'light';
+    const base = defaults[baseName];
     const own = file[name] ?? {};
-    const colors = Object.fromEntries(COLOR_TOKEN_NAMES.map((token) => [token, own.colors?.[token] ?? base.colors![token]!])) as Record<ColorToken, string>;
-    return { colors, fonts: { ui: own.fonts?.ui ?? base.fonts!.ui!, mono: own.fonts?.mono ?? base.fonts!.mono! } };
+    const missing = (key: string): never => { throw new Error(`Default theme is incomplete: missing ${baseName}.${key}`); };
+    const colors = Object.fromEntries(COLOR_TOKEN_NAMES.map((token) => [token, own.colors?.[token] ?? base?.colors?.[token] ?? missing(`colors.${token}`)])) as Record<ColorToken, string>;
+    return {
+      colors,
+      fonts: {
+        ui: own.fonts?.ui ?? base?.fonts?.ui ?? missing('fonts.ui'),
+        mono: own.fonts?.mono ?? base?.fonts?.mono ?? missing('fonts.mono'),
+      },
+    };
   };
   return {
     id,
