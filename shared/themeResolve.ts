@@ -1,0 +1,39 @@
+import type { ThemeFile } from './themeSchema';
+import { COLOR_TOKEN_NAMES, type ColorToken, type ThemeMode } from './themeTokens';
+
+export interface ResolvedMode { colors: Record<ColorToken, string>; fonts: { ui: string; mono: string } }
+export interface ResolvedTheme {
+  id: string;
+  name: string;
+  modes: ThemeMode[];
+  light?: ResolvedMode;
+  dark?: ResolvedMode;
+  shape: { radius: number; radiusSmall: number; borderWidth: number; shadows: boolean };
+  text: { labelCase: 'upper' | 'none'; labelSpacing: number; baseSize: number };
+  fontFiles: NonNullable<ThemeFile['fontFiles']>;
+}
+
+const FALLBACK_SHAPE = { radius: 10, radiusSmall: 6, borderWidth: 1, shadows: true };
+const FALLBACK_TEXT = { labelCase: 'upper' as const, labelSpacing: 0.04, baseSize: 14 };
+
+/** A theme only lists what it changes; every other key comes from Default, so the page is always fully styled. */
+export function resolveTheme(id: string, file: ThemeFile, defaults: ThemeFile): ResolvedTheme {
+  const mode = (name: ThemeMode): ResolvedMode | undefined => {
+    if (!file.modes.includes(name)) return undefined;
+    // A single-mode Default would leave the other mode empty; fall back to Default's dark block then.
+    const base = defaults[name] ?? defaults.dark!;
+    const own = file[name] ?? {};
+    const colors = Object.fromEntries(COLOR_TOKEN_NAMES.map((token) => [token, own.colors?.[token] ?? base.colors![token]!])) as Record<ColorToken, string>;
+    return { colors, fonts: { ui: own.fonts?.ui ?? base.fonts!.ui!, mono: own.fonts?.mono ?? base.fonts!.mono! } };
+  };
+  return {
+    id,
+    name: file.name,
+    modes: file.modes,
+    light: mode('light'),
+    dark: mode('dark'),
+    shape: { ...FALLBACK_SHAPE, ...defaults.shape, ...file.shape },
+    text: { ...FALLBACK_TEXT, ...defaults.text, ...file.text },
+    fontFiles: file.fontFiles ?? [],
+  };
+}
