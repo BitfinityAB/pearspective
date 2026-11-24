@@ -12,8 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script>
-  // Applied before first paint so a dark-mode user never sees a white flash.
+  // Applied before first paint so a dark-mode user never sees a white flash, and the chosen theme shows at once.
   try { var saved = localStorage.getItem('theme'); if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved; } catch (e) {}
+  try { var css = localStorage.getItem('pearspective.themeCss'); if (css) { var style = document.createElement('style'); style.id = 'theme'; style.textContent = css; document.head.appendChild(style); } } catch (e) {}
 </script>
 </head>
 <body>
