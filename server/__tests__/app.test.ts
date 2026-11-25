@@ -75,6 +75,15 @@ describe('HTTP API', () => {
     await api(app).put('/api/settings').send({ pinned: 'PR_1' }).expect(400);
   });
 
+  it('keeps both changes when two settings saves overlap', async () => {
+    const { app, store } = await setup();
+    await Promise.all([
+      api(app).put('/api/settings').send({ pinned: ['PR_1'] }).expect(200),
+      api(app).put('/api/settings').send({ theme: 'terminal' }).expect(200),
+    ]);
+    expect(store.get()).toMatchObject({ pinned: ['PR_1'], theme: 'terminal' });
+  });
+
   it('does not refresh when the saved repositories are unchanged', async () => {
     const pollLean = vi.fn(async () => []);
     const { app } = await setup({ pollLean });

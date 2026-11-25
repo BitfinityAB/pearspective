@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import type { ThemeInfo } from '../../../shared/types';
+import { currentMode } from '../theme';
 
 const SWATCH_TOKENS = ['bg', 'surface', 'accent', 'blocked', 'waiting', 'ready'] as const;
 
@@ -32,12 +33,16 @@ export function AppearanceSettings({ themes, chosen, onChoose, folderHint }: App
     );
   };
   const shownChoice = pending ?? chosen;
+  // Read at render: the mode toggle sits behind this modal, so it cannot change while the tab is open.
+  const pageMode = currentMode();
 
   return (
     <section className="appearance-settings" aria-label="Appearance">
       <div className="theme-list" role="radiogroup" aria-label="Theme">
         {themes.map((info, index) => {
-          const mode = info.theme?.[info.modes[0] ?? 'light'] ?? info.theme?.light ?? info.theme?.dark;
+          // A two-mode theme previews in the user's light/dark choice, which it would show once picked; a single-mode one only has its own.
+          const shownMode = info.modes.length === 1 ? info.modes[0]! : pageMode;
+          const mode = info.theme?.[shownMode] ?? info.theme?.light ?? info.theme?.dark;
           const noteIds = [...(info.error ? [`${idPrefix}-${index}-error`] : []), ...info.warnings.map((_, warning) => `${idPrefix}-${index}-warning-${warning}`)];
           return (
             <div key={info.id} className="theme-option">

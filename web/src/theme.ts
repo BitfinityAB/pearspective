@@ -20,3 +20,10 @@ export function applyTheme(choice: ThemeChoice): void {
     // Storage can be blocked; the theme still applies for this page view.
   }
 }
+
+/** The light/dark choice: the picked one, else the system preference. A single-mode theme overrides it on the page but leaves it saved. */
+export function currentMode(): 'light' | 'dark' {
+  const picked = document.documentElement.dataset.theme;
+  if (picked === 'light' || picked === 'dark') return picked;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}

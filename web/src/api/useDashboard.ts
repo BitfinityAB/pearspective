@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NotificationKind, RefreshSetting, Snapshot } from '../../../shared/types';
 import type { DashboardApi } from './client';
 
 export function useDashboard(api: DashboardApi) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const clientId = useMemo(() => crypto.randomUUID(), []);
+  const latestSettingsRequest = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -22,8 +23,10 @@ export function useDashboard(api: DashboardApi) {
 
   const refreshNow = useCallback(async () => setSnapshot(await api.refreshNow()), [api]);
   const updateSettings = useCallback(async (patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> }; theme?: string }) => {
+    const request = ++latestSettingsRequest.current;
     const settings = await api.updateSettings(patch);
-    setSnapshot((current) => (current ? { ...current, settings } : current));
+    // An older response arriving last would show settings the server has since replaced.
+    if (request === latestSettingsRequest.current) setSnapshot((current) => (current ? { ...current, settings } : current));
   }, [api]);
 
   return { snapshot, refreshNow, updateSettings };

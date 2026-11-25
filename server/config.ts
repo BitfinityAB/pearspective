@@ -91,6 +91,8 @@ function parse(raw: unknown, path: string): Config {
 }
 
 export class ConfigStore {
+  private queue: Promise<unknown> = Promise.resolve();
+
   private constructor(private readonly path: string, private config: Config) {}
 
   static async open(path: string): Promise<ConfigStore> {
@@ -111,12 +113,23 @@ export class ConfigStore {
   }
 
   async save(next: Config): Promise<void> {
-    const valid = parse(next, this.path);
-    // Write then rename so a crash never leaves a half-written config.
-    const temporary = `${this.path}.tmp`;
-    await writeFile(temporary, `${JSON.stringify(valid, null, 2)}\n`);
-    await rename(temporary, this.path);
-    this.config = valid;
+    await this.update(() => next);
+  }
+
+  /** Changes run one at a time against the latest config, so overlapping requests neither share the temp file nor undo each other. */
+  update(change: (current: Config) => Config): Promise<Config> {
+    const result = this.queue.then(async () => {
+      const valid = parse(change(this.config), this.path);
+      // Write then rename so a crash never leaves a half-written config.
+      const temporary = `${this.path}.tmp`;
+      await writeFile(temporary, `${JSON.stringify(valid, null, 2)}\n`);
+      await rename(temporary, this.path);
+      this.config = valid;
+      return valid;
+    });
+    // A failed change must not block the ones queued after it.
+    this.queue = result.catch(() => undefined);
+    return result;
   }
 }
 

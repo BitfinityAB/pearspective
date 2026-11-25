@@ -115,14 +115,16 @@ describe('useThemes', () => {
     localStorage.setItem(THEME_CSS_KEY, 'cached');
     const getThemes = vi.fn(async (): Promise<ThemeInfo[]> => { throw new Error('offline'); });
     const api = { getThemes };
-    renderHook(() => useThemes(api, snapshotWith('calm')));
+    const { result } = renderHook(() => useThemes(api, snapshotWith('calm')));
     await act(async () => { await vi.advanceTimersByTimeAsync(4900); });
+    expect(result.current.problem).toBeNull();
     expect(getThemes).toHaveBeenCalledTimes(1);
     expect(document.getElementById('theme')!.textContent).toBe('cached');
     await act(async () => { await vi.advanceTimersByTimeAsync(200); });
     expect(getThemes).toHaveBeenCalledTimes(2);
     expect(document.getElementById('theme')).toBeNull();
     expect(localStorage.getItem(THEME_CSS_KEY)).toBeNull();
+    expect(result.current.problem).toBe('Themes could not be loaded, so the default colours are shown. Reload the page to try again.');
     await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
     expect(getThemes).toHaveBeenCalledTimes(2);
   });
@@ -137,5 +139,38 @@ describe('useThemes', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(5100); });
     expect(result.current.active?.id).toBe('calm');
     expect(document.getElementById('theme')!.textContent).toContain('#88ccff');
+  });
+
+  it('keeps the loaded themes and says so when a refetch after a folder change fails', async () => {
+    vi.useFakeTimers();
+    const getThemes = vi.fn<() => Promise<ThemeInfo[]>>()
+      .mockResolvedValueOnce([defaultInfo, calmInfo])
+      .mockRejectedValue(new Error('offline'));
+    const api = { getThemes };
+    const { result, rerender } = renderHook(({ snapshot }) => useThemes(api, snapshot), { initialProps: { snapshot: snapshotWith('calm', 1) } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(result.current.active?.id).toBe('calm');
+    rerender({ snapshot: snapshotWith('calm', 2) });
+    await act(async () => { await vi.advanceTimersByTimeAsync(5100); });
+    expect(getThemes).toHaveBeenCalledTimes(3);
+    expect(result.current.active?.id).toBe('calm');
+    expect(document.getElementById('theme')!.textContent).toContain('#88ccff');
+    expect(result.current.problem).toBe('Updated themes could not be loaded, so the previous versions are shown. Reload the page to try again.');
+  });
+
+  it('clears the load problem once a later fetch succeeds', async () => {
+    vi.useFakeTimers();
+    const getThemes = vi.fn<() => Promise<ThemeInfo[]>>()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue([defaultInfo, calmInfo]);
+    const api = { getThemes };
+    const { result, rerender } = renderHook(({ snapshot }) => useThemes(api, snapshot), { initialProps: { snapshot: snapshotWith('calm', 1) } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(5100); });
+    expect(result.current.problem).toMatch(/could not be loaded/);
+    rerender({ snapshot: snapshotWith('calm', 2) });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(result.current.problem).toBeNull();
+    expect(result.current.active?.id).toBe('calm');
   });
 });

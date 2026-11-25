@@ -6,6 +6,8 @@ import { ThemeFileSchema, type ThemeFile } from '../../shared/themeSchema';
 import type { ThemeInfo } from '../../shared/types';
 
 const DEBOUNCE_MS = 200;
+const REARM_MIN_MS = 5_000;
+const REARM_MAX_MS = 5 * 60_000;
 const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
 interface Entry { info: ThemeInfo; dir: string; file?: ThemeFile; shown: string }
@@ -23,12 +25,13 @@ export class ThemeRegistry {
   private versionNumber = Date.now();
   private watcher: FSWatcher | null = null;
   private timer: NodeJS.Timeout | null = null;
+  private rearmTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly opts: { builtinDir: string; userDir: string; onChange?: () => void }) {}
 
   async load(): Promise<void> {
     // The same folder twice would otherwise list every built-in as a user theme and write the schema over itself.
-    const separate = resolve(this.opts.userDir) !== resolve(this.opts.builtinDir);
+    const separate = this.separateDirs();
     if (separate) this.ensureUserDir();
     const defaults = this.builtinDefault();
     const entries = new Map<string, Entry>();
@@ -71,30 +74,63 @@ export class ThemeRegistry {
   }
 
   watch(): void {
-    try {
-      this.watcher = watch(this.opts.userDir, { recursive: true }, () => {
-        if (this.timer) clearTimeout(this.timer);
-        this.timer = setTimeout(() => {
-          this.load()
-            .then(() => this.opts.onChange?.())
-            .catch((error) => console.error('Reloading themes failed:', error));
-        }, DEBOUNCE_MS);
-      });
-      this.watcher.on('error', (error) => {
-        console.error('Watching the themes folder failed:', error);
-        this.close();
-      });
-    } catch (error) {
-      // Without file watching, theme edits apply after a restart.
-      console.error('Watching the themes folder failed:', error);
-    }
+    this.close();
+    this.startWatching(REARM_MIN_MS);
   }
 
   close(): void {
+    this.stopWatching();
+    if (this.rearmTimer) clearTimeout(this.rearmTimer);
+    this.rearmTimer = null;
+  }
+
+  /** Returns whether watching started; on failure it tries again later, backing off, so theme edits keep applying without a restart. */
+  private startWatching(retryMs: number): boolean {
+    try {
+      this.watcher = watch(this.opts.userDir, { recursive: true }, () => this.reloadSoon());
+      this.watcher.on('error', (error) => {
+        console.error('Watching the themes folder failed, trying again shortly:', error);
+        this.stopWatching();
+        this.rearmLater(REARM_MIN_MS);
+      });
+      return true;
+    } catch (error) {
+      console.error('Watching the themes folder failed, trying again shortly:', error);
+      this.watcher = null;
+      this.rearmLater(retryMs);
+      return false;
+    }
+  }
+
+  private rearmLater(delayMs: number): void {
+    if (this.rearmTimer) clearTimeout(this.rearmTimer);
+    this.rearmTimer = setTimeout(() => {
+      this.rearmTimer = null;
+      // The folder may have been deleted, which is what broke the watcher.
+      if (this.separateDirs()) this.ensureUserDir();
+      // Edits made while nothing was watching would otherwise go unseen until the next one.
+      if (this.startWatching(Math.min(delayMs * 2, REARM_MAX_MS))) this.reloadSoon();
+    }, delayMs);
+  }
+
+  private reloadSoon(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      this.load()
+        .then(() => this.opts.onChange?.())
+        .catch((error) => console.error('Reloading themes failed:', error));
+    }, DEBOUNCE_MS);
+  }
+
+  private stopWatching(): void {
     this.watcher?.close();
     this.watcher = null;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+  }
+
+  private separateDirs(): boolean {
+    return resolve(this.opts.userDir) !== resolve(this.opts.builtinDir);
   }
 
   private candidates(dir: string): Candidate[] {

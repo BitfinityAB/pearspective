@@ -124,16 +124,18 @@ export function createApp({ poller, presence, loop, provider, store, hub, themes
       res.status(400).json({ error: `notifications are invalid: ${parsedNotifications.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}` });
       return;
     }
-    const current = store.get();
-    // Re-sending the same selection (Save after changing only other settings) must not cost a full refresh.
-    const reposChanged = repos !== undefined && (repos as string[]).join('\n') !== current.codeHost.repos.join('\n');
-    await store.save({
-      ...current,
-      refreshIntervalSec: refresh !== undefined ? refreshToSeconds(refresh) : current.refreshIntervalSec,
-      codeHost: { ...current.codeHost, repos: (repos as string[] | undefined) ?? current.codeHost.repos },
-      pinned: (pinned as string[] | undefined) ?? current.pinned,
-      notifications: parsedNotifications ? parsedNotifications.data : current.notifications,
-      theme: (theme as string | undefined) ?? current.theme,
+    let reposChanged = false;
+    await store.update((current) => {
+      // Re-sending the same selection (Save after changing only other settings) must not cost a full refresh.
+      reposChanged = repos !== undefined && (repos as string[]).join('\n') !== current.codeHost.repos.join('\n');
+      return {
+        ...current,
+        refreshIntervalSec: refresh !== undefined ? refreshToSeconds(refresh) : current.refreshIntervalSec,
+        codeHost: { ...current.codeHost, repos: (repos as string[] | undefined) ?? current.codeHost.repos },
+        pinned: (pinned as string[] | undefined) ?? current.pinned,
+        notifications: parsedNotifications ? parsedNotifications.data : current.notifications,
+        theme: (theme as string | undefined) ?? current.theme,
+      };
     });
     poller.refreshSettings();
     if (reposChanged) await poller.tick();

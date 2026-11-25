@@ -39,6 +39,29 @@ describe('ConfigStore', () => {
     expect(JSON.parse(await readFile(path, 'utf8')).refreshIntervalSec).toBe(600);
     expect(store.get().refreshIntervalSec).toBe(600);
   });
+
+  it('keeps every change when updates overlap', async () => {
+    const path = await tempConfig(minimal);
+    const store = await ConfigStore.open(path);
+    await Promise.all([
+      store.update((current) => ({ ...current, refreshIntervalSec: 600 })),
+      store.update((current) => ({ ...current, pinned: ['acme/orders-api#1'] })),
+      store.update((current) => ({ ...current, theme: 'terminal' })),
+    ]);
+    const saved = JSON.parse(await readFile(path, 'utf8'));
+    expect(saved).toMatchObject({ refreshIntervalSec: 600, pinned: ['acme/orders-api#1'], theme: 'terminal' });
+    expect(store.get()).toMatchObject({ refreshIntervalSec: 600, pinned: ['acme/orders-api#1'], theme: 'terminal' });
+  });
+
+  it('keeps saving after an invalid update is rejected', async () => {
+    const path = await tempConfig(minimal);
+    const store = await ConfigStore.open(path);
+    const invalid = store.update((current) => ({ ...current, refreshIntervalSec: 1 }));
+    const valid = store.update((current) => ({ ...current, refreshIntervalSec: 600 }));
+    await expect(invalid).rejects.toBeInstanceOf(ConfigError);
+    await expect(valid).resolves.toMatchObject({ refreshIntervalSec: 600 });
+    expect(JSON.parse(await readFile(path, 'utf8')).refreshIntervalSec).toBe(600);
+  });
 });
 
 describe('refresh conversion', () => {

@@ -158,19 +158,61 @@ describe('ThemeRegistry', () => {
     expect(registry.fontFile('calm', 'fonts/x.woff2')).toBeNull();
   });
 
-  it('survives a watcher error by logging and closing', async () => {
-    const registry = new ThemeRegistry({ builtinDir, userDir: tempUserDir() });
-    await registry.load();
-    registry.watch();
-    const watcher = (registry as unknown as { watcher: { emit: (event: string, error: Error) => boolean } | null }).watcher!;
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    try {
-      expect(() => watcher.emit('error', new Error('boom'))).not.toThrow();
-      expect(logged).toHaveBeenCalled();
-    } finally {
-      logged.mockRestore();
+  describe('after a watcher error', () => {
+    type Watched = { watcher: { emit: (event: string, error: Error) => boolean } | null };
+    const watcherOf = (registry: ThemeRegistry) => (registry as unknown as Watched).watcher;
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    it('logs, then watches again 5 seconds later and reloads to catch missed edits', async () => {
+      const onChange = vi.fn();
+      const registry = new ThemeRegistry({ builtinDir, userDir: tempUserDir(), onChange });
+      await registry.load();
+      registry.watch();
+      try {
+        expect(() => watcherOf(registry)!.emit('error', new Error('boom'))).not.toThrow();
+        expect(console.error).toHaveBeenCalled();
+        expect(watcherOf(registry)).toBeNull();
+        await vi.advanceTimersByTimeAsync(4900);
+        expect(watcherOf(registry)).toBeNull();
+        await vi.advanceTimersByTimeAsync(400);
+        expect(watcherOf(registry)).not.toBeNull();
+        await vi.waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+      } finally {
+        registry.close();
+      }
+    });
+
+    it('recreates a deleted themes folder before watching it again', async () => {
+      const userDir = join(tempUserDir(), 'custom-themes');
+      const registry = new ThemeRegistry({ builtinDir, userDir });
+      registry.watch();
+      try {
+        expect(watcherOf(registry)).toBeNull();
+        await vi.advanceTimersByTimeAsync(5100);
+        expect(existsSync(userDir)).toBe(true);
+        expect(watcherOf(registry)).not.toBeNull();
+      } finally {
+        registry.close();
+      }
+    });
+
+    it('stops trying again once closed', async () => {
+      const registry = new ThemeRegistry({ builtinDir, userDir: tempUserDir() });
+      await registry.load();
+      registry.watch();
+      watcherOf(registry)!.emit('error', new Error('boom'));
       registry.close();
-    }
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(watcherOf(registry)).toBeNull();
+    });
   });
 
   it('says a theme file could not be read instead of calling it invalid JSON', async () => {

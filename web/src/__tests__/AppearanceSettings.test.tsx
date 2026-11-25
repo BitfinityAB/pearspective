@@ -42,6 +42,40 @@ describe('AppearanceSettings', () => {
     expect(options[3]!.querySelectorAll('[data-swatch]')).toHaveLength(0);
   });
 
+  describe('swatch colours', () => {
+    afterEach(() => { delete document.documentElement.dataset.theme; });
+    const accentOf = (container: HTMLElement, index: number) => container.querySelectorAll('.theme-option')[index]!.querySelector('[data-swatch="accent"]') as HTMLElement;
+
+    it('show a two-mode theme in the dark mode when the page is dark', () => {
+      document.documentElement.dataset.theme = 'dark';
+      const { container } = render(<AppearanceSettings themes={themes} chosen="default" onChoose={async () => undefined} folderHint="x" />);
+      expect(accentOf(container, 2)).toHaveStyle({ backgroundColor: '#88aaff' });
+    });
+
+    it('show a two-mode theme in the light mode when the page is light', () => {
+      document.documentElement.dataset.theme = 'light';
+      const { container } = render(<AppearanceSettings themes={themes} chosen="default" onChoose={async () => undefined} folderHint="x" />);
+      expect(accentOf(container, 2)).toHaveStyle({ backgroundColor: '#3366ff' });
+    });
+
+    it('show a single-mode theme in its only mode whatever the page mode', () => {
+      document.documentElement.dataset.theme = 'light';
+      const { container } = render(<AppearanceSettings themes={themes} chosen="default" onChoose={async () => undefined} folderHint="x" />);
+      expect(accentOf(container, 1)).toHaveStyle({ backgroundColor: '#33ff33' });
+    });
+
+    it('follow the system preference when no mode is picked', () => {
+      const matchMedia = vi.fn((query: string) => ({ matches: query === '(prefers-color-scheme: dark)' }));
+      vi.stubGlobal('matchMedia', matchMedia);
+      try {
+        const { container } = render(<AppearanceSettings themes={themes} chosen="default" onChoose={async () => undefined} folderHint="x" />);
+        expect(accentOf(container, 2)).toHaveStyle({ backgroundColor: '#88aaff' });
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
+
   it('chooses another valid theme on click', async () => {
     const onChoose = renderTab();
     await userEvent.click(screen.getByRole('radio', { name: /Terminal/ }));
