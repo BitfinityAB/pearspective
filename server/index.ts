@@ -1,6 +1,4 @@
-import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import express from 'express';
 import { createApp } from './app';
 import { ConfigError, ConfigStore, hiddenPollInterval } from './config';
 import { createGhClient } from './gh';
@@ -11,6 +9,7 @@ import { createCodeHost, createIssueTracker } from './providers/registry';
 import { ThemeRegistry, themeDirs } from './themes/registry';
 import { openStorage } from './storage/startup';
 import { TicketSync } from './ticket-sync';
+import { serveWebUi } from './web-ui';
 
 const PORT = 4100;
 const HOST = '127.0.0.1';
@@ -54,11 +53,7 @@ async function main() {
   });
   const app = createApp({ poller, presence, loop, provider, store, hub, themes });
 
-  const dist = resolve(process.cwd(), 'dist');
-  if (existsSync(dist)) {
-    app.use(express.static(dist));
-    app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
-  }
+  serveWebUi(app, resolve(process.cwd(), 'dist'));
 
   app.listen(PORT, HOST, () => console.log(`pearspective API on http://${HOST}:${PORT}`));
   loop.start();
