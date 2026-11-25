@@ -78,6 +78,14 @@ export interface Team {
   avatarUrl?: string;
 }
 
+/** A team in the org and the logins of its direct members. */
+export interface OrgTeam {
+  slug: string;
+  name: string;
+  avatarUrl?: string;
+  members: string[];
+}
+
 export interface Viewer {
   login: string;
   name?: string;
@@ -91,7 +99,7 @@ export const MAX_REPOS = 10;
 export const MAX_PINNED = 200;
 
 export interface BannerMsg {
-  kind: 'missing-cli' | 'auth' | 'rate-limit' | 'stale' | 'tickets' | 'database';
+  kind: 'missing-cli' | 'auth' | 'rate-limit' | 'stale' | 'tickets' | 'database' | 'teams';
   message: string;
 }
 
@@ -115,6 +123,8 @@ export interface Snapshot {
   settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean; notifications: NotificationSettings; theme: string };
   /** Bumped when theme files change on disk, so open tabs refetch the theme list. */
   themes: { version: number };
+  /** Every team the viewer can see, for grouping by team; null until loaded or when the code host has no teams. */
+  orgTeams: OrgTeam[] | null;
 }
 
 export interface ThemeInfo {
@@ -233,5 +243,6 @@ export function emptySnapshot(org = '', host = 'github.com'): Snapshot {
     notification: null,
     settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false, notifications: { enabled: false, events: { ...NOTIFICATION_DEFAULTS } }, theme: 'default' },
     themes: { version: 0 },
+    orgTeams: null,
   };
 }

@@ -101,7 +101,7 @@ export function App({ api }: { api: DashboardApi }) {
             <StacksView snapshot={snapshot} views={views} onSelect={(id) => setUrl({ selected: id, tab: 'overview' })} onVisualize={setStackPrId} themeKey={themes.themeKey} /></>
         : (
           <>
-            {tab !== 'tickets' && <Toolbar url={url} counts={bucketCounts(ids, views)} onChange={setUrl} />}
+            {tab !== 'tickets' && <Toolbar url={url} counts={bucketCounts(ids, views)} onChange={setUrl} teamsKnown={!!snapshot.orgTeams?.length} />}
             {tab === 'tickets' && (
               <div className="toolbar">
                 <button

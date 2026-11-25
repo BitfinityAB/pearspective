@@ -25,6 +25,20 @@ describe('Toolbar', () => {
     expect(onChange).toHaveBeenCalledWith({ filters: expect.objectContaining({ newestFirst: true }) });
   });
 
+  it('offers Team grouping only when teams are known', async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<Toolbar url={parseUrlState('')} counts={counts} onChange={onChange} />);
+    expect(screen.queryByRole('button', { name: 'Team' })).toBeNull();
+    rerender(<Toolbar url={parseUrlState('')} counts={counts} onChange={onChange} teamsKnown />);
+    await userEvent.click(screen.getByRole('button', { name: 'Team' }));
+    expect(onChange).toHaveBeenCalledWith({ groupBy: 'team' });
+  });
+
+  it('shows Author as chosen while a team grouping waits for teams', () => {
+    render(<Toolbar url={parseUrlState('?group=team')} counts={counts} onChange={() => undefined} />);
+    expect(screen.getByRole('button', { name: 'Author' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('hides Group by on the Mine tab', () => {
     render(<Toolbar url={parseUrlState('?tab=mine')} counts={counts} onChange={() => undefined} />);
     expect(screen.queryByRole('button', { name: 'Ticket' })).toBeNull();

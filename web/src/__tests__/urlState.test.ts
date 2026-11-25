@@ -24,6 +24,7 @@ describe('URL state', () => {
 
   it('ignores unknown values', () => {
     expect(parseUrlState('?tab=nope&group=nope')).toMatchObject({ tab: 'overview', groupBy: 'author' });
+    expect(parseUrlState('?group=team')).toMatchObject({ groupBy: 'team' });
   });
 
   it('reads and writes the tickets tab', () => {

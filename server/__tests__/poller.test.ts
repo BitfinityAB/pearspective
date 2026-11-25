@@ -177,3 +177,64 @@ describe('Poller', () => {
     expect(poller.snapshot().overviewIds).toEqual([frontend.id]);
   });
 });
+
+describe('Poller org teams', () => {
+  const orders = { slug: 'orders', name: 'Orders', members: ['dev-one'] };
+  const billing = { slug: 'billing', name: 'Billing', members: ['dev-two'] };
+
+  function teamSetup(teamMembers?: () => Promise<{ slug: string; name: string; members: string[] }[]>) {
+    let now = Date.parse('2026-11-18T12:00:00Z');
+    const fake = createFakeProvider([makePr()], teamMembers ? { teamMembers } : {});
+    const poller = new Poller({ provider: fake.provider, config: () => config, now: () => now });
+    return { poller, advance: (ms: number) => (now += ms) };
+  }
+
+  it('publishes the teams after the first tick', async () => {
+    const { poller } = teamSetup(async () => [orders]);
+    await poller.tick();
+    expect(poller.snapshot().orgTeams).toEqual([orders]);
+  });
+
+  it('fetches the teams again only once an hour has passed', async () => {
+    const teamMembers = vi.fn(async () => [orders]);
+    const { poller, advance } = teamSetup(teamMembers);
+    await poller.tick();
+    advance(59 * 60_000);
+    await poller.tick();
+    expect(teamMembers).toHaveBeenCalledTimes(1);
+    advance(60_000);
+    teamMembers.mockResolvedValueOnce([orders, billing]);
+    await poller.tick();
+    expect(teamMembers).toHaveBeenCalledTimes(2);
+    expect(poller.snapshot().orgTeams).toEqual([orders, billing]);
+  });
+
+  it('keeps the last teams and says so when fetching them fails, then tries again next tick', async () => {
+    const teamMembers = vi.fn(async () => [orders]);
+    const { poller, advance } = teamSetup(teamMembers);
+    await poller.tick();
+    advance(60 * 60_000);
+    teamMembers.mockRejectedValueOnce(new Error('timeout'));
+    await poller.tick();
+    expect(poller.snapshot().orgTeams).toEqual([orders]);
+    expect(poller.snapshot().prs).toHaveLength(1);
+    expect(poller.snapshot().banners).toContainEqual({ kind: 'teams', message: 'Teams could not be loaded (timeout). Grouping by team shows the last loaded teams.' });
+    await poller.tick();
+    expect(teamMembers).toHaveBeenCalledTimes(3);
+    expect(poller.snapshot().banners.some((banner) => banner.kind === 'teams')).toBe(false);
+  });
+
+  it('says grouping by team is unavailable when the first fetch fails', async () => {
+    const { poller } = teamSetup(async () => { throw new Error('timeout'); });
+    await poller.tick();
+    expect(poller.snapshot().orgTeams).toBeNull();
+    expect(poller.snapshot().banners).toContainEqual({ kind: 'teams', message: 'Teams could not be loaded (timeout). Grouping by team is unavailable until they load.' });
+  });
+
+  it('leaves the teams unknown for a code host without teams', async () => {
+    const { poller } = teamSetup();
+    await poller.tick();
+    expect(poller.snapshot().orgTeams).toBeNull();
+    expect(poller.snapshot().banners).toEqual([]);
+  });
+});

@@ -19,7 +19,7 @@ Pearspective is a small local dashboard that answers them on one screen. It read
 
 ## What you get
 
-- **Overview** in swimlanes, grouped by author, repository or ticket. Rows are sorted blocked → waiting → ready, oldest first (or newest first).
+- **Overview** in swimlanes, grouped by author, repository, ticket or team (a PR shows under each of its author's teams). Rows are sorted blocked → waiting → ready, oldest first (or newest first).
 - **Six status squares per PR**: CI, AI review (Copilot), code analysis (CodeScene), human review, unresolved threads and mergeability. Hover a square for the detail, such as which required check failed.
 - **Clear buckets.** Every PR is *blocked*, *waiting for review*, *ready* or a *draft*, with a badge saying why (conflicts, changes requested, required check failed, and so on). Missing or truncated data never shows as green.
 - **Age at a glance.** A log-scale bar from 1 hour to 3 months, coloured by bucket.

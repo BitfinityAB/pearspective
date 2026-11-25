@@ -9,6 +9,8 @@ import type { TicketSync } from './ticket-sync';
 
 export const FULL_SWEEP_MS = 15 * 60_000;
 export const RATE_LIMIT_FLOOR = 500;
+/** Team membership rarely changes, so an hourly look is enough. */
+export const TEAMS_REFRESH_MS = 60 * 60_000;
 
 export interface PollerDeps {
   provider: CodeHostProvider;
@@ -58,6 +60,8 @@ export class Poller {
   private rerunHidden = true;
   private ticketSync: Promise<void> | null = null;
   private ticketBanner: BannerMsg | null = null;
+  private teamsBanner: BannerMsg | null = null;
+  private teamsFetchedAt: number | null = null;
   /** The stored viewer may be outdated, so the login is still checked once per run. */
   private authChecked = false;
   /** With stored data the first refresh only fetches what changed; the next one sweeps. */
@@ -175,6 +179,7 @@ export class Poller {
         this.viewer = auth.viewer;
         this.authChecked = true;
       }
+      const orgTeams = await this.loadTeams(now);
 
       const repos = config.codeHost.repos.filter((repo) => !config.codeHost.excludeRepos.includes(repo));
       const teams = config.codeHost.teams.length ? config.codeHost.teams : this.viewer.teams.map((team) => team.slug);
@@ -236,6 +241,7 @@ export class Poller {
         overviewIds,
         mine,
         rateLimit,
+        orgTeams,
         ...ticketPatch,
         ...outcome,
         banners: this.withSideBanners(outcome.banners ?? []),
@@ -264,6 +270,25 @@ export class Poller {
     return notificationEvents({ previous: this.lastComplete, next, viewerLogin: this.viewer.login, enabled: settings.events, at: new Date(now).toISOString() });
   }
 
+  /** A failed fetch keeps the last teams and tries again next tick, since one is cheap and grouping depends on it. */
+  private async loadTeams(now: number): Promise<Snapshot['orgTeams']> {
+    const { provider } = this.deps;
+    if (!provider.teamMembers) return null;
+    if (this.teamsFetchedAt !== null && now - this.teamsFetchedAt < TEAMS_REFRESH_MS) return this.current.orgTeams;
+    try {
+      const teams = await provider.teamMembers();
+      this.teamsFetchedAt = now;
+      this.teamsBanner = null;
+      return teams;
+    } catch (error) {
+      if (error instanceof ProviderError && (error.kind === 'auth' || error.kind === 'missing-cli')) throw error;
+      const reason = error instanceof Error ? error.message : String(error);
+      const effect = this.current.orgTeams ? 'Grouping by team shows the last loaded teams.' : 'Grouping by team is unavailable until they load.';
+      this.teamsBanner = { kind: 'teams', message: `Teams could not be loaded (${reason}). ${effect}` };
+      return this.current.orgTeams;
+    }
+  }
+
   private ticketConfig() {
     const tracker = this.deps.config().issueTracker;
     return this.deps.tickets && tracker?.ticketStatus ? tracker : null;
@@ -274,6 +299,7 @@ export class Poller {
     return [
       ...banners,
       ...(this.ticketBanner ? [this.ticketBanner] : []),
+      ...(this.teamsBanner ? [this.teamsBanner] : []),
       ...(database ? [{ kind: 'database' as const, message: database }] : []),
     ];
   }

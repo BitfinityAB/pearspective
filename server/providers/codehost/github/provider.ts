@@ -1,10 +1,10 @@
-import type { ChangeRequest, ChangeRequestStub, ClosedChangeRequest, RepoRef } from '../../../../shared/types';
+import type { ChangeRequest, ChangeRequestStub, ClosedChangeRequest, OrgTeam, RepoRef } from '../../../../shared/types';
 import type { GhClient } from '../../../gh';
 import { ProviderError, type AuthResult, type CodeHostProvider, type MineKind, type NativeStackEntries, type ReviewerClasses } from '../../types';
 import { toChangeRequest, toClosed, toStub } from './mapping';
 import {
   ACTIVITY_QUERY, closedReposQuery, fullQuery, leanRepoPageQuery, leanReposQuery, mineSearch, NATIVE_STACK_QUERY,
-  openCountsQuery, REPO_SEARCH_QUERY, SEARCH_PRS_QUERY, TEAMS_QUERY, VIEWER_ORGS_QUERY, VIEWER_QUERY,
+  openCountsQuery, ORG_TEAMS_QUERY, REPO_SEARCH_QUERY, SEARCH_PRS_QUERY, TEAM_MEMBERS_PAGE_QUERY, TEAMS_QUERY, VIEWER_ORGS_QUERY, VIEWER_QUERY,
 } from './queries';
 
 export const ENRICH_BATCH_SIZE = 25;
@@ -12,8 +12,11 @@ export const ENRICH_BATCH_SIZE = 25;
 export const ENRICH_CONCURRENCY = 3;
 const MAX_SEARCH_PAGES = 4;
 const MAX_EXTRA_REPO_PAGES = 20;
+const MAX_TEAM_PAGES = 20;
 
 type RateLimitRaw = { remaining: number; resetAt: string };
+type Page<T> = { pageInfo: { hasNextPage: boolean; endCursor: string | null }; nodes: T[] };
+type TeamNode = { id: string; slug: string; name: string; avatarUrl?: string; members: Page<{ login: string }> };
 
 /** Organisations the logged-in gh user belongs to; setup offers one before an org is chosen. */
 export async function viewerOrganizations(gh: GhClient): Promise<string[]> {
@@ -146,6 +149,33 @@ export class GithubProvider implements CodeHostProvider {
   async searchMine(kind: MineKind, team?: string): Promise<ChangeRequestStub[]> {
     const nodes = await this.searchAll<any>(SEARCH_PRS_QUERY, mineSearch(this.org, kind, team), MAX_SEARCH_PAGES);
     return nodes.filter((node) => node?.id).map(toStub);
+  }
+
+  async teamMembers(): Promise<OrgTeam[]> {
+    const teams: OrgTeam[] = [];
+    let after: string | null = null;
+    // The page caps and cursor checks stop a repeated or missing cursor from looping forever.
+    for (let page = 0; page < MAX_TEAM_PAGES; page += 1) {
+      const data: { organization: { teams: Page<TeamNode> } | null } = await this.query(ORG_TEAMS_QUERY, { org: this.org, after });
+      const connection = data.organization?.teams;
+      if (!connection) break;
+      for (const node of connection.nodes) teams.push({ slug: node.slug, name: node.name, ...(node.avatarUrl ? { avatarUrl: node.avatarUrl } : {}), members: await this.allMembers(node) });
+      if (!connection.pageInfo.hasNextPage || !connection.pageInfo.endCursor) break;
+      after = connection.pageInfo.endCursor;
+    }
+    return teams;
+  }
+
+  private async allMembers(team: TeamNode): Promise<string[]> {
+    const logins = team.members.nodes.map((member) => member.login);
+    let members = team.members;
+    for (let page = 0; page < MAX_TEAM_PAGES && members.pageInfo.hasNextPage && members.pageInfo.endCursor; page += 1) {
+      const data: { node: { members: Page<{ login: string }> } | null } = await this.query(TEAM_MEMBERS_PAGE_QUERY, { id: team.id, after: members.pageInfo.endCursor });
+      if (!data.node) break;
+      members = data.node.members;
+      logins.push(...members.nodes.map((member) => member.login));
+    }
+    return logins;
   }
 
   async listRepos(text: string): Promise<RepoRef[]> {

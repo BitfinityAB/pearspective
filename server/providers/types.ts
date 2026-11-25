@@ -1,4 +1,4 @@
-import type { ChangeRequest, ChangeRequestStub, ClosedChangeRequest, RepoRef, StatusCategory, Ticket, Viewer } from '../../shared/types';
+import type { ChangeRequest, ChangeRequestStub, ClosedChangeRequest, OrgTeam, RepoRef, StatusCategory, Ticket, Viewer } from '../../shared/types';
 
 export type ProviderErrorKind = 'missing-cli' | 'auth' | 'rate-limit' | 'too-large' | 'failed';
 
@@ -48,6 +48,8 @@ export interface CodeHostProvider {
   /** PRs merged or closed at or after `since` (ISO time) in the given repositories. */
   fetchClosed(repos: string[], since: string): Promise<ClosedChangeRequest[]>;
   searchMine(kind: MineKind, team?: string): Promise<ChangeRequestStub[]>;
+  /** Teams in the org with their direct members; absent when the code host has no teams. */
+  teamMembers?(): Promise<OrgTeam[]>;
   nativeStackEntries(repo: string, number: number): Promise<NativeStackEntries | null>;
   compareRefs(repo: string, base: string, head: string): Promise<{ behindBy: number }>;
 }

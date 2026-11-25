@@ -5,19 +5,27 @@ import type { UrlState } from '../state/urlState';
 const CHIPS: { bucket: Bucket; label: string }[] = [
   { bucket: 'blocked', label: 'Blocked' }, { bucket: 'waiting', label: 'Waiting' }, { bucket: 'ready', label: 'Ready' }, { bucket: 'draft', label: 'Drafts' },
 ];
-const GROUPS: { value: GroupBy; label: string }[] = [{ value: 'author', label: 'Author' }, { value: 'repo', label: 'Repository' }, { value: 'ticket', label: 'Ticket' }];
+const GROUPS: { value: GroupBy; label: string }[] = [{ value: 'author', label: 'Author' }, { value: 'repo', label: 'Repository' }, { value: 'ticket', label: 'Ticket' }, { value: 'team', label: 'Team' }];
 
-interface ToolbarProps { url: UrlState; counts: Record<Bucket, number>; onChange: (patch: Partial<UrlState>) => void }
+interface ToolbarProps {
+  url: UrlState;
+  counts: Record<Bucket, number>;
+  onChange: (patch: Partial<UrlState>) => void;
+  /** Team grouping needs the org's teams, which load after the PRs and not on every code host. */
+  teamsKnown?: boolean;
+}
 
-export function Toolbar({ url, counts, onChange }: ToolbarProps) {
+export function Toolbar({ url, counts, onChange, teamsKnown = false }: ToolbarProps) {
   const { filters } = url;
+  // Lanes fall back to authors until teams are known, so the control says the same.
+  const groupBy = url.groupBy === 'team' && !teamsKnown ? 'author' : url.groupBy;
   return (
     <section className="toolbar" aria-label="Filters">
       {url.tab === 'overview' && (
         <div className="segs" style={{ background: 'var(--surface)' }} role="group" aria-label="Group by">
           <span className="lbl" aria-hidden="true">Group by</span>
-          {GROUPS.map((group) => (
-            <button key={group.value} type="button" className={`seg${url.groupBy === group.value ? ' on' : ''}`} aria-pressed={url.groupBy === group.value} onClick={() => onChange({ groupBy: group.value })}>
+          {GROUPS.filter((group) => group.value !== 'team' || teamsKnown).map((group) => (
+            <button key={group.value} type="button" className={`seg${groupBy === group.value ? ' on' : ''}`} aria-pressed={groupBy === group.value} onClick={() => onChange({ groupBy: group.value })}>
               {group.label}
             </button>
           ))}

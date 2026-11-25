@@ -2,7 +2,7 @@ import { ageHours } from './age';
 import { blockersOf, bucketOf, signalsOf, type Blocker, type Bucket, type Signal } from './status';
 import { detectStacks, membersBottomUp, stackIndex, type Stack } from './stacks';
 import { prTicketKey } from './tickets';
-import type { ChangeRequest, Snapshot, Verdict } from './types';
+import type { ChangeRequest, OrgTeam, Snapshot, Verdict } from './types';
 
 export interface TicketBrief {
   key: string;
@@ -26,7 +26,7 @@ export function ticketBrief(key: string, snapshot: Snapshot): TicketBrief {
   };
 }
 
-export type GroupBy = 'author' | 'repo' | 'ticket';
+export type GroupBy = 'author' | 'repo' | 'ticket' | 'team';
 export interface ViewFilters { show: Record<Bucket, boolean>; q: string; newestFirst: boolean }
 export const DEFAULT_FILTERS: ViewFilters = { show: { blocked: true, waiting: true, ready: true, draft: false }, q: '', newestFirst: false };
 
@@ -119,32 +119,55 @@ function lane(key: string, title: string, icon: LaneModel['icon'], views: PrView
   return { key, title, icon, counts, units: buildUnits(views, input.filters, input.stacks, input.pinned), defaultCollapsed: false, ...extra };
 }
 
-function ticketGroup(view: PrView, snapshot: Snapshot) {
-  if (!view.ticket) return { title: 'No ticket', icon: 'ticket' as const, last: true, views: [] as PrView[] };
+type Group = { title: string; icon: LaneModel['icon']; avatarUrl?: string; ticket?: TicketBrief; rank: number; views: PrView[] };
+
+// Lanes sort by rank first: the viewer's teams, then everyone else, then catch-all lanes, then bots.
+const RANK = { first: 0, normal: 1, last: 2, bots: 3 };
+
+function ticketGroup(view: PrView): Group {
+  if (!view.ticket) return { title: 'No ticket', icon: 'ticket', rank: RANK.last, views: [] };
   const brief = view.ticketInfo ?? undefined;
-  return { title: brief?.summary ? `${view.ticket} · ${brief.summary}` : view.ticket, icon: 'ticket' as const, last: false, views: [] as PrView[], ticket: brief };
+  return { title: brief?.summary ? `${view.ticket} · ${brief.summary}` : view.ticket, icon: 'ticket', rank: RANK.normal, views: [], ticket: brief };
+}
+
+/** Each PR's lanes as key and group; a PR by someone in several teams lands in all of them. */
+function groupsOf(view: PrView, groupBy: GroupBy, teamsByLogin: Map<string, OrgTeam[]> | null, viewerTeams: Set<string>): [string, Group][] {
+  if (view.pr.author.kind !== 'human' && groupBy !== 'repo' && groupBy !== 'ticket') return [['bots', { title: 'Bots', icon: 'bot', rank: RANK.bots, views: [] }]];
+  if (groupBy === 'repo') return [[`repo:${view.pr.repo}`, { title: view.pr.repo, icon: 'repo', rank: RANK.normal, views: [] }]];
+  if (groupBy === 'ticket') return [[`ticket:${view.ticket ?? ''}`, ticketGroup(view)]];
+  if (groupBy === 'team' && teamsByLogin) {
+    const teams = teamsByLogin.get(view.pr.author.login.toLowerCase()) ?? [];
+    if (teams.length === 0) return [['no-team', { title: 'No team', icon: 'section', rank: RANK.last, views: [] }]];
+    return teams.map((team) => [`team:${team.slug}`, { title: team.name, icon: 'team', avatarUrl: team.avatarUrl, rank: viewerTeams.has(team.slug) ? RANK.first : RANK.normal, views: [] }]);
+  }
+  return [[`author:${view.pr.author.login}`, { title: view.pr.author.name ?? view.pr.author.login, icon: 'avatar', avatarUrl: view.pr.author.avatarUrl, rank: RANK.normal, views: [] }]];
+}
+
+function teamsByLogin(teams: OrgTeam[]): Map<string, OrgTeam[]> {
+  const byLogin = new Map<string, OrgTeam[]>();
+  for (const team of teams) {
+    for (const login of team.members) {
+      const key = login.toLowerCase();
+      byLogin.set(key, [...(byLogin.get(key) ?? []), team]);
+    }
+  }
+  return byLogin;
 }
 
 export function buildOverviewLanes(snapshot: Snapshot, opts: { groupBy: GroupBy; filters: ViewFilters; now: number }): LaneModel[] {
   const views = buildPrViews(snapshot, opts.now);
   const input: LaneInput = { filters: opts.filters, stacks: detectStacks(snapshot.prs), pinned: new Set(snapshot.settings.pinned) };
   const overview = snapshot.overviewIds.map((id) => views.get(id)).filter((view): view is PrView => !!view);
+  // Without team data, team grouping falls back to authors rather than showing everyone as teamless.
+  const byLogin = opts.groupBy === 'team' && snapshot.orgTeams?.length ? teamsByLogin(snapshot.orgTeams) : null;
+  const viewerTeams = new Set((snapshot.viewer?.teams ?? []).map((team) => team.slug));
 
-  const groups = new Map<string, { title: string; icon: LaneModel['icon']; avatarUrl?: string; ticket?: TicketBrief; last: boolean; views: PrView[] }>();
+  const groups = new Map<string, Group>();
   for (const view of overview) {
-    const isBot = view.pr.author.kind !== 'human';
-    const key =
-      opts.groupBy === 'repo' ? `repo:${view.pr.repo}`
-      : opts.groupBy === 'ticket' ? `ticket:${view.ticket ?? ''}`
-      : isBot ? 'bots' : `author:${view.pr.author.login}`;
-    if (!groups.has(key)) {
-      groups.set(key,
-        opts.groupBy === 'repo' ? { title: view.pr.repo, icon: 'repo', last: false, views: [] }
-        : opts.groupBy === 'ticket' ? ticketGroup(view, snapshot)
-        : isBot ? { title: 'Bots', icon: 'bot', last: true, views: [] }
-        : { title: view.pr.author.name ?? view.pr.author.login, icon: 'avatar', avatarUrl: view.pr.author.avatarUrl, last: false, views: [] });
+    for (const [key, group] of groupsOf(view, opts.groupBy, byLogin, viewerTeams)) {
+      if (!groups.has(key)) groups.set(key, group);
+      groups.get(key)!.views.push(view);
     }
-    groups.get(key)!.views.push(view);
   }
 
   return [...groups]
@@ -156,7 +179,7 @@ export function buildOverviewLanes(snapshot: Snapshot, opts: { groupBy: GroupBy;
         defaultCollapsed: key === 'bots',
       }),
     }))
-    .sort((a, b) => Number(a.group.last) - Number(b.group.last) || b.model.counts.blocked - a.model.counts.blocked || a.model.title.localeCompare(b.model.title))
+    .sort((a, b) => a.group.rank - b.group.rank || b.model.counts.blocked - a.model.counts.blocked || a.model.title.localeCompare(b.model.title))
     .map((entry) => entry.model);
 }
 

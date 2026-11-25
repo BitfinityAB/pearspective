@@ -36,6 +36,54 @@ describe('buildOverviewLanes', () => {
     expect(lanes[0]!.avatarUrl).toBe(sam.avatarUrl);
   });
 
+  describe('by team', () => {
+    const kim = makePerson('kim');
+    const lee = makePerson('Lee');
+    const teams = [
+      { slug: 'billing', name: 'Billing', avatarUrl: 'billing.png', members: ['sam'] },
+      { slug: 'orders', name: 'Orders', avatarUrl: 'orders.png', members: ['alex', 'sam', 'lee'] },
+      { slug: 'search', name: 'Search', members: ['nobody-with-prs'] },
+    ];
+    const withTeams = (snapshot: Snapshot, viewerTeams: string[] = []): Snapshot => ({
+      ...snapshot,
+      orgTeams: teams,
+      viewer: { login: 'viewer', teams: viewerTeams.map((slug) => ({ slug })) },
+    });
+
+    it('puts a PR under every team of its author, with no-team people and bots in lanes last', () => {
+      const snapshot = withTeams(snapshotOf([
+        makePr({ author: alex }),
+        makePr({ author: sam, mergeState: 'conflicts' }),
+        makePr({ author: kim }),
+        makePr({ author: dependabot }),
+      ]));
+      const lanes = buildOverviewLanes(snapshot, { groupBy: 'team', filters: allBuckets, now });
+      expect(lanes.map((lane) => [lane.title, lane.icon, lane.units.length, lane.defaultCollapsed])).toEqual([
+        ['Billing', 'team', 1, false],
+        ['Orders', 'team', 2, false],
+        ['No team', 'section', 1, false],
+        ['Bots', 'bot', 1, true],
+      ]);
+      expect(lanes[0]!.avatarUrl).toBe('billing.png');
+    });
+
+    it('matches logins whatever their case', () => {
+      const snapshot = withTeams(snapshotOf([makePr({ author: lee })]));
+      expect(buildOverviewLanes(snapshot, { groupBy: 'team', filters: allBuckets, now }).map((lane) => lane.title)).toEqual(['Orders']);
+    });
+
+    it("puts the viewer's own teams first", () => {
+      const snapshot = withTeams(snapshotOf([makePr({ author: alex }), makePr({ author: sam, mergeState: 'conflicts' })]), ['orders']);
+      expect(buildOverviewLanes(snapshot, { groupBy: 'team', filters: allBuckets, now }).map((lane) => lane.title)).toEqual(['Orders', 'Billing']);
+    });
+
+    it('groups by author while the teams are unknown or none could be read', () => {
+      const snapshot = snapshotOf([makePr({ author: alex })]);
+      expect(buildOverviewLanes(snapshot, { groupBy: 'team', filters: allBuckets, now }).map((lane) => [lane.title, lane.icon])).toEqual([['alex', 'avatar']]);
+      expect(buildOverviewLanes({ ...snapshot, orgTeams: [] }, { groupBy: 'team', filters: allBuckets, now }).map((lane) => [lane.title, lane.icon])).toEqual([['alex', 'avatar']]);
+    });
+  });
+
   it('groups by repository and by ticket with a "No ticket" lane last', () => {
     const snapshot = snapshotOf([
       makePr({ repo: 'orders-api', headRefName: 'XX-1-backend' }),

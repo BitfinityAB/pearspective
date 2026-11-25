@@ -266,6 +266,44 @@ describe('GithubProvider', () => {
   });
 });
 
+describe('GithubProvider.teamMembers', () => {
+  const members = (logins: string[], hasNextPage = false, endCursor: string | null = null) => ({ pageInfo: { hasNextPage, endCursor }, nodes: logins.map((login) => ({ login })) });
+  const team = (id: string, slug: string, name: string, logins: string[], more = false) => ({ id, slug, name, avatarUrl: `${slug}.png`, members: members(logins, more, more ? `${slug}-m1` : null) });
+
+  it('lists every team with its direct members', async () => {
+    const { gh, queries } = fakeGh([
+      { match: /teams\(first: 100/, reply: () => ({ organization: { teams: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [team('T1', 'orders', 'Orders', ['dev-one', 'dev-two']), team('T2', 'billing', 'Billing', [])] } }, rateLimit }) },
+    ]);
+    const teams = await new GithubProvider(gh, 'acme', classes).teamMembers();
+    expect(teams).toEqual([
+      { slug: 'orders', name: 'Orders', avatarUrl: 'orders.png', members: ['dev-one', 'dev-two'] },
+      { slug: 'billing', name: 'Billing', avatarUrl: 'billing.png', members: [] },
+    ]);
+    expect(queries[0]!.variables).toMatchObject({ org: 'acme' });
+    expect(queries[0]!.query).toContain('membership: IMMEDIATE');
+  });
+
+  it('follows further pages of teams and of a large team\'s members', async () => {
+    const { gh, queries } = fakeGh([
+      {
+        match: /teams\(first: 100/,
+        reply: (_query, variables) => variables.after === 'teams-p1'
+          ? { organization: { teams: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [team('T2', 'billing', 'Billing', ['dev-three'])] } }, rateLimit }
+          : { organization: { teams: { pageInfo: { hasNextPage: true, endCursor: 'teams-p1' }, nodes: [team('T1', 'orders', 'Orders', ['dev-one'], true)] } }, rateLimit },
+      },
+      { match: /node\(id: \$id\)/, reply: () => ({ node: { members: members(['dev-two']) }, rateLimit }) },
+    ]);
+    const teams = await new GithubProvider(gh, 'acme', classes).teamMembers();
+    expect(teams.map((entry) => [entry.slug, entry.members])).toEqual([['orders', ['dev-one', 'dev-two']], ['billing', ['dev-three']]]);
+    expect(queries.find((entry) => /node\(id: \$id\)/.test(entry.query))!.variables).toEqual({ id: 'T1', after: 'orders-m1' });
+  });
+
+  it('returns no teams when the organisation cannot be read', async () => {
+    const { gh } = fakeGh([{ match: /teams\(first: 100/, reply: () => ({ organization: null, rateLimit }) }]);
+    expect(await new GithubProvider(gh, 'acme', classes).teamMembers()).toEqual([]);
+  });
+});
+
 describe('GithubProvider.fetchClosed', () => {
   const closedNode = (number: number, closedAt: string, merged = true) => ({
     id: `PR_${number}`, number, title: `Change ${number}`, url: `https://github.com/acme/orders-api/pull/${number}`,

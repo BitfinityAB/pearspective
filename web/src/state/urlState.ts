@@ -7,7 +7,7 @@ export type Tab = 'overview' | 'mine' | 'stacks' | 'tickets';
 export interface UrlState { tab: Tab; groupBy: GroupBy; filters: ViewFilters; selected: string | null; ticketsMine: boolean; ticket: string | null }
 
 const TABS: Tab[] = ['overview', 'mine', 'stacks', 'tickets'];
-const GROUPS: GroupBy[] = ['author', 'repo', 'ticket'];
+const GROUPS: GroupBy[] = ['author', 'repo', 'ticket', 'team'];
 const BUCKETS: Bucket[] = ['blocked', 'waiting', 'ready', 'draft'];
 
 export function parseUrlState(search: string): UrlState {

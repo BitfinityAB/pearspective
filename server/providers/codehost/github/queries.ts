@@ -62,6 +62,14 @@ export const VIEWER_ORGS_QUERY = `query { viewer { organizations(first: 100) { n
 export const TEAMS_QUERY =
   `query($org: String!, $login: String!) { organization(login: $org) { teams(first: 50, userLogins: [$login]) { nodes { slug avatarUrl(size: 64) } } } ${RATE} }`;
 
+const memberPage = (after: string) => `members(first: 100, membership: IMMEDIATE${after}) { pageInfo { hasNextPage endCursor } nodes { login } }`;
+
+export const ORG_TEAMS_QUERY =
+  `query($org: String!, $after: String) { organization(login: $org) { teams(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { id slug name avatarUrl(size: 64) ${memberPage('')} } } } ${RATE} }`;
+
+export const TEAM_MEMBERS_PAGE_QUERY =
+  `query($id: ID!, $after: String) { node(id: $id) { ... on Team { ${memberPage(', after: $after')} } } ${RATE} }`;
+
 export const REPO_SEARCH_QUERY = `query($q: String!) { search(query: $q, type: REPOSITORY, first: 20) { nodes { ... on Repository { name } } } ${RATE} }`;
 
 export function openCountsQuery(org: string, repos: string[]): string {
