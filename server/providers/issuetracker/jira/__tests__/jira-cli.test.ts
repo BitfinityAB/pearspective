@@ -100,12 +100,12 @@ describe('JiraCliTracker', () => {
 describe('JiraCliTracker mine flag', () => {
   const mineReply = (mineKeys: string[]) => (args: string[]) => ok(JSON.stringify(list.filter((raw) => keysIn(args).includes(raw.key) && mineKeys.includes(raw.key))));
 
-  it('marks tickets the viewer created or is or was assignee on, with one extra query per chunk', async () => {
+  it('marks tickets the viewer is or was assignee on, with one extra query per chunk', async () => {
     const { runner, calls } = fakeRunner([{ match: isMine, reply: mineReply(['XX-2']) }, { match: isList, reply: listReply }, noView]);
     const result = await new JiraCliTracker(BASE, runner).getTickets(['XX-1', 'XX-2']);
     expect(result.tickets.map((ticket) => [ticket.key, ticket.mine])).toEqual([['XX-1', false], ['XX-2', true]]);
     const mineQuery = calls.find(isMine)!;
-    expect(mineQuery[mineQuery.indexOf('-q') + 1]).toBe('key in (XX-1, XX-2) AND (reporter = currentUser() OR assignee WAS currentUser())');
+    expect(mineQuery[mineQuery.indexOf('-q') + 1]).toBe('key in (XX-1, XX-2) AND (assignee WAS currentUser())');
     expect(mineQuery[mineQuery.indexOf('--project') + 1]).toBe('XX');
   });
 

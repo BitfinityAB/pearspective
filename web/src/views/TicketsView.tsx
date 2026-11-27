@@ -68,7 +68,7 @@ export function TicketsView({ snapshot, selectedId, onSelect, mineOnly = false, 
   if (isFirstLoad(snapshot)) return <FirstLoadMessage />;
   const visible = lanes.filter((lane) => lane.rows.length > 0 || lane.key === 'mismatch' || lane.key === 'review');
   if (lanes.every((lane) => lane.rows.length === 0)) {
-    return <p className="empty-state">{mineOnly ? 'None of these tickets were created by you or assigned to you.' : 'No tickets are referenced by open or recently closed pull requests.'}</p>;
+    return <p className="empty-state">{mineOnly ? 'None of these tickets are or were assigned to you, and none have a pull request by you.' : 'No tickets are referenced by open or recently closed pull requests.'}</p>;
   }
   return <div className="board">{visible.map((lane) => <TicketLane key={lane.key} lane={lane} selectedId={selectedId} onSelect={onSelect} focusKey={focusKey} />)}</div>;
 }

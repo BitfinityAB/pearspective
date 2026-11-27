@@ -6,7 +6,8 @@ export const CHUNK_SIZE = 50;
 const CATEGORY: Record<string, StatusCategory> = { new: 'todo', indeterminate: 'inProgress', done: 'done' };
 const NOT_FOUND = /An issue with key '([^']+)' does not exist/g;
 const NO_RESULT = /No result found/;
-const MINE_JQL = 'reporter = currentUser() OR assignee WAS currentUser()';
+// Not the reporter: someone who writes tickets for others would see all of that work as theirs.
+const MINE_JQL = 'assignee WAS currentUser()';
 
 export const projectOf = (key: string) => key.slice(0, key.lastIndexOf('-'));
 const firstLine = (text: string) => text.split('\n').map((line) => line.trim()).find(Boolean) ?? '';

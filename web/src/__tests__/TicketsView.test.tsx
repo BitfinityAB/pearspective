@@ -27,7 +27,7 @@ function setup(mineOnly = false, focusKey: string | null = null) {
 describe('TicketsView', () => {
   it('says so when none of the tickets are the viewer\'s', () => {
     setup(true);
-    expect(screen.getByText('None of these tickets were created by you or assigned to you.')).toBeInTheDocument();
+    expect(screen.getByText('None of these tickets are or were assigned to you, and none have a pull request by you.')).toBeInTheDocument();
   });
 
   it('lists mismatching tickets with actual and expected status and the reason', () => {

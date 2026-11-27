@@ -108,7 +108,7 @@ export function App({ api }: { api: DashboardApi }) {
                   type="button"
                   className={`chip${url.ticketsMine ? '' : ' off'}`}
                   aria-pressed={url.ticketsMine}
-                  title={mineIsUnknown(snapshot) ? 'Could not tell for every ticket whether it is yours, so some of yours may be hidden.' : 'Tickets you created, or are or were assignee on'}
+                  title={mineIsUnknown(snapshot) ? 'Could not tell for every ticket whether it is yours, so some of yours may be hidden.' : 'Tickets you are or were assignee on, or have a pull request for'}
                   onClick={() => setUrl({ ticketsMine: !url.ticketsMine })}
                 >
                   Mine

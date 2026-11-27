@@ -25,9 +25,23 @@ const LANES: { key: Verdict; title: string; defaultCollapsed: boolean }[] = [
   { key: 'skipped', title: 'Not checked (ignored branches only)', defaultCollapsed: true },
 ];
 
-/** The Mine filter keeps tickets the viewer created or is or was assignee on; the lanes and the tab count must agree on it. */
-const visibleChecks = (snapshot: Snapshot, mineOnly = false) =>
-  Object.values(snapshot.ticketChecks).filter((check) => !mineOnly || snapshot.tickets[check.key]?.mine === true);
+/** Tickets with an open or closed PR by the viewer; the tracker cannot tell who wrote the code. */
+function keysWithViewerPrs(snapshot: Snapshot): Set<string> {
+  const login = snapshot.viewer?.login.toLowerCase();
+  if (!login) return new Set();
+  return new Set([...snapshot.prs, ...snapshot.closed]
+    .filter((pr) => pr.author.login.toLowerCase() === login)
+    .map((pr) => prTicketKey(pr))
+    .filter((key): key is string => !!key));
+}
+
+/** The Mine filter keeps tickets the viewer is or was assignee on or has a PR for; the lanes and the tab count must agree on it. */
+function visibleChecks(snapshot: Snapshot, mineOnly = false): TicketCheck[] {
+  const checks = Object.values(snapshot.ticketChecks);
+  if (!mineOnly) return checks;
+  const withViewerPrs = keysWithViewerPrs(snapshot);
+  return checks.filter((check) => snapshot.tickets[check.key]?.mine === true || withViewerPrs.has(check.key));
+}
 
 export function buildTicketLanes(snapshot: Snapshot, opts: { mineOnly?: boolean } = {}): TicketLaneModel[] {
   const checks = visibleChecks(snapshot, opts.mineOnly);

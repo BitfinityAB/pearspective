@@ -1,6 +1,6 @@
 import { buildTicketLanes, mineIsUnknown, ticketAttentionCount } from '../ticketLanes';
 import { emptySnapshot, type TicketCheck } from '../types';
-import { makeClosed, makePr } from '../../test/factories';
+import { makeClosed, makePerson, makePr } from '../../test/factories';
 import { makeTicket } from '../../test/fake-tracker';
 
 const checkOf = (key: string, verdict: TicketCheck['verdict'], since = '2026-11-18T08:00:00Z'): TicketCheck =>
@@ -60,6 +60,17 @@ describe('buildTicketLanes', () => {
   it('keeps only the viewer\'s tickets when filtered to mine', () => {
     const lanes = buildTicketLanes(snapshot, { mineOnly: true });
     expect(lanes.flatMap((lane) => lane.rows.map((row) => row.key))).toEqual(['XX-1']);
+  });
+
+  it('also keeps tickets with an open or closed PR by the viewer, whoever the ticket belongs to', () => {
+    const viewerPrs = {
+      ...snapshot,
+      viewer: { login: 'Dev-One', teams: [] },
+      prs: [...snapshot.prs, makePr({ headRefName: 'XX-3-work', author: makePerson('dev-one') })],
+      closed: [...snapshot.closed, makeClosed({ headRefName: 'XX-4-done', author: makePerson('dev-one') }), makeClosed({ headRefName: 'XX-5-done', author: makePerson('someone-else') })],
+    };
+    expect(buildTicketLanes(viewerPrs, { mineOnly: true }).flatMap((lane) => lane.rows.map((row) => row.key)).sort()).toEqual(['XX-1', 'XX-3', 'XX-4']);
+    expect(ticketAttentionCount(viewerPrs, { mineOnly: true })).toBe(1);
   });
 
   it('reports when the tracker could not tell which tickets are mine', () => {
