@@ -299,6 +299,7 @@ const sigHtml = p => signals(p).map(s => `<span class="dot k-${s.k}" title="${es
 const ageHtml = (h, cat) => `<span class="age"><span class="track"><i style="width:${pct(h)}%;background:${barFill(cat)}"></i></span><span class="l">${age(h)}</span></span>`;
 
 // ---------- State ----------
+const TEAMS = { 'Alex Rivera': ['Orders'], 'Sam Chen': ['Field app', 'Orders'], 'Robin Park': ['Integrations'], 'Kim Lee': ['Field app'] };
 const state = { tab:'overview', groupBy:'author', newestFirst:false, show:{blocked:true, waiting:true, ready:true, draft:false}, q:'', selected:'e1', pinned:{m2:true}, collapsed:{}, openStacks:{s1:true, s2:true}, interval:'3m', theme: document.documentElement.dataset.theme || 'system' };
 function setTheme(t){
   state.theme = t;
@@ -452,11 +453,15 @@ function lanesHtml(){
   } else {
     const groups = new Map();
     ALL.forEach(p => {
-      const key = state.groupBy === 'author' ? (p.bot ? 'Bots' : p.author) : state.groupBy === 'repo' ? p.repo : (p.ticket || 'No ticket');
-      if (!groups.has(key)) groups.set(key, []); groups.get(key).push(p);
+      // Like the app, a PR shows under every team its author belongs to.
+      const keys = state.groupBy === 'author' ? [p.bot ? 'Bots' : p.author]
+        : state.groupBy === 'repo' ? [p.repo]
+        : state.groupBy === 'team' ? (p.bot ? ['Bots'] : TEAMS[p.author] || ['No team'])
+        : [p.ticket || 'No ticket'];
+      keys.forEach(key => { if (!groups.has(key)) groups.set(key, []); groups.get(key).push(p); });
     });
     lanes = [...groups].map(([k, v]) => lane(k, v));
-    const last = n => n === 'Bots' || n === 'No ticket';
+    const last = n => n === 'Bots' ? 2 : n === 'No ticket' || n === 'No team' ? 1 : 0;
     lanes.sort((a,b) => last(a.name) - last(b.name) || b.blocked - a.blocked);
   }
   const ticks = [[1,'1h'],[6,'6h'],[24,'1d'],[72,'3d'],[168,'1w'],[336,'2w'],[720,'1mo'],[2160,'3mo']]
@@ -552,7 +557,7 @@ function render(){
   </header>
   ${state.tab === 'tickets' ? '<div class="toolbar"><button class="chip off">Mine</button><span class="muted">Tickets referenced by open and recently closed pull requests, checked against their PRs.</span></div>' + ticketsHtml() : state.tab === 'stacks' ? '<div class="toolbar"><span class="muted">Every stack in the selected repos. Hold ' + ZOOM_KEY + ' and scroll to zoom, drag to pan, click a PR to open it.</span></div>' + stacksHtml() : `
   <section class="toolbar">
-    ${state.tab === 'overview' ? `<div class="segs" style="background:var(--surface)"><span class="lbl">Group by</span>${seg(state.groupBy === 'author','group','author','Author')}${seg(state.groupBy === 'repo','group','repo','Repository')}${seg(state.groupBy === 'ticket','group','ticket','Ticket')}</div>` : ''}
+    ${state.tab === 'overview' ? `<div class="segs" style="background:var(--surface)"><span class="lbl">Group by</span>${seg(state.groupBy === 'author','group','author','Author')}${seg(state.groupBy === 'repo','group','repo','Repository')}${seg(state.groupBy === 'ticket','group','ticket','Ticket')}${seg(state.groupBy === 'team','group','team','Team')}</div>` : ''}
     <div style="display:flex;flex-wrap:wrap;gap:8px" role="group" aria-label="Status filter">${['blocked','waiting','ready','draft'].map(k => `<button class="chip${state.show[k] ? '' : ' off'}" aria-pressed="${state.show[k]}" data-act="chip" data-val="${k}"><span class="d${k === 'draft' ? ' hatch' : ''}" style="${k === 'draft' ? '' : 'background:' + CAT[k].c}"></span>${{blocked:'Blocked', waiting:'Waiting', ready:'Ready', draft:'Drafts'}[k]}<span class="n">${gCounts[k]}</span></button>`).join('')}</div>
     <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="sr">Search pull requests</span><input id="q" value="${esc(state.q)}" placeholder="Search title, branch, repo"></label>
     <button class="chip" data-act="sort"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 16l4 4 4-4"/><path d="M17 20V4"/><path d="M13 8l4-4 4 4"/></svg>${state.newestFirst ? 'Newest first' : 'Oldest first'}</button>
