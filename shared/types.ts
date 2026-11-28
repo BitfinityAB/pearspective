@@ -1,5 +1,6 @@
 import type { ResolvedTheme } from './themeResolve';
 import type { ThemeMode } from './themeTokens';
+import { NO_REVIEWERS, type ReviewerViews } from './reviewers';
 export type SignalColor = 'green' | 'amber' | 'red' | 'grey';
 export type MergeState = 'clean' | 'blocked' | 'unstable' | 'conflicts' | 'behind' | 'unknown';
 export type ReviewDecision = 'approved' | 'review_required' | 'changes_requested' | null;
@@ -120,7 +121,7 @@ export interface Snapshot {
   notification: NotificationBatch | null;
   /** ticketUrl is a template with {key}, or null when no issue tracker is configured. */
   /** pinned holds change request ids that sort first in their lane. */
-  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean; notifications: NotificationSettings; theme: string };
+  settings: { refresh: RefreshSetting; repos: string[]; org: string; host: string; ticketUrl: string | null; pinned: string[]; ticketsEnabled: boolean; notifications: NotificationSettings; theme: string; reviewers: ReviewerViews };
   /** Bumped when theme files change on disk, so open tabs refetch the theme list. */
   themes: { version: number };
   /** Every team the viewer can see, for grouping by team; null until loaded or when the code host has no teams. */
@@ -241,7 +242,7 @@ export function emptySnapshot(org = '', host = 'github.com'): Snapshot {
     closed: [],
     ticketChecks: {},
     notification: null,
-    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false, notifications: { enabled: false, events: { ...NOTIFICATION_DEFAULTS } }, theme: 'default' },
+    settings: { refresh: 3, repos: [], org, host, ticketUrl: null, pinned: [], ticketsEnabled: false, notifications: { enabled: false, events: { ...NOTIFICATION_DEFAULTS } }, theme: 'default', reviewers: NO_REVIEWERS },
     themes: { version: 0 },
     orgTeams: null,
   };

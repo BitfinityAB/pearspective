@@ -1,3 +1,4 @@
+import { toReviewerView } from '../shared/reviewers';
 import { emptySnapshot, type BannerMsg, type ChangeRequest, type ChangeRequestStub, type NotificationBatch, type Snapshot, type Viewer } from '../shared/types';
 import { notificationEvents } from '../shared/notifications';
 import { buildTicketChecks } from '../shared/ticketChecks';
@@ -120,6 +121,7 @@ export class Poller {
         ticketsEnabled: Boolean(tracker?.ticketStatus),
         notifications: notificationSettings(config),
         theme: config.theme,
+        reviewers: { aiReview: toReviewerView(config.reviewers.aiReview), codeAnalysis: toReviewerView(config.reviewers.codeAnalysis) },
       },
     }, notify);
   }

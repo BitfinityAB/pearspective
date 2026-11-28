@@ -1,4 +1,5 @@
-import { ConfigSchema, DEFAULT_REVIEWER_CLASSES, type Config } from '../server/config';
+import { ConfigSchema, type Config } from '../server/config';
+import { catalogEntryFor, isIgnoredBot, matchesLogin, REVIEWER_SLOTS, type ReviewerSlot, type ReviewerSlotKey } from '../shared/reviewers';
 import { MAX_REPOS, type RepoRef } from '../shared/types';
 
 export function parseRemote(url: string): { owner: string; repo: string } | null {
@@ -17,6 +18,9 @@ export function rankCandidates(cloned: string[], activity: RepoRef[], openCounts
 export function preselect(candidates: RepoRef[], max = MAX_REPOS): string[] {
   return candidates.filter((repo) => (repo.openCount ?? 0) > 0).slice(0, max).map((repo) => repo.name);
 }
+
+/** The prompt joins choices on one line by default, which wraps unreadably with ten padded rows. */
+export const selectedReposSummary = (names: string[]): string => names.map((name) => `\n  ${name}`).join('');
 
 export function validateSelection(selected: string[]): true | string {
   if (selected.length === 0) return 'Pick at least one repository.';
@@ -39,11 +43,45 @@ export function defaultOrg(input: { existing?: string; viewerOrgs: string[]; rem
   return mostCommonOwner(remotes) ?? '';
 }
 
-export function buildConfig(input: { org: string; repos: string[]; teams: string[]; localRepos: string[] }, existing?: Config): Config {
+export function buildConfig(input: { org: string; repos: string[]; teams: string[]; localRepos: string[]; reviewers?: Config['reviewers'] }, existing?: Config): Config {
   return ConfigSchema.parse({
     ...existing,
     codeHost: { ...existing?.codeHost, provider: 'github', org: input.org, repos: input.repos, teams: input.teams, localRepos: input.localRepos },
-    reviewerClasses: existing?.reviewerClasses ?? DEFAULT_REVIEWER_CLASSES,
+    reviewers: input.reviewers ?? existing?.reviewers ?? {},
     refreshIntervalSec: existing?.refreshIntervalSec ?? 180,
   });
+}
+
+export interface ReviewerCandidate { slot: ReviewerSlotKey; slotConfig: ReviewerSlot; reviews: number; known: boolean }
+
+/** The current choice leads on a re-run; otherwise the tool with most reviews leads. */
+export function sortCandidates(candidates: ReviewerCandidate[], existing: ReviewerSlot | undefined): ReviewerCandidate[] {
+  return [...candidates].sort((a, b) => Number(b.slotConfig === existing) - Number(a.slotConfig === existing) || b.reviews - a.reviews);
+}
+
+export function reviewerCandidates(bots: { login: string; reviews: number }[], existing: Config['reviewers'] = {}) {
+  const bySlot: Record<ReviewerSlotKey, ReviewerCandidate[]> = { aiReview: [], codeAnalysis: [] };
+  const unknown: { login: string; reviews: number }[] = [];
+  for (const bot of bots) {
+    if (isIgnoredBot(bot.login)) continue;
+    const current = REVIEWER_SLOTS.find((slot) => existing[slot]?.logins.some((pattern) => matchesLogin(bot.login, pattern)));
+    const entry = catalogEntryFor(bot.login);
+    const slot = current ?? entry?.slot;
+    if (!slot) {
+      unknown.push(bot);
+      continue;
+    }
+    const slotConfig: ReviewerSlot = current ? existing[current]! : { name: entry!.name, logins: entry!.logins, ...(entry!.short ? { short: entry!.short } : {}), show: true };
+    const same = bySlot[slot].find((candidate) => candidate.slotConfig.name === slotConfig.name);
+    if (same) same.reviews += bot.reviews;
+    else bySlot[slot].push({ slot, slotConfig, reviews: bot.reviews, known: true });
+  }
+  for (const slot of REVIEWER_SLOTS) {
+    const configured = existing[slot];
+    if (configured && !bySlot[slot].some((candidate) => candidate.slotConfig.name === configured.name)) {
+      bySlot[slot].push({ slot, slotConfig: configured, reviews: 0, known: true });
+    }
+    bySlot[slot] = sortCandidates(bySlot[slot], existing[slot]);
+  }
+  return { bySlot, unknown };
 }

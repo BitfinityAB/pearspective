@@ -328,3 +328,19 @@ describe('GithubProvider.fetchClosed', () => {
     expect(await provider.fetchClosed([], '2026-11-06T00:00:00Z')).toEqual([]);
   });
 });
+
+describe('GithubProvider.reviewingBots', () => {
+  it('counts reviews per bot across recent PRs in the chosen repos, ignoring people', async () => {
+    const pr = (reviewers: [string, string][], requested: string[] = []) => ({
+      reviews: { nodes: reviewers.map(([typename, login]) => ({ author: { __typename: typename, login } })) },
+      reviewRequests: { nodes: requested.map((login) => ({ requestedReviewer: { __typename: 'Bot', login } })) },
+    });
+    const { gh, queries } = fakeGh([{
+      match: /search\(query: \$q, type: ISSUE, first: 100\)/,
+      reply: () => ({ search: { nodes: [pr([['Bot', 'codescene-access'], ['User', 'dev-one'], ['Bot', 'copilot-pull-request-reviewer']]), pr([['Bot', 'codescene-access']], ['coderabbitai'])] }, rateLimit }),
+    }]);
+    const bots = await new GithubProvider(gh, 'acme', classes).reviewingBots(['orders-api', 'orders-web']);
+    expect(bots).toEqual([{ login: 'codescene-access', reviews: 2 }, { login: 'copilot-pull-request-reviewer', reviews: 1 }, { login: 'coderabbitai', reviews: 0 }]);
+    expect(queries[0]!.variables.q).toBe('is:pr repo:acme/orders-api repo:acme/orders-web sort:updated-desc');
+  });
+});

@@ -50,7 +50,7 @@ GitHub (and later Jira) sit behind interfaces. Then someone can write a GitLab, 
 - **The domain model is neutral.** The poller, the status rules (`status.ts`), grouping and the HTTP API only ever see neutral types (`ChangeRequest`, `Check`, `Review`, `Thread`, `Stack`, `Ticket`, `Viewer`). Provider vocabulary such as GraphQL fields, `mergeStateStatus`, GitLab "merge requests" or Azure "policies" never leaks past the provider.
 - **Providers map their native states onto neutral enums.** For example: GitHub `DIRTY` and GitLab `has_conflicts` both become `conflicts`, and a required GitHub check and an Azure "required policy" both become `Check.required = true`.
 - **Missing features are declared, not faked.** Each provider declares `capabilities`, and the UI hides or greys out what a provider can't supply. For example, a provider without native stacks falls back to the generic branch-chain detection.
-- **Reviewer classes are config, not code.** v1 hard-codes `copilot-pull-request-reviewer` as the Copilot reviewer and `codescene-*` as CodeScene. Instead, `config.json` maps reviewer logins (or patterns) to a class (`ai-review`, `code-analysis`, `bot`), and the status strip gets its non-human signals from these classes. On another host, other bots can fill the same signals.
+- **Reviewer classes are config, not code.** v1 hard-codes `copilot-pull-request-reviewer` as the Copilot reviewer and `codescene-*` as CodeScene. Instead, the `reviewers` config names the AI reviewer and code analysis tools and their logins (or patterns), and the status strip gets its non-human signals from them (actor kinds in code stay `ai-review`, `code-analysis`, `bot`). On another host, other bots can fill the same signals.
 - **Each provider is a module** under `server/providers/<kind>/<name>/` with its own tests and fixtures. A registry chooses providers from config, and every implementation must pass a shared **contract test** suite (fixtures in, neutral model out).
 
 ### Interfaces (sketch)
@@ -90,9 +90,9 @@ interface IssueTrackerProvider {                                         // v2
 {
   "codeHost":     { "provider": "github", "org": "acme", "repos": ["…"] },
   "issueTracker": { "provider": "jira", "baseUrl": "https://jira.example.com" },
-  "reviewerClasses": {
-    "ai-review":     ["copilot-pull-request-reviewer"],
-    "code-analysis": ["codescene-access", "codescene-delta-analysis"]
+  "reviewers": {
+    "aiReview": { "name": "Copilot", "logins": ["copilot-pull-request-reviewer"] },
+    "codeAnalysis": { "name": "CodeScene", "logins": ["codescene-*"] }
   }
 }
 ```
@@ -112,9 +112,9 @@ v1 ships only `github`. `issueTracker` is optional, so the Jira features simply 
     "excludeRepos": [],
     "teams": ["platform-team"]
   },
-  "reviewerClasses": {
-    "ai-review":     ["copilot-pull-request-reviewer"],
-    "code-analysis": ["codescene-access", "codescene-delta-analysis"]
+  "reviewers": {
+    "aiReview": { "name": "Copilot", "logins": ["copilot-pull-request-reviewer"] },
+    "codeAnalysis": { "name": "CodeScene", "logins": ["codescene-*"] }
   },
   "refreshIntervalSec": 180
 }
@@ -177,14 +177,14 @@ A banner, never silent failure, when:
 
 All status derivation is pure functions over the raw GraphQL data (unit-tested).
 
-### Reviewer classes
+### Reviewers
 
-These are the GitHub defaults. The mapping comes from `reviewerClasses` in config, not from code.
+These are the GitHub defaults. The mapping comes from `reviewers` in config, not from code.
 
 | Class | Logins | Counts as human review |
 |---|---|---|
 | Copilot | `copilot-pull-request-reviewer` (Bot) | no |
-| CodeScene | `codescene-access`, `codescene-delta-analysis` (Bot) | no |
+| CodeScene | `codescene-*` (Bot) | no |
 | Other bots | any `__typename: Bot` | no, ignored |
 | Human | `__typename: User` | yes |
 

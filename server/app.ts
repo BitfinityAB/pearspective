@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import express, { type ErrorRequestHandler, type RequestHandler } from 'express';
+import { REVIEWER_SLOTS } from '../shared/reviewers';
 import { MAX_PINNED, MAX_REPOS, REFRESH_OPTIONS, type RefreshSetting } from '../shared/types';
 import { NotificationsSchema, refreshToSeconds, type ConfigStore } from './config';
 import type { SnapshotHub } from './hub';
@@ -21,6 +23,7 @@ export interface AppDeps {
 }
 
 const THEME_ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
+const ReviewerShowSchema = z.object({ aiReview: z.object({ show: z.boolean() }).strict().optional(), codeAnalysis: z.object({ show: z.boolean() }).strict().optional() }).strict();
 
 export const DEFAULT_ALLOWED_HOSTS = ['127.0.0.1:4100', 'localhost:4100', '127.0.0.1:5173', 'localhost:5173'];
 const ALLOWED_ORIGINS = new Set(DEFAULT_ALLOWED_HOSTS.map((host) => `http://${host}`));
@@ -98,9 +101,9 @@ export function createApp({ poller, presence, loop, provider, store, hub, themes
   });
 
   app.put('/api/settings', async (req, res) => {
-    const { refresh, repos, pinned, notifications, theme } = (req.body ?? {}) as { refresh?: RefreshSetting; repos?: unknown; pinned?: unknown; notifications?: unknown; theme?: unknown };
-    if (refresh === undefined && repos === undefined && pinned === undefined && notifications === undefined && theme === undefined) {
-      res.status(400).json({ error: 'Send refresh, repos, pinned, notifications or theme' });
+    const { refresh, repos, pinned, notifications, theme, reviewers } = (req.body ?? {}) as { refresh?: RefreshSetting; repos?: unknown; pinned?: unknown; notifications?: unknown; theme?: unknown; reviewers?: unknown };
+    if (refresh === undefined && repos === undefined && pinned === undefined && notifications === undefined && theme === undefined && reviewers === undefined) {
+      res.status(400).json({ error: 'Send refresh, repos, pinned, notifications, theme or reviewers' });
       return;
     }
     if (refresh !== undefined && !(REFRESH_OPTIONS as readonly unknown[]).includes(refresh)) {
@@ -124,6 +127,16 @@ export function createApp({ poller, presence, loop, provider, store, hub, themes
       res.status(400).json({ error: `notifications are invalid: ${parsedNotifications.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}` });
       return;
     }
+    const parsedReviewers = reviewers === undefined ? undefined : ReviewerShowSchema.safeParse(reviewers);
+    if (parsedReviewers && !parsedReviewers.success) {
+      res.status(400).json({ error: 'reviewers must look like { aiReview: { show: true } }' });
+      return;
+    }
+    const unconfigured = REVIEWER_SLOTS.filter((slot) => parsedReviewers?.data?.[slot] && !store.get().reviewers[slot]);
+    if (unconfigured.length) {
+      res.status(400).json({ error: `${unconfigured.join(', ')} is not configured in config.json` });
+      return;
+    }
     let reposChanged = false;
     await store.update((current) => {
       // Re-sending the same selection (Save after changing only other settings) must not cost a full refresh.
@@ -135,6 +148,12 @@ export function createApp({ poller, presence, loop, provider, store, hub, themes
         pinned: (pinned as string[] | undefined) ?? current.pinned,
         notifications: parsedNotifications ? parsedNotifications.data : current.notifications,
         theme: (theme as string | undefined) ?? current.theme,
+        reviewers: Object.fromEntries(REVIEWER_SLOTS.flatMap((slot) => {
+          const configured = current.reviewers[slot];
+          if (!configured) return [];
+          const show = parsedReviewers?.data?.[slot]?.show;
+          return [[slot, show === undefined ? configured : { ...configured, show }]];
+        })),
       };
     });
     poller.refreshSettings();

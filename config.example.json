@@ -7,9 +7,9 @@
     "teams": ["platform-team"],
     "localRepos": []
   },
-  "reviewerClasses": {
-    "ai-review": ["copilot-pull-request-reviewer"],
-    "code-analysis": ["codescene-access", "codescene-delta-analysis"]
+  "reviewers": {
+    "aiReview": { "name": "Copilot", "logins": ["copilot-pull-request-reviewer"] },
+    "codeAnalysis": { "name": "CodeScene", "logins": ["codescene-*"] }
   },
   "refreshIntervalSec": 180,
   "issueTracker": {

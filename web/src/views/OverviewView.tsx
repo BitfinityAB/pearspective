@@ -23,7 +23,7 @@ export function OverviewView({ snapshot, url, now, onSelect, onVisualize, onOpen
   if (isFirstLoad(snapshot)) return <FirstLoadMessage />;
   return (
     <div className="board">
-      <ColumnHeader />
+      <ColumnHeader reviewers={snapshot.settings.reviewers} />
       {lanes.map((lane) => <Lane key={`${url.groupBy}:${lane.key}`} lane={lane} selectedId={url.selected} onSelect={onSelect} onVisualize={onVisualize} />)}
       <p className="note">Age axis is log scale: 1 hour to 3 months share one ruler. Bar colour is the PR's bucket; hatched means draft.</p>
     </div>

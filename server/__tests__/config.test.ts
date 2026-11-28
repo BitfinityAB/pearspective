@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ConfigError, ConfigSchema, ConfigStore, hiddenPollInterval, notificationSettings, refreshToSeconds, resolveDatabasePath, secondsToRefresh } from '../config';
+import { ConfigError, ConfigSchema, ConfigStore, hiddenPollInterval, notificationSettings, refreshToSeconds, resolveDatabasePath, reviewerClassesOf, secondsToRefresh } from '../config';
 
 async function tempConfig(contents?: unknown) {
   const dir = await mkdtemp(join(tmpdir(), 'prdash-'));
@@ -17,7 +17,7 @@ describe('ConfigStore', () => {
     const store = await ConfigStore.open(await tempConfig(minimal));
     expect(store.get()).toMatchObject({
       codeHost: { excludeRepos: [], teams: [], localRepos: [] },
-      reviewerClasses: { 'ai-review': ['copilot-pull-request-reviewer'], 'code-analysis': ['codescene-access', 'codescene-delta-analysis'] },
+      reviewers: {},
       refreshIntervalSec: 180,
     });
   });
@@ -150,5 +150,63 @@ describe('ConfigSchema theme', () => {
   ])('resolves a theme that %s', (_label, theme, expected) => {
     const parsed = ConfigSchema.safeParse({ ...minimal, ...(theme === undefined ? {} : { theme }) });
     expect(parsed.success && parsed.data.theme).toBe(expected);
+  });
+});
+
+describe('reviewers config', () => {
+  const slot = { name: 'Copilot', logins: ['copilot-pull-request-reviewer'] };
+
+  it('reads configured slots, defaulting show to true, and leaves missing slots out', async () => {
+    const store = await ConfigStore.open(await tempConfig({ ...minimal, reviewers: { aiReview: slot } }));
+    expect(store.get().reviewers).toEqual({ aiReview: { ...slot, show: true } });
+  });
+
+  it('rejects a slot without a name or logins', async () => {
+    await expect(ConfigStore.open(await tempConfig({ ...minimal, reviewers: { aiReview: { name: '', logins: ['x'] } } }))).rejects.toBeInstanceOf(ConfigError);
+    await expect(ConfigStore.open(await tempConfig({ ...minimal, reviewers: { codeAnalysis: { name: 'X', logins: [] } } }))).rejects.toBeInstanceOf(ConfigError);
+  });
+
+  it('rewrites an old reviewerClasses block as reviewers when opened', async () => {
+    const path = await tempConfig({ ...minimal, reviewerClasses: { 'ai-review': ['copilot-pull-request-reviewer'], 'code-analysis': ['codescene-access', 'codescene-delta-analysis'] } });
+    const logged = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const store = await ConfigStore.open(path);
+    logged.mockRestore();
+    const expected = {
+      aiReview: { name: 'Copilot', logins: ['copilot-pull-request-reviewer'], show: true },
+      codeAnalysis: { name: 'CodeScene', logins: ['codescene-access', 'codescene-delta-analysis'], show: true },
+    };
+    expect(store.get().reviewers).toEqual(expected);
+    const saved = JSON.parse(await readFile(path, 'utf8'));
+    expect(saved.reviewerClasses).toBeUndefined();
+    expect(saved.reviewers).toEqual(expected);
+  });
+
+  it('names an unknown old login readably and skips empty old lists', async () => {
+    const path = await tempConfig({ ...minimal, reviewerClasses: { 'ai-review': ['acme-review-bot'], 'code-analysis': [] } });
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const store = await ConfigStore.open(path);
+    vi.restoreAllMocks();
+    expect(store.get().reviewers).toEqual({ aiReview: { name: 'Acme Review Bot', logins: ['acme-review-bot'], show: true } });
+  });
+
+  it('keeps reviewers and drops reviewerClasses when a file has both', async () => {
+    const path = await tempConfig({ ...minimal, reviewers: { aiReview: slot }, reviewerClasses: { 'ai-review': ['other'], 'code-analysis': ['x'] } });
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const store = await ConfigStore.open(path);
+    vi.restoreAllMocks();
+    expect(store.get().reviewers).toEqual({ aiReview: { ...slot, show: true } });
+    expect(JSON.parse(await readFile(path, 'utf8')).reviewerClasses).toBeUndefined();
+  });
+
+  it('does not rewrite a file that is already in the new format', async () => {
+    const path = await tempConfig({ ...minimal, reviewers: { aiReview: slot } });
+    const before = await readFile(path, 'utf8');
+    await ConfigStore.open(path);
+    expect(await readFile(path, 'utf8')).toBe(before);
+  });
+
+  it('gives the provider the logins of each slot', () => {
+    expect(reviewerClassesOf({ reviewers: { codeAnalysis: { name: 'CodeScene', logins: ['codescene-*'], show: false } } }))
+      .toEqual({ 'ai-review': [], 'code-analysis': ['codescene-*'] });
   });
 });

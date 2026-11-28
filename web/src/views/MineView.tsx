@@ -13,7 +13,7 @@ export function MineView({ snapshot, url, now, onSelect, onVisualize }: MineView
   if (isFirstLoad(snapshot)) return <FirstLoadMessage />;
   return (
     <div className="board">
-      <ColumnHeader />
+      <ColumnHeader reviewers={snapshot.settings.reviewers} />
       {lanes.map((lane) => <Lane key={lane.key} lane={lane} selectedId={url.selected} onSelect={onSelect} onVisualize={onVisualize} />)}
     </div>
   );

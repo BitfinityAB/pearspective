@@ -181,6 +181,9 @@ a.mini { color: var(--text); text-decoration: none }
 .notify-settings { display: flex; flex-direction: column; gap: 8px; padding: 0 18px 12px }
 .notify-master { display: flex; align-items: center; gap: 8px; font-weight: 600 }
 .notify-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; font-size: 13px }
+.column-settings { display: flex; flex-wrap: wrap; gap: 4px 16px; border: 0; padding: 0 18px; margin: 0 0 12px; font-size: 13px }
+.column-settings legend { font-weight: 600; margin-bottom: 4px }
+.column-settings [role="alert"] { flex-basis: 100% }
 /* Browser permission is a separate concern from which events notify, so it gets its own band. */
 .notify-permission { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: var(--border-width) solid var(--hair) }
 .has-dot { position: relative }

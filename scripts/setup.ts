@@ -4,11 +4,12 @@ import { readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { checkbox, input } from '@inquirer/prompts';
-import { ConfigStore, type Config } from '../server/config';
+import { checkbox, confirm, input, select } from '@inquirer/prompts';
+import { ConfigStore, reviewerClassesOf, type Config } from '../server/config';
 import { createGhClient } from '../server/gh';
 import { GithubProvider, viewerOrganizations } from '../server/providers/codehost/github/provider';
-import { buildConfig, defaultOrg, parseRemote, preselect, rankCandidates, validateSelection } from './setup-lib';
+import { readableName, REVIEWER_SLOTS, type ReviewerSlotKey } from '../shared/reviewers';
+import { buildConfig, defaultOrg, parseRemote, preselect, rankCandidates, reviewerCandidates, selectedReposSummary, sortCandidates, validateSelection } from './setup-lib';
 
 const run = promisify(execFile);
 // Resolved from this file so setup works from any working directory.
@@ -40,7 +41,7 @@ async function main() {
   const cloned = [...new Set(remotes.filter((remote) => remote.owner === org).map((remote) => remote.repo))];
   console.log(`Found ${cloned.length} local clones in ${org}. Asking GitHub for your activity…`);
 
-  const provider = new GithubProvider(gh, org, existing?.reviewerClasses ?? { 'ai-review': [], 'code-analysis': [] });
+  const provider = new GithubProvider(gh, org, existing ? reviewerClassesOf(existing) : { 'ai-review': [], 'code-analysis': [] });
   const auth = await provider.checkAuth();
   if (!auth.ok) throw new Error(auth.message);
   const activity = await provider.rankReposByActivity(90);
@@ -55,15 +56,42 @@ async function main() {
     choices: ranked.map((repo) => ({
       name: `${repo.name.padEnd(36)} ${String(repo.openCount).padStart(3)} open · activity ${repo.activity}${repo.cloned ? '' : ' · not cloned'}`,
       value: repo.name,
+      short: repo.name,
       checked: preselected.has(repo.name),
     })),
+    theme: { style: { renderSelectedChoices: (selected: ReadonlyArray<{ short: string }>) => selectedReposSummary(selected.map((choice) => choice.short)) } },
     validate: (choices) => validateSelection(choices.map((choice) => choice.value)),
   });
 
-  const config = buildConfig({ org, repos, teams: auth.viewer.teams.map((team) => team.slug), localRepos: cloned }, existing);
+  const SLOT_LABEL = { aiReview: 'AI reviewer', codeAnalysis: 'Code analysis tool' } as const;
+  console.log('Looking for AI reviewers and code analysis tools in recent PRs…');
+  const bots = await provider.reviewingBots(repos).catch(() => []);
+  const { bySlot, unknown } = reviewerCandidates(bots, existing?.reviewers);
+  for (const bot of unknown) {
+    const slot = await select<ReviewerSlotKey | 'ignore'>({
+      message: `${bot.login} reviewed ${bot.reviews} recent PRs. What is it?`,
+      choices: [{ name: 'AI reviewer', value: 'aiReview' }, { name: 'Code analysis tool', value: 'codeAnalysis' }, { name: 'Ignore', value: 'ignore' }],
+      default: 'ignore',
+    });
+    if (slot === 'ignore') continue;
+    const name = await input({ message: 'Name to show for it', default: readableName(bot.login) });
+    bySlot[slot].push({ slot, slotConfig: { name, logins: [bot.login], show: true }, reviews: bot.reviews, known: false });
+  }
+  const reviewers: Config['reviewers'] = {};
+  for (const slot of REVIEWER_SLOTS) {
+    for (const candidate of sortCandidates(bySlot[slot], existing?.reviewers?.[slot])) {
+      const { name, logins } = candidate.slotConfig;
+      if (await confirm({ message: `${SLOT_LABEL[slot]}: ${name} (${logins.join(', ')})?`, default: true })) {
+        reviewers[slot] = candidate.slotConfig;
+        break;
+      }
+    }
+  }
+
+  const config = buildConfig({ org, repos, teams: auth.viewer.teams.map((team) => team.slug), localRepos: cloned, reviewers }, existing);
   if (existsSync(CONFIG_PATH)) await (await ConfigStore.open(CONFIG_PATH)).save(config);
   else await writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`);
-  console.log(`Saved ${CONFIG_PATH} with ${repos.length} repositories and teams: ${config.codeHost.teams.join(', ') || 'none'}.`);
+  console.log(`Saved ${CONFIG_PATH} with ${repos.length} repositories and teams: ${config.codeHost.teams.join(', ') || 'none'}. Columns: ${REVIEWER_SLOTS.map((slot) => reviewers[slot]?.name).filter(Boolean).join(', ') || 'none'}.`);
   console.log(`API points left: ${provider.lastRateLimit()?.remaining ?? 'unknown'}. Next: npm run dev`);
 }
 

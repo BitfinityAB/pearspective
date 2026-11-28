@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ageLabel } from '../../../shared/age';
 import type { PrView } from '../../../shared/grouping';
 import { detectStacks, membersBottomUp, stackIndex } from '../../../shared/stacks';
+import type { ReviewerViews } from '../../../shared/reviewers';
 import { SIGNAL_LABELS } from '../../../shared/status';
 import { isTruncatedThreadsPlaceholder } from '../../../shared/threads';
 import type { ActorKind, ChangeRequest, Snapshot, Thread } from '../../../shared/types';
@@ -48,10 +49,10 @@ function reviewerRows(pr: ChangeRequest): ReviewerRow[] {
 }
 
 // People first, matching the Threads signal; automated reviewers have their own signals, so their threads start folded.
-const THREAD_GROUPS: { kind: ActorKind; label: string }[] = [
+const threadGroups = (reviewers: ReviewerViews): { kind: ActorKind; label: string }[] => [
   { kind: 'human', label: 'From people' },
-  { kind: 'ai-review', label: `From ${SIGNAL_LABELS.aiReview}` },
-  { kind: 'code-analysis', label: `From ${SIGNAL_LABELS.codeAnalysis}` },
+  { kind: 'ai-review', label: `From ${reviewers.aiReview?.name ?? SIGNAL_LABELS.aiReview}` },
+  { kind: 'code-analysis', label: `From ${reviewers.codeAnalysis?.name ?? SIGNAL_LABELS.codeAnalysis}` },
   { kind: 'bot', label: 'From bots' },
 ];
 
@@ -63,13 +64,13 @@ function ThreadLink({ thread }: { thread: Thread }) {
   );
 }
 
-function UnresolvedThreads({ threads }: { threads: Thread[] }) {
+function UnresolvedThreads({ threads, reviewers }: { threads: Thread[]; reviewers: ReviewerViews }) {
   // The placeholder only says the list is incomplete; it is not a thread anyone started.
   const truncated = threads.find(isTruncatedThreadsPlaceholder);
   const real = threads.filter((thread) => !isTruncatedThreadsPlaceholder(thread));
   return (
     <>
-      {THREAD_GROUPS.map(({ kind, label }) => {
+      {threadGroups(reviewers).map(({ kind, label }) => {
         const group = real.filter((thread) => thread.author.kind === kind);
         if (group.length === 0) return null;
         const title = `${label} (${group.length})`;
@@ -188,7 +189,7 @@ export function Drawer({ snapshot, views, selectedId, onSelect, onVisualize, onT
 
       {unresolved.length > 0 && (
         <Section title="Unresolved threads">
-          <UnresolvedThreads threads={unresolved} />
+          <UnresolvedThreads threads={unresolved} reviewers={snapshot.settings.reviewers} />
         </Section>
       )}
 

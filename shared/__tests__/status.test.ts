@@ -188,3 +188,31 @@ describe('reviewCounts', () => {
     expect(reviewCounts(pr)).toEqual({ approved: 1, changesRequested: 1 });
   });
 });
+
+describe('signalsOf with configured reviewers', () => {
+  const copilotView = { name: 'Copilot', short: 'Cop', show: true };
+  const codesceneView = { name: 'CodeScene', short: 'CS', show: true };
+  const aiThread = (resolved = false) => ({ resolved, author: makePerson('copilot-pull-request-reviewer', 'ai-review'), url: 'https://example.test/t', snippet: 'Consider…' });
+
+  it('labels the reviewer signals with the configured names', () => {
+    const labels = signalsOf(makePr(), { aiReview: copilotView, codeAnalysis: codesceneView }).map((signal) => signal.label);
+    expect(labels).toEqual(['CI', 'Copilot', 'CodeScene', 'Review', 'Threads', 'Mergeable']);
+  });
+
+  it('leaves out unconfigured and hidden reviewer signals', () => {
+    expect(signalsOf(makePr(), { aiReview: null, codeAnalysis: { ...codesceneView, show: false } }).map((signal) => signal.key))
+      .toEqual(['ci', 'review', 'threads', 'mergeable']);
+  });
+
+  it('uses generic labels when no reviewers are given', () => {
+    expect(signalsOf(makePr()).map((signal) => signal.label).slice(1, 3)).toEqual(['AI review', 'Code analysis']);
+  });
+
+  it('counts the AI reviewer\'s open threads under Threads only while its column is hidden', () => {
+    const pr = makePr({ threads: [aiThread(), aiThread(true)] });
+    const shown = signalsOf(pr, { aiReview: copilotView, codeAnalysis: null }).find((signal) => signal.key === 'threads')!;
+    expect(shown).toMatchObject({ color: 'green', detail: 'None unresolved' });
+    const hidden = signalsOf(pr, { aiReview: { ...copilotView, show: false }, codeAnalysis: null }).find((signal) => signal.key === 'threads')!;
+    expect(hidden).toMatchObject({ color: 'amber', glyph: '1', detail: '1 unresolved (1 from Copilot)' });
+  });
+});

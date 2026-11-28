@@ -4,7 +4,7 @@ describe('shared types', () => {
   it('builds an empty snapshot with the 3 minute default refresh', () => {
     const snapshot = emptySnapshot('acme');
     expect(snapshot.settings).toEqual({
-      refresh: 3, repos: [], org: 'acme', host: 'github.com', ticketUrl: null, pinned: [], ticketsEnabled: false, theme: 'default',
+      refresh: 3, repos: [], org: 'acme', host: 'github.com', ticketUrl: null, pinned: [], ticketsEnabled: false, theme: 'default', reviewers: { aiReview: null, codeAnalysis: null },
       notifications: {
         enabled: false,
         events: { ciFailed: true, ciPassed: true, approved: true, changesRequested: true, readyToMerge: true, conflict: true, newComment: true, newThread: true, reviewRequested: false },

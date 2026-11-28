@@ -96,4 +96,12 @@ describe('SettingsPanel', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('shows the reviewer column checkboxes on the Appearance tab', async () => {
+    const appearance = { themes: [], chosen: 'default', onChoose: async () => undefined, folderHint: 'the themes folder' };
+    const columns = { reviewers: { aiReview: { name: 'Copilot', short: 'Cop', show: true }, codeAnalysis: null }, onSave: async () => undefined };
+    render(<SettingsPanel api={api} repos={['orders-api']} onSave={async () => undefined} onClose={() => undefined} notifications={notifications} appearance={appearance} columns={columns} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Appearance' }));
+    expect(screen.getByRole('checkbox', { name: 'Copilot (Cop)' })).toBeChecked();
+  });
 });

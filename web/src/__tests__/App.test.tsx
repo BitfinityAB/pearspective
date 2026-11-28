@@ -25,7 +25,7 @@ function fakeApi(overrides: Partial<DashboardApi> = {}): DashboardApi {
     subscribe: () => () => undefined,
     setVisible: async () => undefined,
     refreshNow: async () => snapshot,
-    updateSettings: async ({ notifications, ...patch }) => ({
+    updateSettings: async ({ notifications, reviewers: _reviewers, ...patch }) => ({
       ...snapshot.settings,
       ...patch,
       notifications: notifications ? { ...snapshot.settings.notifications, enabled: notifications.enabled } : snapshot.settings.notifications,

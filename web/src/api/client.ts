@@ -1,3 +1,4 @@
+import type { ReviewerSlotKey } from '../../../shared/reviewers';
 import type { NotificationKind, RefreshSetting, RepoRef, Snapshot, StackDetail, ThemeInfo } from '../../../shared/types';
 
 export interface DashboardApi {
@@ -5,7 +6,7 @@ export interface DashboardApi {
   subscribe(clientId: string, onSnapshot: (snapshot: Snapshot) => void, onOpen?: () => void): () => void;
   setVisible(clientId: string, visible: boolean): Promise<void>;
   refreshNow(): Promise<Snapshot>;
-  updateSettings(patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> }; theme?: string }): Promise<Snapshot['settings']>;
+  updateSettings(patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> }; theme?: string; reviewers?: Partial<Record<ReviewerSlotKey, { show: boolean }>> }): Promise<Snapshot['settings']>;
   getThemes(): Promise<ThemeInfo[]>;
   searchRepos(q: string): Promise<RepoRef[]>;
   stackDetail(prId: string): Promise<StackDetail | null>;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NotificationKind, RefreshSetting, Snapshot } from '../../../shared/types';
+import type { ReviewerSlotKey } from '../../../shared/reviewers';
 import type { DashboardApi } from './client';
 
 export function useDashboard(api: DashboardApi) {
@@ -22,7 +23,7 @@ export function useDashboard(api: DashboardApi) {
   }, [api, clientId]);
 
   const refreshNow = useCallback(async () => setSnapshot(await api.refreshNow()), [api]);
-  const updateSettings = useCallback(async (patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> }; theme?: string }) => {
+  const updateSettings = useCallback(async (patch: { refresh?: RefreshSetting; repos?: string[]; pinned?: string[]; notifications?: { enabled: boolean; events?: Partial<Record<NotificationKind, boolean>> }; theme?: string; reviewers?: Partial<Record<ReviewerSlotKey, { show: boolean }>> }) => {
     const request = ++latestSettingsRequest.current;
     const settings = await api.updateSettings(patch);
     // An older response arriving last would show settings the server has since replaced.

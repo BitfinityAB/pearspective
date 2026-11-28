@@ -1,3 +1,4 @@
+import type { ReviewerView, ReviewerViews } from './reviewers';
 import { isTruncatedThreadsPlaceholder } from './threads';
 import type { ActorKind, ChangeRequest, Review, SignalColor } from './types';
 
@@ -8,7 +9,7 @@ export type Bucket = 'blocked' | 'waiting' | 'ready' | 'draft';
 
 export const GLYPH: Record<SignalColor, string> = { green: '✓', amber: '!', red: '✕', grey: '–' };
 export const SIGNAL_LABELS: Record<SignalKey, string> = {
-  ci: 'CI', aiReview: 'Copilot', codeAnalysis: 'CodeScene', review: 'Review', threads: 'Threads', mergeable: 'Mergeable',
+  ci: 'CI', aiReview: 'AI review', codeAnalysis: 'Code analysis', review: 'Review', threads: 'Threads', mergeable: 'Mergeable',
 };
 
 const makeSignal = (key: SignalKey, color: SignalColor, detail: string, glyph = GLYPH[color]): Signal =>
@@ -85,10 +86,12 @@ function reviewSignal(pr: ChangeRequest): Signal {
   }
 }
 
-function threadsSignal(pr: ChangeRequest): Signal {
-  const unresolved = unresolvedBy(pr, 'human');
+function threadsSignal(pr: ChangeRequest, extra?: { count: number; name: string }): Signal {
+  const people = unresolvedBy(pr, 'human');
+  const unresolved = people + (extra?.count ?? 0);
   const cutOff = threadsCutOff(pr);
-  if (unresolved > 0) return makeSignal('threads', 'amber', `${unresolved} unresolved${cutOff ? ', more not loaded' : ''}`, String(unresolved));
+  const from = extra?.count ? ` (${extra.count} from ${extra.name})` : '';
+  if (unresolved > 0) return makeSignal('threads', 'amber', `${unresolved} unresolved${from}${cutOff ? ', more not loaded' : ''}`, String(unresolved));
   return cutOff ? makeSignal('threads', 'amber', 'Not all threads loaded', '?') : makeSignal('threads', 'green', 'None unresolved');
 }
 
@@ -103,8 +106,18 @@ function mergeableSignal(pr: ChangeRequest): Signal {
   }
 }
 
-export function signalsOf(pr: ChangeRequest): Signal[] {
-  return [ciSignal(pr), aiReviewSignal(pr), codeAnalysisSignal(pr), reviewSignal(pr), threadsSignal(pr), mergeableSignal(pr)];
+const isShown = (view: ReviewerView | null | undefined) => Boolean(view?.show);
+
+/** Without reviewers every signal is returned with generic labels; with them, hidden or unconfigured tools are left out. */
+export function signalsOf(pr: ChangeRequest, reviewers?: ReviewerViews): Signal[] {
+  const ai = reviewers?.aiReview;
+  // A hidden AI column would hide threads that can still block merging, so they move to Threads.
+  const aiThreads = reviewers && ai && !ai.show ? { count: unresolvedBy(pr, 'ai-review'), name: ai.name } : undefined;
+  const all = [ciSignal(pr), aiReviewSignal(pr), codeAnalysisSignal(pr), reviewSignal(pr), threadsSignal(pr, aiThreads), mergeableSignal(pr)];
+  if (!reviewers) return all;
+  return all
+    .filter((signal) => (signal.key === 'aiReview' ? isShown(reviewers.aiReview) : signal.key === 'codeAnalysis' ? isShown(reviewers.codeAnalysis) : true))
+    .map((signal) => (signal.key === 'aiReview' ? { ...signal, label: reviewers.aiReview!.name } : signal.key === 'codeAnalysis' ? { ...signal, label: reviewers.codeAnalysis!.name } : signal));
 }
 
 export function blockersOf(pr: ChangeRequest): Blocker[] {

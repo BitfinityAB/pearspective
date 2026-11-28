@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { MAX_REPOS, type NotificationSettings, type RepoRef } from '../../../shared/types';
 import type { DashboardApi } from '../api/client';
 import type { ThemeInfo } from '../../../shared/types';
+import type { ReviewerSlotKey, ReviewerViews } from '../../../shared/reviewers';
 import { AppearanceSettings } from './AppearanceSettings';
+import { ColumnSettings } from './ColumnSettings';
 import { NotificationSettingsSection } from './NotificationSettings';
 
 interface SettingsPanelProps {
@@ -13,11 +15,12 @@ interface SettingsPanelProps {
   focusPermission?: boolean;
   notifications?: { settings: NotificationSettings; onSave: (next: NotificationSettings) => Promise<void> };
   appearance?: { themes: ThemeInfo[]; chosen: string; onChoose: (id: string) => Promise<void>; folderHint: string };
+  columns?: { reviewers: ReviewerViews; onSave: (slot: ReviewerSlotKey, show: boolean) => Promise<void> };
 }
 
 type SettingsTab = 'repositories' | 'notifications' | 'appearance';
 
-export function SettingsPanel({ api, repos, onSave, onClose, notifications, appearance, focusPermission }: SettingsPanelProps) {
+export function SettingsPanel({ api, repos, onSave, onClose, notifications, appearance, columns, focusPermission }: SettingsPanelProps) {
   // The permission hint links straight to the notifications tab.
   const tabs: { value: SettingsTab; label: string }[] = [
     { value: 'repositories', label: 'Repositories' },
@@ -114,6 +117,7 @@ export function SettingsPanel({ api, repos, onSave, onClose, notifications, appe
         {appearance && tab === 'appearance' && (
           <div className="settings-panel" role="tabpanel" id="settings-panel-appearance" aria-labelledby="settings-tab-appearance">
             <p className="settings-note muted small">Appearance changes are saved as you make them.</p>
+            {columns && <ColumnSettings {...columns} />}
             <AppearanceSettings {...appearance} />
           </div>
         )}

@@ -75,7 +75,7 @@ To change the repositories later, use the settings button in the header (**Repos
 | `codeHost.excludeRepos` | Repositories to leave out of the Overview even if listed. |
 | `codeHost.localRepos` | Repositories cloned next to Pearspective, found by setup; the settings panel marks the others "not cloned". |
 | `codeHost.teams` | Teams for the "Review requested from my team" section. Detected by setup. |
-| `reviewerClasses` | Which bot logins count as AI review and code analysis. A trailing `*` matches a prefix. |
+| `reviewers` | The AI reviewer (`aiReview`) and code analysis tool (`codeAnalysis`) columns: `name`, bot `logins` (a trailing `*` matches a prefix), optional `short` (otherwise derived from the name) and `show`, which the Appearance tab toggles. Leave a slot out to drop its column. Detected by setup; an old `reviewerClasses` block is rewritten as `reviewers` on start. |
 | `refreshIntervalSec` | `0` (off), `180`, `300`, `600`, `900` or `1800`. Also editable from the header. |
 | `pinned` | IDs of pinned PRs. Managed from the detail panel. |
 | `issueTracker` | Optional. Ticket links, and with jira-cli the ticket status and mismatch checks; see [Ticket status](#ticket-status-optional). |
@@ -148,7 +148,7 @@ Pearspective keeps its latest state (pull requests, checks, reviews, threads, ti
 
 ## Themes
 
-Pick a theme in the settings panel's **Appearance** tab. **Default** follows your light/dark setting; **Terminal** is dark only, with a monospace font, tighter corners and a soft green glow on the active tab and filters.
+Pick a theme in the settings panel's **Appearance** tab, which also has a **Columns** section to show or hide the AI review and code analysis columns. **Default** follows your light/dark setting; **Terminal** is dark only, with a monospace font, tighter corners and a soft green glow on the active tab and filters.
 
 ![Terminal theme](docs/assets/screenshot-terminal.png)
 

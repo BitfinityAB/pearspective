@@ -20,7 +20,7 @@ const api = (app: Parameters<typeof request.agent>[0]) => request.agent(app).set
 async function setup(overrides: Partial<CodeHostProvider> = {}, builtinDir = join(process.cwd(), 'themes')) {
   const dir = await mkdtemp(join(tmpdir(), 'prdash-app-'));
   const path = join(dir, 'config.json');
-  await writeFile(path, JSON.stringify({ codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'], localRepos: ['orders-api', 'orders-web'] } }));
+  await writeFile(path, JSON.stringify({ codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'], localRepos: ['orders-api', 'orders-web'] }, reviewers: { aiReview: { name: 'Copilot', logins: ['copilot-pull-request-reviewer'] } } }));
   const store = await ConfigStore.open(path);
   const fake = createFakeProvider([makePr(), makePr()], { listRepos: async () => [{ name: 'report-service' }], ...overrides });
   const hub = new SnapshotHub();
@@ -204,5 +204,14 @@ describe('HTTP API', () => {
     expect(store.get().theme).toBe('terminal');
     await api(app).put('/api/settings').send({ theme: 'bad id!' }).expect(400);
     await api(app).put('/api/settings').send({ theme: 7 }).expect(400);
+  });
+
+  it('shows or hides a configured reviewer column and rejects an unconfigured one', async () => {
+    const { app, store } = await setup();
+    const saved = await api(app).put('/api/settings').send({ reviewers: { aiReview: { show: false } } }).expect(200);
+    expect(saved.body.reviewers.aiReview).toEqual({ name: 'Copilot', short: 'Cop', show: false });
+    expect(store.get().reviewers.aiReview?.show).toBe(false);
+    await api(app).put('/api/settings').send({ reviewers: { codeAnalysis: { show: true } } }).expect(400);
+    await api(app).put('/api/settings').send({ reviewers: { aiReview: { show: 'no' } } }).expect(400);
   });
 });

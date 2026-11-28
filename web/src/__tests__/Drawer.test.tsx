@@ -6,12 +6,15 @@ import { buildPrViews } from '../../../shared/grouping';
 import { emptySnapshot, type ChangeRequest } from '../../../shared/types';
 import { makeClosed, makePerson, makePr } from '../../../test/factories';
 import { makeTicket } from '../../../test/fake-tracker';
+import type { ReviewerViews } from '../../../shared/reviewers';
 import { truncatedThreadsPlaceholder } from '../../../shared/threads';
 
 const copilot = makePerson('copilot-pull-request-reviewer', 'ai-review');
 
-function setup(prs: ChangeRequest[], selectedId: string, ticketUrl: string | null = 'https://jira.example.test/browse/{key}', pinned: string[] = []) {
-  const snapshot = { ...emptySnapshot('acme'), prs, settings: { ...emptySnapshot('acme').settings, ticketUrl, pinned } };
+const CONFIGURED: ReviewerViews = { aiReview: { name: 'Copilot', short: 'Cop', show: true }, codeAnalysis: { name: 'CodeScene', short: 'CS', show: true } };
+
+function setup(prs: ChangeRequest[], selectedId: string, ticketUrl: string | null = 'https://jira.example.test/browse/{key}', pinned: string[] = [], reviewers: ReviewerViews = CONFIGURED) {
+  const snapshot = { ...emptySnapshot('acme'), prs, settings: { ...emptySnapshot('acme').settings, ticketUrl, pinned, reviewers } };
   const views = buildPrViews(snapshot, Date.parse('2026-11-18T12:00:00Z'));
   const onSelect = vi.fn();
   const onVisualize = vi.fn();
@@ -22,6 +25,13 @@ function setup(prs: ChangeRequest[], selectedId: string, ticketUrl: string | nul
 }
 
 describe('Drawer', () => {
+  it('names automated thread groups after the configured tools', () => {
+    const pr = makePr({ threads: [{ resolved: false, author: copilot, snippet: 'Rename this', url: 'https://github.example.test/t/30' }] });
+    setup([pr], pr.id, null, [], { ...CONFIGURED, aiReview: { name: 'CodeRabbit', short: 'CR', show: true } });
+    const threads = within(screen.getByRole('region', { name: 'Unresolved threads' }));
+    expect(threads.getByText('From CodeRabbit (1)')).toBeInTheDocument();
+  });
+
   it('asks the user to pick a PR when nothing is selected', () => {
     setup([makePr()], 'nothing');
     expect(screen.getByText('Select a pull request to see its details.')).toBeInTheDocument();

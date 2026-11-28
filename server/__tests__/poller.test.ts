@@ -6,7 +6,7 @@ import { makePr } from '../../test/factories';
 
 const config: Config = {
   codeHost: { provider: 'fake', org: 'acme', repos: ['orders-api'], excludeRepos: [], teams: [], localRepos: [] },
-  reviewerClasses: { 'ai-review': [], 'code-analysis': [] },
+  reviewers: {},
   refreshIntervalSec: 180,
   pinned: [],
   theme: 'default',
@@ -22,6 +22,13 @@ function setup(prs = [makePr(), makePr()]) {
 }
 
 describe('Poller', () => {
+  it('publishes the configured reviewers with derived abbreviations', async () => {
+    const withReviewers: Config = { ...config, reviewers: { aiReview: { name: 'Copilot', logins: ['copilot-pull-request-reviewer'], show: false } } };
+    const fake = createFakeProvider([makePr()]);
+    const poller = new Poller({ provider: fake.provider, config: () => withReviewers });
+    expect(poller.snapshot().settings.reviewers).toEqual({ aiReview: { name: 'Copilot', short: 'Cop', show: false }, codeAnalysis: null });
+  });
+
   it('publishes the viewer, PRs, overview ids and settings after the first tick', async () => {
     const { poller, published } = setup();
     await poller.tick();

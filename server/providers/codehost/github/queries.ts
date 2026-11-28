@@ -55,6 +55,9 @@ export const SEARCH_PRS_QUERY =
 export const ACTIVITY_QUERY =
   `query($q: String!, $after: String) { search(query: $q, type: ISSUE, first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { ... on PullRequest { repository { name } } } } ${RATE} }`;
 
+export const REVIEWING_BOTS_QUERY =
+  `query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest { reviews(first: 50) { nodes { author { __typename login } } } reviewRequests(first: 20) { nodes { requestedReviewer { __typename ... on Bot { login } } } } } } } ${RATE} }`;
+
 export const VIEWER_QUERY = `query { viewer { login name avatarUrl(size: 64) } ${RATE} }`;
 
 export const VIEWER_ORGS_QUERY = `query { viewer { organizations(first: 100) { nodes { login } } } ${RATE} }`;

@@ -1,13 +1,17 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { z } from 'zod';
+import { catalogEntryFor, readableName, REVIEWER_SLOTS, type ReviewerSlotKey } from '../shared/reviewers';
 import { MAX_PINNED, MAX_REPOS, NOTIFICATION_DEFAULTS, type NotificationSettings, type RefreshSetting } from '../shared/types';
 import { HIDDEN_POLL_MS } from './presence';
+import type { ReviewerClasses } from './providers/types';
 
-export const DEFAULT_REVIEWER_CLASSES = {
-  'ai-review': ['copilot-pull-request-reviewer'],
-  'code-analysis': ['codescene-access', 'codescene-delta-analysis'],
-};
+const ReviewerSlotSchema = z.object({
+  name: z.string().min(1),
+  logins: z.array(z.string().min(1)).min(1),
+  short: z.string().min(1).optional(),
+  show: z.boolean().default(true),
+}).strict();
 
 const REFRESH_SECONDS = [0, 180, 300, 600, 900, 1800] as const;
 
@@ -30,10 +34,8 @@ export const ConfigSchema = z.object({
     teams: z.array(z.string()).default([]),
     localRepos: z.array(z.string()).default([]),
   }),
-  reviewerClasses: z.object({
-    'ai-review': z.array(z.string()).default(DEFAULT_REVIEWER_CLASSES['ai-review']),
-    'code-analysis': z.array(z.string()).default(DEFAULT_REVIEWER_CLASSES['code-analysis']),
-  }).default(DEFAULT_REVIEWER_CLASSES),
+  // A missing slot means that tool is not configured: its column is not shown and its bots count as plain bots.
+  reviewers: z.object({ aiReview: ReviewerSlotSchema.optional(), codeAnalysis: ReviewerSlotSchema.optional() }).strict().default({}),
   refreshIntervalSec: z.number().refine((value) => (REFRESH_SECONDS as readonly number[]).includes(value), {
     message: `refreshIntervalSec must be one of ${REFRESH_SECONDS.join(', ')}`,
   }).default(180),
@@ -90,6 +92,28 @@ function parse(raw: unknown, path: string): Config {
   return result.data;
 }
 
+const OLD_CLASS: Record<ReviewerSlotKey, 'ai-review' | 'code-analysis'> = { aiReview: 'ai-review', codeAnalysis: 'code-analysis' };
+
+/** Configs written before reviewers had names keep working: the old login lists become named slots. */
+export function migrateReviewerClasses(raw: unknown): { raw: unknown; migrated: boolean } {
+  if (!raw || typeof raw !== 'object' || !('reviewerClasses' in raw)) return { raw, migrated: false };
+  const { reviewerClasses, ...rest } = raw as Record<string, unknown> & { reviewerClasses?: Record<string, unknown> };
+  if ('reviewers' in rest) return { raw: rest, migrated: true };
+  const reviewers: Record<string, unknown> = {};
+  for (const slot of REVIEWER_SLOTS) {
+    const logins = reviewerClasses?.[OLD_CLASS[slot]];
+    if (!Array.isArray(logins) || logins.length === 0 || !logins.every((login) => typeof login === 'string')) continue;
+    const known = logins.map((login) => catalogEntryFor(login.replace(/\*$/, ''))).find((entry) => entry?.slot === slot);
+    reviewers[slot] = { name: known?.name ?? readableName(logins[0]!.replace(/\*$/, '')), logins, show: true };
+  }
+  return { raw: { ...rest, reviewers }, migrated: true };
+}
+
+export const reviewerClassesOf = (config: Pick<Config, 'reviewers'>): ReviewerClasses => ({
+  'ai-review': config.reviewers.aiReview?.logins ?? [],
+  'code-analysis': config.reviewers.codeAnalysis?.logins ?? [],
+});
+
 export class ConfigStore {
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -105,7 +129,13 @@ export class ConfigStore {
     }
     let raw: unknown;
     try { raw = JSON.parse(text); } catch { throw new ConfigError(`${path} is not valid JSON.`); }
-    return new ConfigStore(path, parse(raw, path));
+    const { raw: current, migrated } = migrateReviewerClasses(raw);
+    const store = new ConfigStore(path, parse(current, path));
+    if (migrated) {
+      await store.save(store.get());
+      console.log(`Rewrote ${path}: reviewerClasses is now reviewers.`);
+    }
+    return store;
   }
 
   get(): Config {

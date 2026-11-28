@@ -67,7 +67,7 @@ export function buildPrViews(snapshot: Snapshot, now: number): Map<string, PrVie
     const parentId = stacks.get(pr.id)?.parentId ?? null;
     views.set(pr.id, {
       pr,
-      signals: signalsOf(pr),
+      signals: signalsOf(pr, snapshot.settings.reviewers),
       blockers: blockersOf(pr),
       bucket: bucketOf(pr),
       ageHours: ageHours(pr.createdAt, now),

@@ -4,7 +4,7 @@ import { ProviderError, type AuthResult, type CodeHostProvider, type MineKind, t
 import { toChangeRequest, toClosed, toStub } from './mapping';
 import {
   ACTIVITY_QUERY, closedReposQuery, fullQuery, leanRepoPageQuery, leanReposQuery, mineSearch, NATIVE_STACK_QUERY,
-  openCountsQuery, ORG_TEAMS_QUERY, REPO_SEARCH_QUERY, SEARCH_PRS_QUERY, TEAM_MEMBERS_PAGE_QUERY, TEAMS_QUERY, VIEWER_ORGS_QUERY, VIEWER_QUERY,
+  openCountsQuery, ORG_TEAMS_QUERY, REPO_SEARCH_QUERY, REVIEWING_BOTS_QUERY, SEARCH_PRS_QUERY, TEAM_MEMBERS_PAGE_QUERY, TEAMS_QUERY, VIEWER_ORGS_QUERY, VIEWER_QUERY,
 } from './queries';
 
 export const ENRICH_BATCH_SIZE = 25;
@@ -197,6 +197,23 @@ export class GithubProvider implements CodeHostProvider {
     if (repos.length === 0) return {};
     const data = await this.query<Record<string, any>>(openCountsQuery(this.org, repos));
     return Object.fromEntries(repos.map((repo, index) => [repo, data[`c${index}`]?.pullRequests.totalCount ?? 0]));
+  }
+
+  /** Bots that reviewed, or were asked to review, recent PRs; setup uses it to suggest the AI reviewer and analysis tool. */
+  async reviewingBots(repos: string[]): Promise<{ login: string; reviews: number }[]> {
+    const q = ['is:pr', ...repos.map((repo) => `repo:${this.org}/${repo}`), 'sort:updated-desc'].join(' ');
+    const data = await this.query<{ search: { nodes: any[] } }>(REVIEWING_BOTS_QUERY, { q });
+    const counts = new Map<string, number>();
+    for (const pr of data.search.nodes) {
+      for (const review of pr.reviews?.nodes ?? []) {
+        if (review.author?.__typename === 'Bot') counts.set(review.author.login, (counts.get(review.author.login) ?? 0) + 1);
+      }
+      for (const request of pr.reviewRequests?.nodes ?? []) {
+        const reviewer = request.requestedReviewer;
+        if (reviewer?.__typename === 'Bot' && !counts.has(reviewer.login)) counts.set(reviewer.login, 0);
+      }
+    }
+    return [...counts].map(([login, reviews]) => ({ login, reviews })).sort((a, b) => b.reviews - a.reviews || a.login.localeCompare(b.login));
   }
 
   async nativeStackEntries(repo: string, number: number): Promise<NativeStackEntries | null> {

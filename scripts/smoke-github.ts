@@ -1,12 +1,12 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ConfigStore } from '../server/config';
+import { ConfigStore, reviewerClassesOf } from '../server/config';
 import { createGhClient } from '../server/gh';
 import { GithubProvider } from '../server/providers/codehost/github/provider';
 
 const config = (await ConfigStore.open(join(resolve(dirname(fileURLToPath(import.meta.url)), '..'), 'config.json'))).get();
 const { org, repos } = config.codeHost;
-const provider = new GithubProvider(createGhClient(), org, config.reviewerClasses);
+const provider = new GithubProvider(createGhClient(), org, reviewerClassesOf(config));
 
 const auth = await provider.checkAuth();
 console.log('auth', auth.ok, auth.ok ? auth.viewer.teams.map((team) => team.slug) : auth);

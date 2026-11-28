@@ -7,7 +7,9 @@ import { emptySnapshot } from '../../../shared/types';
 import { makePr } from '../../../test/factories';
 
 const now = Date.parse('2026-11-18T12:00:00Z');
-const viewOf = (...prs: ReturnType<typeof makePr>[]) => buildPrViews({ ...emptySnapshot('acme'), prs }, now);
+const base = emptySnapshot('acme');
+const reviewers = { aiReview: { name: 'Copilot', short: 'Cop', show: true }, codeAnalysis: { name: 'CodeScene', short: 'CS', show: true } };
+const viewOf = (...prs: ReturnType<typeof makePr>[]) => buildPrViews({ ...base, prs, settings: { ...base.settings, reviewers } }, now);
 
 describe('PrRow', () => {
   it('shows repo and number, title, blocker badges, six labelled squares and the age', () => {

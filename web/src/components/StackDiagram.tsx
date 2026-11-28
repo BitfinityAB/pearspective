@@ -128,7 +128,7 @@ export function StackDiagram({ detail, viewsByNumber, selectedNumber, onSelect, 
     open.each(function drawSquares(entry) {
       const view = entry.node.number ? viewsByNumber.get(entry.node.number) : undefined;
       if (!view) return;
-      const squares = select(this).append('g').attr('transform', `translate(${NODE_WIDTH / 2 - 6 * 19 - 8},${-NODE_HEIGHT / 2 + 10})`);
+      const squares = select(this).append('g').attr('transform', `translate(${NODE_WIDTH / 2 - view.signals.length * 19 - 8},${-NODE_HEIGHT / 2 + 10})`);
       view.signals.forEach((signal, index) => {
         squares.append('rect').attr('x', index * 19).attr('width', 16).attr('height', 16).attr('rx', Math.max(0, radiusSmall - 2)).style('fill', SIGNAL_COLORS[signal.color][0])
           .append('title').text(`${signal.label}: ${signal.detail}`);

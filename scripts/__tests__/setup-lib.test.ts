@@ -1,4 +1,10 @@
-import { buildConfig, defaultOrg, mostCommonOwner, parseRemote, preselect, rankCandidates, validateSelection } from '../setup-lib';
+import { buildConfig, defaultOrg, mostCommonOwner, parseRemote, preselect, rankCandidates, reviewerCandidates, selectedReposSummary, sortCandidates, validateSelection } from '../setup-lib';
+
+describe('selectedReposSummary', () => {
+  it('lists each chosen repository on its own line', () => {
+    expect(selectedReposSummary(['orders-api', 'orders-web'])).toBe('\n  orders-api\n  orders-web');
+  });
+});
 
 describe('parseRemote', () => {
   it.each([
@@ -76,12 +82,56 @@ describe('buildConfig', () => {
     });
   });
 
-  it('keeps reviewer classes and refresh from an existing config', () => {
-    const existing = buildConfig({ org: 'acme', repos: [], teams: [], localRepos: [] });
+  it('keeps reviewers and refresh from an existing config unless new reviewers are given', () => {
+    const copilot = { name: 'Copilot', logins: ['copilot-pull-request-reviewer'], show: false };
+    const existing = buildConfig({ org: 'acme', repos: [], teams: [], localRepos: [], reviewers: { aiReview: copilot } });
     existing.refreshIntervalSec = 600;
-    existing.reviewerClasses['ai-review'] = ['custom-bot'];
-    const next = buildConfig({ org: 'acme', repos: ['x'], teams: [], localRepos: [] }, existing);
-    expect(next.refreshIntervalSec).toBe(600);
-    expect(next.reviewerClasses['ai-review']).toEqual(['custom-bot']);
+    const kept = buildConfig({ org: 'acme', repos: ['x'], teams: [], localRepos: [] }, existing);
+    expect(kept.refreshIntervalSec).toBe(600);
+    expect(kept.reviewers).toEqual({ aiReview: copilot });
+    const replaced = buildConfig({ org: 'acme', repos: ['x'], teams: [], localRepos: [], reviewers: {} }, existing);
+    expect(replaced.reviewers).toEqual({});
+  });
+});
+
+describe('reviewerCandidates', () => {
+  it('sorts known tools into slots, most reviews first, and keeps unknown bots apart', () => {
+    const { bySlot, unknown } = reviewerCandidates([
+      { login: 'codescene-access', reviews: 250 },
+      { login: 'copilot-pull-request-reviewer', reviews: 84 },
+      { login: 'codescene-delta-analysis', reviews: 5 },
+      { login: 'github-actions', reviews: 3 },
+      { login: 'acme-review-bot', reviews: 2 },
+    ]);
+    expect(bySlot.aiReview.map((candidate) => candidate.slotConfig.name)).toEqual(['Copilot']);
+    expect(bySlot.codeAnalysis).toEqual([{ slot: 'codeAnalysis', slotConfig: { name: 'CodeScene', logins: ['codescene-*'], show: true }, reviews: 255, known: true }]);
+    expect(unknown).toEqual([{ login: 'acme-review-bot', reviews: 2 }]);
+  });
+
+  it('puts an existing slot first and keeps its show and short', () => {
+    const existing = { codeAnalysis: { name: 'SonarQube Cloud', logins: ['sonarqubecloud'], short: 'SQ', show: false } };
+    const { bySlot } = reviewerCandidates([{ login: 'codescene-access', reviews: 9 }], existing);
+    expect(bySlot.codeAnalysis.map((candidate) => [candidate.slotConfig.name, candidate.slotConfig.show])).toEqual([['SonarQube Cloud', false], ['CodeScene', true]]);
+  });
+
+  it('keeps the show setting when the existing tool is found again', () => {
+    const existing = { aiReview: { name: 'Copilot', logins: ['copilot-pull-request-reviewer'], show: false } };
+    const { bySlot } = reviewerCandidates([{ login: 'copilot-pull-request-reviewer', reviews: 3 }], existing);
+    expect(bySlot.aiReview).toEqual([{ slot: 'aiReview', slotConfig: existing.aiReview, reviews: 3, known: true }]);
+  });
+});
+
+describe('sortCandidates', () => {
+  const candidate = (name: string, reviews: number, known: boolean, slotConfig = { name, logins: [name], show: true }) => ({ slot: 'aiReview' as const, slotConfig, reviews, known });
+
+  it('puts an unknown bot with more reviews ahead of a known tool', () => {
+    const sorted = sortCandidates([candidate('Copilot', 5, true), candidate('Acme Bot', 40, false)], undefined);
+    expect(sorted.map((entry) => entry.slotConfig.name)).toEqual(['Acme Bot', 'Copilot']);
+  });
+
+  it('keeps the existing slot first regardless of reviews', () => {
+    const existing = { name: 'Copilot', logins: ['copilot'], show: true };
+    const sorted = sortCandidates([candidate('Acme Bot', 40, false), candidate('Copilot', 0, true, existing)], existing);
+    expect(sorted.map((entry) => entry.slotConfig.name)).toEqual(['Copilot', 'Acme Bot']);
   });
 });
